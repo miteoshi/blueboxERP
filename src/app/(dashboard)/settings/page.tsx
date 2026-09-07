@@ -16,6 +16,7 @@ import {
   Check, X, AlertTriangle, Users,
 } from 'lucide-react'
 import type { Enums } from '@/lib/types/database'
+import { useOrgId } from '@/lib/hooks/use-tenant'
 
 
 type UserRole = Enums<"user_role">
@@ -34,65 +35,79 @@ const ROLE_COLORS: Record<UserRole, 'danger' | 'warning' | 'info' | 'teal' | 'pu
 }
 
 // ── Fetch all profiles ────────────────────────────────────────
-function useAllProfiles() {
-  const supabase = createClient()
+function useAllProfiles(orgId: string | null) {
+  const supabase = createClient();
+
   return useQuery({
-    queryKey: ['all-profiles'],
+    queryKey: ["all-profiles", orgId],
     queryFn: async () => {
+      if (!orgId) return [];
+
       const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, role, is_active, created_at')
-        .order('full_name')
-      if (error) throw error
-      return data
+        .from("profiles")
+        .select("id, full_name, role, is_active, created_at")
+        .order("full_name");
+
+      if (error) throw error;
+      return data;
     },
+    enabled: !!orgId,
     staleTime: 60 * 1000,
-  })
+  });
 }
 
 // ── Fetch items with current prices ──────────────────────────
-function useItemsWithPrices(search: string) {
-  const supabase = createClient()
+function useItemsWithPrices(search: string, orgId: string | null) {
+  const supabase = createClient();
   return useQuery({
-    queryKey: ['items-for-price-update', search],
+    queryKey: ["items-for-price-update", orgId, search],
     queryFn: async () => {
+      if (!orgId) return [];
+
       let query = supabase
-        .from('items')
-        .select('id, item_code, name, unit, category')
-        .eq('is_active', true)
-        .order('category')
-        .order('item_code')
+        .from("items")
+        .select("id, item_code, name, unit, category")
+        .eq("is_active", true)
+        .order("category")
+        .order("item_code");
 
       if (search) {
-        query = query.or(
-          `name.ilike.%${search}%,item_code.ilike.%${search}%`
-        )
+        query = query.or(`name.ilike.%${search}%,item_code.ilike.%${search}%`);
       }
 
-      const { data: items, error } = await query
-      if (error) throw error
+      const { data: items, error } = await query;
+      if (error) throw error;
 
       const { data: prices } = await supabase
-        .from('v_current_prices')
-        .select('item_id, purchase_rate, selling_rate, gst_percent, rate_unit, effective_from')
+        .from("v_current_prices")
+        .select(
+          "item_id, purchase_rate, selling_rate, gst_percent, rate_unit, effective_from"
+        );
 
-      const priceMap = new Map(prices?.map(p => [p.item_id, p]) ?? [])
-      return items?.map(i => ({ ...i, currentPrice: priceMap.get(i.id) ?? null })) ?? []
+      const priceMap = new Map(prices?.map((p) => [p.item_id, p]) ?? []);
+      return (
+        items?.map((i) => ({
+          ...i,
+          currentPrice: priceMap.get(i.id) ?? null,
+        })) ?? []
+      );  
     },
     staleTime: 2 * 60 * 1000,
-  })
+    enabled: !!orgId,
+  });
 }
 
 export default function SettingsPage() {
   const supabase     = createClient()
   const qc           = useQueryClient()
   const isAdmin      = useIsAdmin()
+  const orgId        = useOrgId()
   const { data: me } = useProfile()
 
   const [activeTab, setActiveTab] = useState<Tab>('Users')
 
   // ── Users state ───────────────────────────────────────────
-  const { data: profiles, isLoading: loadingProfiles } = useAllProfiles()
+  const { data: profiles, isLoading: loadingProfiles } = useAllProfiles(orgId)
   const [updatingRole, setUpdatingRole] = useState<string | null>(null)
 
   // ── Price update state ────────────────────────────────────
@@ -102,7 +117,7 @@ export default function SettingsPage() {
   const [newSelling,   setNewSelling]   = useState('')
   const [savingPrice,  setSavingPrice]  = useState(false)
 
-  const { data: items, isLoading: loadingItems } = useItemsWithPrices(priceSearch)
+  const { data: items, isLoading: loadingItems } = useItemsWithPrices(priceSearch, orgId)
 
   // ── Reconcile state ───────────────────────────────────────
   const [reconciling,     setReconciling]     = useState(false)
@@ -114,16 +129,16 @@ export default function SettingsPage() {
     setUpdatingRole(userId)
     try {
       const { error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update({ role: newRole })
-        .eq('id', userId)
-      if (error) throw error
-      qc.invalidateQueries({ queryKey: ['all-profiles'] })
-      toast.success('Role updated')
-    } catch (err: any) {
-      toast.error(err.message)
+        .eq("id", userId);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["all-profiles"] });
+      toast.success("Role updated");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Operation failed");
     } finally {
-      setUpdatingRole(null)
+      setUpdatingRole(null);
     }
   }
 
@@ -145,6 +160,12 @@ export default function SettingsPage() {
       toast.error('Enter at least a purchase or selling rate')
       return
     }
+
+    if (!orgId) {
+      toast.error("Organization not loaded");
+      return;
+    }
+
     setSavingPrice(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -163,6 +184,7 @@ export default function SettingsPage() {
       const { error } = await supabase
         .from('item_prices')
         .insert({
+          org_id:         orgId,
           item_id:        itemId,
           purchase_rate:  newPurchase ? Number(newPurchase) : null,
           selling_rate:   newSelling  ? Number(newSelling)  : null,
@@ -179,8 +201,8 @@ export default function SettingsPage() {
       setNewPurchase('')
       setNewSelling('')
       toast.success('Price updated — effective from today')
-    } catch (err: any) {
-      toast.error(err.message)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Operation failed");
     } finally {
       setSavingPrice(false)
     }
@@ -197,19 +219,23 @@ export default function SettingsPage() {
     setReconciling(true)
     setReconcileResult(null)
     try {
-      const { data, error } = await supabase.rpc('reconcile_inventory_balance')
-      if (error) throw error
-      const result = (data as any[]) ?? []
-      setReconcileResult(result)
+      const { data, error } = await supabase.rpc("reconcile_inventory_balance");
+      if (error) throw error;
+      const result = (data as any[]) ?? [];
+      setReconcileResult(result);
       if (result.length === 0) {
-        toast.success('All balances correct — no drift detected')
+        toast.success("All balances correct — no drift detected");
       } else {
-        toast.warning(`Fixed ${result.length} balance discrepanc${result.length === 1 ? 'y' : 'ies'}`)
+        toast.warning(
+          `Fixed ${result.length} balance discrepanc${
+            result.length === 1 ? "y" : "ies"
+          }`
+        );
       }
-    } catch (err: any) {
-      toast.error(err.message)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Operation failed");
     } finally {
-      setReconciling(false)
+      setReconciling(false);
     }
   }
 

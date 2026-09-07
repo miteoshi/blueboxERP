@@ -10,25 +10,25 @@ import { Input, Textarea } from '@/components/ui/input'
 import { TableLoader } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 import { Plus, Search, X } from 'lucide-react'
+import { useOrgId } from '@/lib/hooks/use-tenant'
 
-function useSuppliers(search: string) {
-  const supabase = createClient()
+function useSuppliers(search: string, orgId: string | null) {
+  const supabase = createClient();
   return useQuery({
-    queryKey: ['suppliers', search],
+    queryKey: ["suppliers", orgId, search],
     queryFn: async () => {
-      let query = supabase
-        .from('suppliers')
-        .select('*')
-        .order('name')
+      if (!orgId) return [];
+      let query = supabase.from("suppliers").select("*").order("name");
       if (search) {
-        query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`)
+        query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`);
       }
-      const { data, error } = await query
-      if (error) throw error
-      return data
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
     },
     staleTime: 2 * 60 * 1000,
-  })
+    enabled: !!orgId,
+  });
 }
 
 interface SupplierForm {
@@ -53,6 +53,7 @@ const EMPTY: SupplierForm = {
 export default function SuppliersPage() {
   const supabase = createClient()
   const qc       = useQueryClient()
+  const orgId    = useOrgId()
 
   const [search,   setSearch]   = useState('')
   const [showForm, setShowForm] = useState(false)
@@ -60,7 +61,7 @@ export default function SuppliersPage() {
   const [form,     setForm]     = useState<SupplierForm>(EMPTY)
   const [saving,   setSaving]   = useState(false)
 
-  const { data: suppliers, isLoading } = useSuppliers(search)
+  const { data: suppliers, isLoading } = useSuppliers(search, orgId)
 
   const f = (field: keyof SupplierForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(prev => ({ ...prev, [field]: e.target.value }))
@@ -85,6 +86,10 @@ export default function SuppliersPage() {
 
   async function handleSave() {
     if (!form.name.trim()) { toast.error('Supplier name is required'); return }
+    if (!orgId) {
+      toast.error("Organization not loaded");
+      return;
+    }
     setSaving(true)
     try {
       const payload = {
@@ -105,15 +110,18 @@ export default function SuppliersPage() {
         if (error) throw error
         toast.success('Supplier updated')
       } else {
-        const { error } = await supabase.from('suppliers').insert(payload)
+        const { error } = await supabase.from('suppliers').insert({
+          ...payload,
+          org_id: orgId,
+        })
         if (error) throw error
         toast.success('Supplier added')
       }
 
       qc.invalidateQueries({ queryKey: ['suppliers'] })
       setShowForm(false)
-    } catch (err: any) {
-      toast.error(err.message)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save supplier')
     } finally {
       setSaving(false)
     }

@@ -1,5 +1,5 @@
 'use client'
-
+import { useOrgId } from "@/lib/hooks/use-tenant";
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -31,14 +31,21 @@ const TRANSPORT_LABELS: Record<string, string> = {
   hand_delivery:  '🤝 Hand Delivery',
 }
 
-function useChallan(id: string) {
-  const supabase = createClient()
+function useChallan(id: string, orgId: string | null) {
+  const supabase = createClient();
+
   return useQuery({
-    queryKey: ['delivery-challans', id],
+    queryKey: ["delivery-challans", orgId, id],
+
     queryFn: async () => {
+      if (!orgId) {
+        throw new Error("Organization context is not available");
+      }
+
       const { data, error } = await supabase
-        .from('delivery_challans')
-        .select(`
+        .from("delivery_challans")
+        .select(
+          `
           *,
           client:clients ( id, name, phone, gst_number, address, city ),
           sales_order:sales_orders ( id, so_number, total_amount, balance_due ),
@@ -48,101 +55,136 @@ function useChallan(id: string) {
             item:items ( id, item_code, name, unit, category ),
             so_line:sales_order_lines ( id, qty, qty_dispatched )
           )
-        `)
-        .eq('id', id)
-        .single()
-      if (error) throw error
-      return data
+        `
+        )
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+
+      return data;
     },
+
+    enabled: !!orgId && !!id,
     staleTime: 30 * 1000,
-  })
+  });
 }
 
-function useMovements(challanId: string) {
-  const supabase = createClient()
+function useMovements(challanId: string, orgId: string | null) {
+  const supabase = createClient();
+
   return useQuery({
-    queryKey: ['challan-movements', challanId],
+    queryKey: ["challan-movements", orgId, challanId],
+
     queryFn: async () => {
+      if (!orgId) {
+        throw new Error("Organization context is not available");
+      }
+
       const { data, error } = await supabase
-        .from('stock_movements')
-        .select('id, qty, movement_type, movement_date, rate_at_time, item_id')
-        .eq('ref_type', 'delivery_challan')
-        .eq('ref_id', challanId)
-      if (error) throw error
-      return data
+        .from("stock_movements")
+        .select("id, qty, movement_type, movement_date, rate_at_time, item_id")
+        .eq("ref_type", "delivery_challan")
+        .eq("ref_id", challanId);
+
+      if (error) throw error;
+
+      return data;
     },
+
+    enabled: !!orgId && !!challanId,
     staleTime: 60 * 1000,
-  })
+  });
 }
 
 export default function ChallanDetailPage() {
-  const { id }   = useParams<{ id: string }>()
-  const router   = useRouter()
-  const supabase = createClient()
-  const qc       = useQueryClient()
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const supabase = createClient();
+  const qc = useQueryClient();
+  const orgId = useOrgId();
 
-  const { data: dc, isLoading } = useChallan(id)
-  const { data: movements }     = useMovements(id)
+  const { data: dc, isLoading } = useChallan(id, orgId);
+  const { data: movements } = useMovements(id, orgId);
 
-  const [marking, setMarking] = useState(false)
+  const [marking, setMarking] = useState(false);
 
-  if (isLoading) return <PageLoader />
-  if (!dc)       return <div className="text-slate-500 text-sm p-6">Challan not found</div>
+  if (isLoading) return <PageLoader />;
+  if (!dc)
+    return <div className="text-slate-500 text-sm p-6">Challan not found</div>;
 
-  const client  = dc.client      as any
-  const so      = dc.sales_order as any
-  const creator = dc.creator     as any
-  const lines   = (dc.delivery_challan_lines as any[]) ?? []
+  const client = dc.client as any;
+  const so = dc.sales_order as any;
+  const creator = dc.creator as any;
+  const lines = (dc.delivery_challan_lines as any[]) ?? [];
 
-  const totalQty   = lines.reduce((s: number, l: any) => s + l.qty, 0)
-  const totalValue = dc.total_amount ?? 0
+  const totalQty = lines.reduce((s: number, l: any) => s + l.qty, 0);
+  const totalValue = dc.total_amount ?? 0;
 
   // ── Mark as delivered ─────────────────────────────────────
-  async function handleMarkDelivered() {
-    setMarking(true)
-    try {
-      const { error } = await supabase
-        .from('delivery_challans')
-        .update({ status: 'delivered' })
-        .eq('id', id)
-
-      if (error) throw error
-
-      // Also update the linked SO status to delivered
-      // if all challans for this SO are now delivered
-      if (so?.id) {
-        const { data: allChallans } = await supabase
-          .from('delivery_challans')
-          .select('id, status')
-          .eq('so_id', so.id)
-
-        const allDelivered = allChallans?.every(c =>
-          c.status === 'delivered' || c.id === id
-        )
-
-        if (allDelivered) {
-          await supabase
-            .from('sales_orders')
-            .update({ status: 'delivered' })
-            .eq('id', so.id)
-        }
-      }
-
-      qc.invalidateQueries({ queryKey: ['delivery-challans'] })
-      qc.invalidateQueries({ queryKey: ['sales-orders'] })
-      toast.success('Challan marked as delivered')
-    } catch (err: any) {
-      toast.error(err.message)
-    } finally {
-      setMarking(false)
-    }
+async function handleMarkDelivered() {
+  if (!orgId) {
+    toast.error("Organization context is not available");
+    return;
   }
+
+  setMarking(true);
+
+  try {
+    const { error } = await supabase
+      .from("delivery_challans")
+      .update({ status: "delivered" })
+      .eq("id", id);
+
+    if (error) throw error;
+
+    // Also update the linked SO status to delivered
+    // if all challans for this SO are now delivered
+    if (so?.id) {
+      const { data: allChallans, error: challansError } = await supabase
+        .from("delivery_challans")
+        .select("id, status")
+        .eq("so_id", so.id);
+
+      if (challansError) throw challansError;
+
+      const allDelivered = allChallans?.every(
+        (c) => c.status === "delivered" || c.id === id
+      );
+
+      if (allDelivered) {
+        const { error: soError } = await supabase
+          .from("sales_orders")
+          .update({ status: "delivered" })
+          .eq("id", so.id);
+
+        if (soError) throw soError;
+      }
+    }
+
+    await qc.invalidateQueries({ queryKey: ["delivery-challans"] });
+    await qc.invalidateQueries({ queryKey: ["sales-orders"] });
+
+    toast.success("Challan marked as delivered");
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error
+        ? err.message
+        : "Failed to mark challan as delivered";
+
+    toast.error(message);
+  } finally {
+    setMarking(false);
+  }
+}
 
   return (
     <div>
       <PageHeader
         title={dc.challan_no}
-        description={`Delivery Challan · ${client?.name} · ${formatDate(dc.challan_date)}`}
+        description={`Delivery Challan · ${client?.name} · ${formatDate(
+          dc.challan_date
+        )}`}
       >
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4" />
@@ -161,7 +203,7 @@ export default function ChallanDetailPage() {
         </a>
 
         {/* Mark as delivered */}
-        {dc.status === 'dispatched' && (
+        {dc.status === "dispatched" && (
           <Button
             size="sm"
             loading={marking}
@@ -175,10 +217,8 @@ export default function ChallanDetailPage() {
       </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
         {/* ── Left ── */}
         <div className="space-y-4">
-
           {/* Challan details */}
           <Card>
             <CardHeader>
@@ -188,12 +228,29 @@ export default function ChallanDetailPage() {
               </h3>
             </CardHeader>
             <CardBody className="space-y-3 text-sm">
-              <Row label="Challan No."  value={<span className="font-mono font-bold">{dc.challan_no}</span>} />
-              <Row label="Status"       value={<Badge variant={STATUS_COLORS[dc.status] ?? 'default'}>{dc.status}</Badge>} />
-              <Row label="Date"         value={formatDate(dc.challan_date)} />
-              <Row label="Transport"    value={TRANSPORT_LABELS[dc.transport_mode] ?? dc.transport_mode} />
-              {dc.vehicle_no  && <Row label="Vehicle No."  value={dc.vehicle_no} />}
-              {dc.driver_name && <Row label="Driver"       value={dc.driver_name} />}
+              <Row
+                label="Challan No."
+                value={
+                  <span className="font-mono font-bold">{dc.challan_no}</span>
+                }
+              />
+              <Row
+                label="Status"
+                value={
+                  <Badge variant={STATUS_COLORS[dc.status] ?? "default"}>
+                    {dc.status}
+                  </Badge>
+                }
+              />
+              <Row label="Date" value={formatDate(dc.challan_date)} />
+              <Row
+                label="Transport"
+                value={TRANSPORT_LABELS[dc.transport_mode] ?? dc.transport_mode}
+              />
+              {dc.vehicle_no && (
+                <Row label="Vehicle No." value={dc.vehicle_no} />
+              )}
+              {dc.driver_name && <Row label="Driver" value={dc.driver_name} />}
             </CardBody>
           </Card>
 
@@ -207,9 +264,13 @@ export default function ChallanDetailPage() {
             </CardHeader>
             <CardBody className="space-y-1.5 text-sm">
               <div className="font-semibold text-slate-900">{client?.name}</div>
-              {client?.phone && <div className="text-slate-500">{client.phone}</div>}
+              {client?.phone && (
+                <div className="text-slate-500">{client.phone}</div>
+              )}
               {client?.gst_number && (
-                <div className="font-mono text-xs text-slate-400">GST: {client.gst_number}</div>
+                <div className="font-mono text-xs text-slate-400">
+                  GST: {client.gst_number}
+                </div>
               )}
               {client?.address && (
                 <div className="text-slate-500 text-xs">
@@ -240,7 +301,9 @@ export default function ChallanDetailPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-slate-500">SO Value</span>
-                  <span className="font-medium">{formatCurrency(so.total_amount)}</span>
+                  <span className="font-medium">
+                    {formatCurrency(so.total_amount)}
+                  </span>
                 </div>
                 {so.balance_due > 0 && (
                   <div className="flex items-center justify-between">
@@ -257,11 +320,13 @@ export default function ChallanDetailPage() {
           {/* Summary */}
           <Card>
             <CardBody className="space-y-2 text-sm">
-              <Row label="Total Lines"  value={`${lines.length} items`} />
-              <Row label="Total Qty"    value={`${totalQty} units`} />
+              <Row label="Total Lines" value={`${lines.length} items`} />
+              <Row label="Total Qty" value={`${totalQty} units`} />
               <div className="flex justify-between font-bold text-base border-t border-slate-100 pt-2">
                 <span>Challan Value</span>
-                <span className="text-blue-600">{formatCurrency(totalValue)}</span>
+                <span className="text-blue-600">
+                  {formatCurrency(totalValue)}
+                </span>
               </div>
               <p className="text-xs text-slate-400 pt-1">
                 GST invoice raised separately.
@@ -282,7 +347,9 @@ export default function ChallanDetailPage() {
           {dc.notes && (
             <Card>
               <CardBody>
-                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Notes</p>
+                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">
+                  Notes
+                </p>
                 <p className="text-sm text-slate-700">{dc.notes}</p>
               </CardBody>
             </Card>
@@ -291,14 +358,13 @@ export default function ChallanDetailPage() {
 
         {/* ── Right ── */}
         <div className="lg:col-span-2 space-y-6">
-
           {/* Line items */}
           <Card>
             <CardHeader>
               <h3 className="text-sm font-semibold text-slate-900">
                 Items Dispatched
                 <span className="ml-2 text-xs font-normal text-slate-400">
-                  {lines.length} line{lines.length !== 1 ? 's' : ''}
+                  {lines.length} line{lines.length !== 1 ? "s" : ""}
                 </span>
               </h3>
             </CardHeader>
@@ -306,26 +372,45 @@ export default function ChallanDetailPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">#</th>
-                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Item</th>
-                    <th className="text-center px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Category</th>
-                    <th className="text-right px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Qty</th>
-                    <th className="text-center px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Unit</th>
-                    <th className="text-right px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Rate</th>
-                    <th className="text-right px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Value</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
+                      #
+                    </th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
+                      Item
+                    </th>
+                    <th className="text-center px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
+                      Category
+                    </th>
+                    <th className="text-right px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
+                      Qty
+                    </th>
+                    <th className="text-center px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
+                      Unit
+                    </th>
+                    <th className="text-right px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
+                      Rate
+                    </th>
+                    <th className="text-right px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
+                      Value
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {lines.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="text-center py-8 text-slate-400 text-xs">
+                      <td
+                        colSpan={7}
+                        className="text-center py-8 text-slate-400 text-xs"
+                      >
                         No lines
                       </td>
                     </tr>
                   )}
                   {lines.map((line: any, i: number) => (
                     <tr key={line.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 text-slate-400 text-xs">{i + 1}</td>
+                      <td className="px-4 py-3 text-slate-400 text-xs">
+                        {i + 1}
+                      </td>
                       <td className="px-4 py-3">
                         <Link href={`/items/${line.item?.id}`}>
                           <span className="font-mono text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded mr-2">
@@ -346,23 +431,31 @@ export default function ChallanDetailPage() {
                         {line.unit}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums text-slate-600">
-                        {line.rate ? formatCurrency(line.rate) : '—'}
+                        {line.rate ? formatCurrency(line.rate) : "—"}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
-                        {line.line_total ? formatCurrency(line.line_total) : '—'}
+                        {line.line_total
+                          ? formatCurrency(line.line_total)
+                          : "—"}
                       </td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="bg-slate-50 border-t border-slate-200">
-                    <td colSpan={3} className="px-4 py-2.5 text-xs text-slate-500">
-                      {lines.length} item{lines.length !== 1 ? 's' : ''}
+                    <td
+                      colSpan={3}
+                      className="px-4 py-2.5 text-xs text-slate-500"
+                    >
+                      {lines.length} item{lines.length !== 1 ? "s" : ""}
                     </td>
                     <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-slate-900">
                       {totalQty}
                     </td>
-                    <td colSpan={2} className="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">
+                    <td
+                      colSpan={2}
+                      className="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase"
+                    >
                       Total Value
                     </td>
                     <td className="px-4 py-2.5 text-right font-bold text-blue-600 tabular-nums">
@@ -389,10 +482,18 @@ export default function ChallanDetailPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-100">
-                      <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Type</th>
-                      <th className="text-right px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Qty</th>
-                      <th className="text-right px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Rate</th>
-                      <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Date</th>
+                      <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
+                        Type
+                      </th>
+                      <th className="text-right px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
+                        Qty
+                      </th>
+                      <th className="text-right px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
+                        Rate
+                      </th>
+                      <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
+                        Date
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -405,7 +506,9 @@ export default function ChallanDetailPage() {
                           -{m.qty}
                         </td>
                         <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">
-                          {m.rate_at_time ? formatCurrency(m.rate_at_time) : '—'}
+                          {m.rate_at_time
+                            ? formatCurrency(m.rate_at_time)
+                            : "—"}
                         </td>
                         <td className="px-4 py-2.5 text-slate-500">
                           {formatDate(m.movement_date)}
@@ -417,11 +520,10 @@ export default function ChallanDetailPage() {
               </div>
             </Card>
           )}
-
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {

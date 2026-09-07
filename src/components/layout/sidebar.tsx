@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/hooks/use-profile'
+import { useTenant } from '@/lib/hooks/use-tenant'
 import { cn } from '@/lib/utils/cn'
 import { toast } from 'sonner'
 import { useState } from 'react'
@@ -167,6 +168,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const router   = useRouter()
   const supabase = createClient()
+  const { organization } = useTenant()
 
   const { data: profile } = useProfile()
   const role = profile?.role
@@ -216,9 +218,9 @@ export function Sidebar() {
         <div style={S.logoIcon}>
           <Zap style={{ width: 17, height: 17, color: '#fff' }} />
         </div>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', letterSpacing: '0.01em', lineHeight: 1.2 }}>
-            Blue Box
+        <div className="min-w-0 flex-1">
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', letterSpacing: '0.01em', lineHeight: 1.2 }} className="truncate" title={organization?.name || 'Blue Box'}>
+            {organization?.name || 'Blue Box'}
           </div>
           <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
             ERP System

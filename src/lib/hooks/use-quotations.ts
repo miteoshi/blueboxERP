@@ -2,9 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useOrgId } from '@/lib/hooks/use-tenant'
 import { toast } from 'sonner'
 import type { Enums, Tables } from '@/lib/types/database'
-
 
 export type Quotation = Tables<'quotations'>
 export type DocumentStatus = Enums<'document_status'>
@@ -16,10 +16,13 @@ export function useQuotations(filters?: {
   search?: string
 }) {
   const supabase = createClient()
+  const orgId = useOrgId()
 
   return useQuery({
-    queryKey: ['quotations', filters],
+    queryKey: ['quotations', orgId, filters],
     queryFn: async () => {
+      if (!orgId) return []
+
       let query = supabase
         .from('quotations')
         .select(`
@@ -43,6 +46,7 @@ export function useQuotations(filters?: {
       if (error) throw error
       return data
     },
+    enabled: !!orgId,
     staleTime: 30 * 1000,
   })
 }
@@ -50,11 +54,13 @@ export function useQuotations(filters?: {
 // ── Single quotation with lines ───────────────────────────────
 export function useQuotation(id: string | null) {
   const supabase = createClient()
+  const orgId = useOrgId()
 
   return useQuery({
-    queryKey: ['quotations', id],
+    queryKey: ['quotations', orgId, id],
     queryFn: async () => {
-      if (!id) return null
+      if (!id || !orgId) return null
+
       const { data, error } = await supabase
         .from('quotations')
         .select(`
@@ -69,10 +75,11 @@ export function useQuotation(id: string | null) {
         `)
         .eq('id', id)
         .single()
+
       if (error) throw error
       return data
     },
-    enabled: !!id,
+    enabled: !!id && !!orgId,
     staleTime: 30 * 1000,
   })
 }
@@ -94,38 +101,56 @@ export function useUpdateQuotationStatus() {
     }) => {
       // Update quotation status
       const updates: Partial<Quotation> = { status }
+
       if (status === 'approved') {
         updates.approved_at = new Date().toISOString()
+
         // approved_by is set by the DB via auth.uid() in audit log
         // We set it here manually for the UI
         const { data: { user } } = await supabase.auth.getUser()
-        if (user) updates.approved_by = user.id
+
+        if (user) {
+          updates.approved_by = user.id
+        }
       }
 
       const { error: qError } = await supabase
         .from('quotations')
         .update(updates)
         .eq('id', id)
+
       if (qError) throw qError
 
       // Log the approval action
       const { data: { user } } = await supabase.auth.getUser()
+
       if (user) {
-        await supabase.from('approvals').insert({
-          ref_type: 'quotation',
-          ref_id: id,
-          action: status === 'approved'
-            ? 'approved'
-            : status === 'rejected'
-            ? 'rejected'
-            : 'revision_requested',
-          actioned_by: user.id,
-          comments: comments ?? null,
-        })
+        const { data: qData } = await supabase
+          .from('quotations')
+          .select('org_id')
+          .eq('id', id)
+          .single()
+
+        if (qData?.org_id) {
+          await supabase.from('approvals').insert({
+            org_id: qData.org_id,
+            ref_type: 'quotation',
+            ref_id: id,
+            action: status === 'approved'
+              ? 'approved'
+              : status === 'rejected'
+              ? 'rejected'
+              : 'revision_requested',
+            actioned_by: user.id,
+            comments: comments ?? null,
+          })
+        }
       }
     },
+
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['quotations'] })
+
       toast.success(
         vars.status === 'approved'
           ? 'Quotation approved'
@@ -134,6 +159,7 @@ export function useUpdateQuotationStatus() {
           : 'Status updated'
       )
     },
+
     onError: (err: Error) => toast.error(err.message),
   })
 }

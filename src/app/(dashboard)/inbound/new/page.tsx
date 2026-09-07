@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useOrgId } from '@/lib/hooks/use-tenant'
 import { receiveInventory } from '@/lib/utils/inventory'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
@@ -39,54 +40,73 @@ const EMPTY_LINE: GrnLine = {
   unit: 'No.', rate: 0, gst_percent: '18',
 }
 
-function useSuppliers() {
-  const supabase = createClient()
+function useSuppliers(orgId: string | null) {
+  const supabase = createClient();
+
   return useQuery({
-    queryKey: ['suppliers-list'],
+    queryKey: ["suppliers-list", orgId],
     queryFn: async () => {
+      if (!orgId) return [];
+
       const { data, error } = await supabase
-        .from('suppliers')
-        .select('id, name, payment_terms')
-        .eq('is_active', true)
-        .order('name')
-      if (error) throw error
-      return data
+        .from("suppliers")
+        .select("id, name, payment_terms")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      return data;
     },
+    enabled: !!orgId,
     staleTime: 5 * 60 * 1000,
-  })
+  });
 }
 
-function useItemsForGrn() {
-  const supabase = createClient()
+function useItemsForGrn(orgId: string | null) {
+  const supabase = createClient();
+
   return useQuery({
-    queryKey: ['items-for-grn'],
+    queryKey: ["items-for-grn", orgId],
     queryFn: async () => {
+      if (!orgId) return [];
+
       const { data, error } = await supabase
-        .from('items')
-        .select('id, item_code, name, unit, hsn_code')
-        .eq('is_active', true)
-        .or('is_traded.eq.true,is_raw_material.eq.true')
-        .order('name')
-      if (error) throw error
+        .from("items")
+        .select("id, item_code, name, unit, hsn_code")
+        .eq("is_active", true)
+        .or("is_traded.eq.true,is_raw_material.eq.true")
+        .order("name");
+
+      if (error) throw error;
 
       // Get current purchase prices
-      const { data: prices } = await supabase
-        .from('v_current_prices')
-        .select('item_id, purchase_rate, gst_percent')
+      const { data: prices, error: pricesError } = await supabase
+        .from("v_current_prices")
+        .select("item_id, purchase_rate, gst_percent");
 
-      const priceMap = new Map(prices?.map(p => [p.item_id, p]) ?? [])
-      return data?.map(i => ({ ...i, price: priceMap.get(i.id) ?? null })) ?? []
+      if (pricesError) throw pricesError;
+
+      const priceMap = new Map(prices?.map((p) => [p.item_id, p]) ?? []);
+
+      return (
+        data?.map((i) => ({
+          ...i,
+          price: priceMap.get(i.id) ?? null,
+        })) ?? []
+      );
     },
+    enabled: !!orgId,
     staleTime: 5 * 60 * 1000,
-  })
+  });
 }
 
 export default function NewGrnPage() {
   const router   = useRouter()
   const supabase = createClient()
+  const orgId    = useOrgId()
 
-  const { data: suppliers } = useSuppliers()
-  const { data: items }     = useItemsForGrn()
+const { data: suppliers } = useSuppliers(orgId);
+const { data: items } = useItemsForGrn(orgId);
 
   const [supplierId,    setSupplierId]    = useState('')
   const [receiptDate,   setReceiptDate]   = useState(new Date().toISOString().split('T')[0])
@@ -140,74 +160,83 @@ export default function NewGrnPage() {
     if (lines.some(l => l.qty_received <= 0)) { toast.error('All quantities must be > 0'); return }
     if (lines.some(l => l.rate <= 0))         { toast.error('All rates must be > 0');       return }
 
+    if (!orgId) {
+      toast.error("Organization not loaded");
+      return;
+    }
+
     setSaving(true)
     try {
-      // Generate GRN number
-      const { data: grnNo } = await supabase.rpc('next_grn_no')
+      // Generate GRN number with tenant org_id
+      const { data: grnNo, error: rpcErr } = await supabase.rpc("next_grn_no", {
+        p_org_id: orgId,
+      });
+      if (rpcErr) throw rpcErr;
 
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      // Create GRN header
+      // Create GRN header with org_id
       const { data: grn, error: grnErr } = await supabase
-        .from('inbound_receipts')
+        .from("inbound_receipts")
         .insert({
-          receipt_no:     grnNo as string,
-          supplier_id:    supplierId,
-          receipt_date:   receiptDate,
+          org_id: orgId,
+          receipt_no: grnNo as string,
+          supplier_id: supplierId,
+          receipt_date: receiptDate,
           transport_mode: transportMode,
-          vehicle_no:     vehicleNo    || null,
-          driver_name:    driverName   || null,
-          challan_no:     challanNo    || null,
-          invoice_no:     invoiceNo    || null,
-          total_amount:   subtotal,
-          gst_amount:     gstAmount,
-          status:         'received',
-          notes:          notes        || null,
-          received_by:    user?.id     ?? null,
-          created_by:     user?.id     ?? null,
+          vehicle_no: vehicleNo || null,
+          driver_name: driverName || null,
+          challan_no: challanNo || null,
+          invoice_no: invoiceNo || null,
+          total_amount: subtotal,
+          gst_amount: gstAmount,
+          status: "received",
+          notes: notes || null,
+          received_by: user?.id ?? null,
+          created_by: user?.id ?? null,
         })
-        .select('id')
-        .single()
+        .select("id")
+        .single();
 
-      if (grnErr) throw grnErr
+      if (grnErr) throw grnErr;
 
-      // Insert GRN lines — each triggers grn_to_stock trigger which:
-      // 1. Creates stock_movements inbound row
-      // 2. sync_inventory_balance trigger fires → updates inventory_balance
+      // Insert GRN lines. Note: there is no DB trigger on inbound_receipt_lines that
+      // syncs stock — the receiveInventory() calls below are what create the
+      // stock_movements rows and update inventory_balance for each line.
       const { error: linesErr } = await supabase
-        .from('inbound_receipt_lines')
+        .from("inbound_receipt_lines")
         .insert(
-          lines.map(l => ({
-            receipt_id:   grn.id,
-            item_id:      l.item_id,
-            qty_ordered:  l.qty_ordered > 0 ? l.qty_ordered : null,
+          lines.map((l) => ({ 
+            receipt_id: grn.id,
+            item_id: l.item_id,
+            qty_ordered: l.qty_ordered > 0 ? l.qty_ordered : null,
             qty_received: l.qty_received,
-            unit:         l.unit as UnitOfMeasure,
-            rate:         l.rate,
-            gst_percent:  l.gst_percent,
+            unit: l.unit as UnitOfMeasure,
+            rate: l.rate,
+            gst_percent: l.gst_percent,
           }))
-        )
+        );
 
-      if (linesErr) throw linesErr
+      if (linesErr) throw linesErr;
 
       // ── Create stock movements manually ─────────────────────
       for (const line of lines) {
-
         await receiveInventory({
           itemId: line.item_id,
           qty: line.qty_received,
           rate: line.rate,
           refId: grn.id,
-        })
+        });
       }
 
-      toast.success(`GRN ${grnNo} created — stock updated`)
-      router.push('/inbound')
-
-    } catch (err: any) {
-      toast.error(err.message)
-    } finally {
+      toast.success(`GRN ${grnNo} created — stock updated`);
+      router.push("/inbound");
+    } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : 'Failed to create GRN')
+} finally {
       setSaving(false)
     }
   }

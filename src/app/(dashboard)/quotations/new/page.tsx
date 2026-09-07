@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
@@ -12,7 +12,7 @@ import { formatCurrency } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { Plus, Trash2, Save, Send } from 'lucide-react'
 import type { Enums } from '@/lib/types/database'
-import {useProductionOrder} from "@/lib/hooks/use-production"
+import { useOrgId } from '@/lib/hooks/use-tenant'
 
 type GstRate = Enums<'gst_rate'>
 
@@ -35,50 +35,63 @@ const EMPTY_LINE: LineItem = {
 
 // Fetch active clients
 function useClients() {
-  const supabase = createClient()
+  const supabase = createClient();
+  const orgId = useOrgId();
+
   return useQuery({
-    queryKey: ['clients-list'],
+    queryKey: ["clients-list", orgId],
     queryFn: async () => {
+      if (!orgId) return [];
+
       const { data, error } = await supabase
-        .from('clients')
-        .select('id, name, phone, gst_number')
-        .eq('is_active', true)
-        .order('name')
-      if (error) throw error
-      return data
+        .from("clients")
+        .select("id, name, phone, gst_number")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      return data;
     },
+    enabled: !!orgId,
     staleTime: 5 * 60 * 1000,
-    refetchOnMount: true
-  })
+    refetchOnMount: true,
+  });
 }
 
 // Fetch items with current selling price
 function useItemsForQuote() {
-  const supabase = createClient()
+  const supabase = createClient();
+  const orgId = useOrgId();
+
   return useQuery({
-    queryKey: ['items-for-quote'],
+    queryKey: ["items-for-quote", orgId],
     queryFn: async () => {
+      if (!orgId) return [];
       const { data: items, error } = await supabase
-        .from('items')
-        .select('id, item_code, name, unit, hsn_code, category')
-        .eq('is_active', true)
-        .order('name')
-      if (error) throw error
+        .from("items")
+        .select("id, item_code, name, unit, hsn_code, category")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
 
       const { data: prices } = await supabase
-        .from('v_current_prices')
-        .select('item_id, selling_rate, gst_percent, rate_unit')
+        .from("v_current_prices")
+        .select("item_id, selling_rate, gst_percent, rate_unit");
 
-      const priceMap = new Map(prices?.map(p => [p.item_id, p]) ?? [])
-      return items?.map(i => ({ ...i, price: priceMap.get(i.id) ?? null })) ?? []
+      const priceMap = new Map(prices?.map((p) => [p.item_id, p]) ?? []);
+      return (
+        items?.map((i) => ({ ...i, price: priceMap.get(i.id) ?? null })) ?? []
+      );
     },
     staleTime: 5 * 60 * 1000,
-  })
+    enabled: !!orgId,
+  });
 }
 
 export default function NewQuotationPage() {
   const router = useRouter()
   const supabase = createClient()
+  const orgId = useOrgId()
 
   const { data: clients } = useClients()
   const { data: items }   = useItemsForQuote()
@@ -143,61 +156,73 @@ export default function NewQuotationPage() {
     if (!clientId) { toast.error('Please select a client'); return }
     if (lines.some(l => !l.item_id)) { toast.error('All lines must have an item selected'); return }
     if (lines.some(l => l.qty <= 0)) { toast.error('All quantities must be greater than 0'); return }
+    if (!orgId) {
+      toast.error("Organization not loaded");
+      return;
+    }
 
     submit ? setSubmitting(true) : setSaving(true)
 
     try {
-      // Generate quotation number
-      const { data: qtNo } = await supabase.rpc('next_qt_no')
-      const { data: { user } } = await supabase.auth.getUser()
-      // Insert quotation header
-      const { data: qt, error: qtErr } = await supabase
-        .from('quotations')
-        .insert({
-          quotation_no:   qtNo as string,
-          created_by:user?.id ?? null,
-          client_id:      clientId,
-          valid_until:    validUntil || null,
-          delivery_days:  deliveryDays ? Number(deliveryDays) : null,
-          payment_terms:  paymentTerms || null,
-          transport_note: transportNote || null,
-          notes:          notes || null,
-          status:         submit ? 'pending_approval' : 'draft',
-          subtotal,
-          gst_amount:     gstAmount,
-          total_amount:   totalAmount,
-        })
-        .select('id')
-        .single()
+      // Generate quotation number with tenant org_id
+      const { data: qtNo, error: rpcErr } = await supabase.rpc("next_qt_no", {
+        p_org_id: orgId,
+      });
+      if (rpcErr) throw rpcErr;
 
-      if (qtErr) throw qtErr
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      // Insert quotation header with org_id
+      const { data: qt, error: qtErr } = await supabase
+        .from("quotations")
+        .insert({
+          org_id: orgId,
+          quotation_no: qtNo as string,
+          created_by: user?.id ?? null,
+          client_id: clientId,
+          valid_until: validUntil || null,
+          delivery_days: deliveryDays ? Number(deliveryDays) : null,
+          payment_terms: paymentTerms || null,
+          transport_note: transportNote || null,
+          notes: notes || null,
+          status: submit ? "pending_approval" : "draft",
+          subtotal,
+          gst_amount: gstAmount,
+          total_amount: totalAmount,
+        })
+        .select("id")
+        .single();
+
+      if (qtErr) throw qtErr;
 
       // Insert lines
-      const { error: linesErr } = await supabase
-        .from('quotation_lines')
-        .insert(
-          lines.map((l, idx) => ({
-            quotation_id: qt.id,
-            item_id:      l.item_id,
-            description:  l.description || null,
-            qty:          l.qty,
-            unit:         l.unit as any,
-            unit_rate:    l.unit_rate,
-            gst_percent:  l.gst_percent,
-            sort_order:   idx,
-          }))
-        )
+      const { error: linesErr } = await supabase.from("quotation_lines").insert(
+        lines.map((l, idx) => ({
+          quotation_id: qt.id,
+          item_id: l.item_id,
+          description: l.description || null,
+          qty: l.qty,
+          unit: l.unit as any,
+          unit_rate: l.unit_rate,
+          gst_percent: l.gst_percent,
+          sort_order: idx,
+        }))
+      );
 
-      if (linesErr) throw linesErr
+      if (linesErr) throw linesErr;
 
-      toast.success(submit ? 'Quotation submitted for approval' : 'Quotation saved as draft')
-      router.push(`/quotations/${qt.id}`)
-
-    } catch (err: any) {
-      toast.error(err.message)
+      toast.success(
+        submit ? "Quotation submitted for approval" : "Quotation saved as draft"
+      );
+      router.push(`/quotations/${qt.id}`);
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to save quotation"
+      );
     } finally {
-      setSaving(false)
-      setSubmitting(false)
+      setSaving(false);
+      setSubmitting(false);
     }
   }
 

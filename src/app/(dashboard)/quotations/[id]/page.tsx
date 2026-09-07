@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuotation, useUpdateQuotationStatus } from '@/lib/hooks/use-quotations'
 import { useCanApprove, useCanSell } from '@/lib/hooks/use-profile'
+import { useOrgId } from '@/lib/hooks/use-tenant'
 import { createClient } from '@/lib/supabase/client'
 import { PageHeader } from '@/components/layout/page-header'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
@@ -21,6 +22,7 @@ export default function QuotationDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router  = useRouter()
   const supabase = createClient()
+  const orgId = useOrgId()
 
   const canApprove  = useCanApprove()
   const canSell     = useCanSell()
@@ -48,86 +50,90 @@ export default function QuotationDetailPage() {
 
   // ── Convert to Sales Order ────────────────────────────────
   async function convertToSO() {
-    if (!qt) return
-    setConvertingToSO(true)
-    try {
-
-      //calculating delivery date
-      const orderDate = new Date()
-
-const deliveryDate = qt.delivery_days
-  ? new Date(
-      orderDate.getTime() +
-      qt.delivery_days * 24 * 60 * 60 * 1000
-    )
-      .toISOString()
-      .split('T')[0]
-  : null
-
-      // Generate SO number
-      const { data: soNo } = await supabase.rpc('next_so_no')
-      const {
-        data: { user }
-      } = await supabase.auth.getUser()
-      // Create sales order from quotation
-      const { data: so, error: soErr } = await supabase
-        .from('sales_orders')
-        .insert({
-          so_number:    soNo as string,
-          created_by: user?.id ?? null,
-          quotation_id: qt.id,
-          client_id:    qt.client_id,
-          order_date:   new Date().toISOString().split('T')[0],
-          status:       'confirmed',
-          subtotal:     qt.subtotal,
-          gst_amount:   qt.gst_amount,
-          total_amount: qt.total_amount,
-          balance_due:  qt.total_amount,
-          payment_terms: qt.payment_terms,
-          delivery_date: deliveryDate,
-          notes:        [qt.notes, qt.transport_note && `Transport: ${qt.transport_note}`]
-            .filter(Boolean)
-            .join('\n\n') || null,
-        })
-        .select('id')
-        .single()
-
-      if (soErr) throw soErr
-
-      // Copy quotation lines to SO lines
-      const { error: linesErr } = await supabase
-        .from('sales_order_lines')
-        .insert(
-          lines.map((l: any, idx: number) => ({
-            so_id:       so.id,
-            item_id:     l.item_id,
-            description: l.description,
-            qty:         l.qty,
-            unit:        l.unit,
-            unit_rate:   l.unit_rate,
-            gst_percent: l.gst_percent,
-            sort_order:  idx,
-          }))
-        )
-
-      if (linesErr) throw linesErr
-
-      // ── Mark quotation as converted ───────────────────────
-      // Prevents double-conversion and makes the status clear in the list
-      await supabase
-        .from('quotations')
-        .update({ status: 'converted' as any })  // add 'converted' to enum — see SQL below
-        .eq('id', qt.id)
-
-      toast.success('Sales order created successfully!')
-      router.push(`/sales-orders/${so.id}`)
-
-    } catch (err: any) {
-      toast.error(err.message)
-    } finally {
-      setConvertingToSO(false)
+    if (!qt) return;
+    if (!orgId) {
+      toast.error("Organization not loaded");
+      return;
     }
+
+    setConvertingToSO(true);
+  try {
+    //calculating delivery date
+    const orderDate = new Date();
+
+    const deliveryDate = qt.delivery_days
+      ? new Date(orderDate.getTime() + qt.delivery_days * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0]
+      : null;
+
+    // Generate SO number with tenant org_id
+    const { data: soNo, error: rpcErr } = await supabase.rpc("next_so_no", {
+      p_org_id: orgId,
+    });
+    if (rpcErr) throw rpcErr;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    // Create sales order from quotation with org_id
+    const { data: so, error: soErr } = await supabase
+      .from("sales_orders")
+      .insert({
+        org_id: orgId,
+        so_number: soNo as string,
+        created_by: user?.id ?? null,
+        quotation_id: qt.id,
+        client_id: qt.client_id,
+        order_date: new Date().toISOString().split("T")[0],
+        status: "confirmed",
+        subtotal: qt.subtotal,
+        gst_amount: qt.gst_amount,
+        total_amount: qt.total_amount,
+        balance_due: qt.total_amount,
+        payment_terms: qt.payment_terms,
+        delivery_date: deliveryDate,
+        notes:
+          [qt.notes, qt.transport_note && `Transport: ${qt.transport_note}`]
+            .filter(Boolean)
+            .join("\n\n") || null,
+      })
+      .select("id")
+      .single();
+
+    if (soErr) throw soErr;
+
+    // Copy quotation lines to SO lines
+    const { error: linesErr } = await supabase.from("sales_order_lines").insert(
+      lines.map((l: any, idx: number) => ({
+        so_id: so.id,
+        item_id: l.item_id,
+        description: l.description,
+        qty: l.qty,
+        unit: l.unit,
+        unit_rate: l.unit_rate,
+        gst_percent: l.gst_percent,
+        sort_order: idx,
+      }))
+    );
+
+    if (linesErr) throw linesErr;
+
+    // ── Mark quotation as converted ───────────────────────
+    // Prevents double-conversion and makes the status clear in the list
+    await supabase
+      .from("quotations")
+      .update({ status: "converted" as any }) // add 'converted' to enum — see SQL below
+      .eq("id", qt.id);
+
+    toast.success("Sales order created successfully!");
+    router.push(`/sales-orders/${so.id}`);
+  } catch (err: unknown) {
+  toast.error(err instanceof Error ? err.message : 'Failed to convert quotation')
+  } finally {
+    setConvertingToSO(false);
   }
+}
 
   function handleApprove() {
     updateStatus({ id, status: 'approved' })

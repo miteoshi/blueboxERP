@@ -25,17 +25,36 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+const { data: profile, error: profileError } = await supabase
+  .from("profiles")
+  .select("org_id, organizations:org_id ( name )")
+  .eq("id", user.id)
+  .single()
+
+if (profileError || !profile?.org_id) {
+  return NextResponse.json(
+    { error: "User is not associated with an organization" },
+    { status: 403 }
+  )
+}
+
+const orgName =
+  (profile.organizations as { name?: string } | null)?.name ?? 'Blue Box ERP'
+
   try {
     switch (type) {
-      case 'quotation': return generateQuotationHTML(supabase, id)
-      case 'challan':   return generateChallanHTML(supabase, id)
-      case 'grn':       return generateGrnHTML(supabase, id)
+      case 'quotation': return generateQuotationHTML(supabase, id, orgName)
+      case 'challan':   return generateChallanHTML(supabase, id, orgName)
+      case 'grn':       return generateGrnHTML(supabase, id, orgName)
       default:
         return NextResponse.json({ error: 'Unknown document type' }, { status: 400 })
     }
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
-  }
+  } catch (err: unknown) {
+  return NextResponse.json(
+    { error: err instanceof Error ? err.message : 'Internal server error' },
+    { status: 500 }
+  )
+}
 }
 
 // ── Shared print CSS ──────────────────────────────────────────
@@ -85,7 +104,7 @@ const dt = (d: string | null | undefined) =>
   d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 
 // ── Quotation ─────────────────────────────────────────────────
-async function generateQuotationHTML(supabase: any, id: string) {
+async function generateQuotationHTML(supabase: any, id: string, orgName: string) {
   const { data: qt, error } = await supabase
     .from('quotations')
     .select(`
@@ -108,7 +127,7 @@ async function generateQuotationHTML(supabase: any, id: string) {
 
   <div class="header">
     <div>
-      <div class="company-name">High Power Electricals</div>
+      <div class="company-name">${orgName}</div>
       <div class="company-sub">Electrical Hardware Supply &amp; Manufacturing</div>
       <div class="company-sub">Panvel, Maharashtra &nbsp;|&nbsp; GST: 27XXXXX1234X1ZX</div>
       <div class="company-sub">+91 98765 43210 &nbsp;|&nbsp; info@highpowerelectricals.in</div>
@@ -201,7 +220,7 @@ async function generateQuotationHTML(supabase: any, id: string) {
     </div>
     <div class="sign-box">
       <div class="sign-line"></div>
-      <div class="sign-label">For High Power Electricals</div>
+      <div class="sign-label">For ${orgName}</div>
     </div>
   </div>
 
@@ -213,7 +232,7 @@ async function generateQuotationHTML(supabase: any, id: string) {
 }
 
 // ── Delivery Challan ──────────────────────────────────────────
-async function generateChallanHTML(supabase: any, id: string) {
+async function generateChallanHTML(supabase: any, id: string, orgName: string) {
   const { data: dc, error } = await supabase
     .from('delivery_challans')
     .select(`
@@ -243,7 +262,7 @@ async function generateChallanHTML(supabase: any, id: string) {
 
   <div class="header">
     <div>
-      <div class="company-name">High Power Electricals</div>
+      <div class="company-name">${orgName}</div>
       <div class="company-sub">Electrical Hardware Supply &amp; Manufacturing</div>
       <div class="company-sub">Panvel, Maharashtra</div>
     </div>
@@ -319,7 +338,7 @@ async function generateChallanHTML(supabase: any, id: string) {
     </div>
     <div class="sign-box">
       <div class="sign-line"></div>
-      <div class="sign-label">For High Power Electricals</div>
+      <div class="sign-label">For ${orgName}</div>
     </div>
   </div>
 
@@ -331,7 +350,7 @@ async function generateChallanHTML(supabase: any, id: string) {
 }
 
 // ── GRN ───────────────────────────────────────────────────────
-async function generateGrnHTML(supabase: any, id: string) {
+async function generateGrnHTML(supabase: any, id: string, orgName: string) {
   const { data: grn, error } = await supabase
     .from('inbound_receipts')
     .select(`
@@ -355,7 +374,7 @@ async function generateGrnHTML(supabase: any, id: string) {
 
   <div class="header">
     <div>
-      <div class="company-name">High Power Electricals</div>
+      <div class="company-name">${orgName}</div>
       <div class="company-sub">Electrical Hardware Supply &amp; Manufacturing</div>
       <div class="company-sub">Panvel, Maharashtra</div>
     </div>

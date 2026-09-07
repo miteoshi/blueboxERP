@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useOrgId } from '@/lib/hooks/use-tenant'
 import { toast } from 'sonner'
 import type { Tables, Enums } from '@/lib/types/database'
 
@@ -15,10 +16,13 @@ export function useItems(filters?: {
   isActive?: boolean
 }) {
   const supabase = createClient()
+  const orgId = useOrgId()
 
   return useQuery({
-    queryKey: ['items', filters],
+    queryKey: ['items', orgId, filters],
     queryFn: async () => {
+      if (!orgId) return []
+
       let query = supabase
         .from('items')
         .select('*')
@@ -45,6 +49,7 @@ export function useItems(filters?: {
       if (error) throw error
       return data as Item[]
     },
+    enabled: !!orgId,
     staleTime: 5 * 60 * 1000, // items change infrequently
   })
 }
@@ -52,11 +57,12 @@ export function useItems(filters?: {
 // ── Single item ───────────────────────────────────────────────
 export function useItem(id: string | null) {
   const supabase = createClient()
+  const orgId = useOrgId()
 
   return useQuery({
-    queryKey: ['items', id],
+    queryKey: ['items', orgId, id],
     queryFn: async () => {
-      if (!id) return null
+      if (!id || !orgId) return null
       const { data, error } = await supabase
         .from('items')
         .select(`
@@ -78,7 +84,7 @@ export function useItem(id: string | null) {
       if (error) throw error
       return data
     },
-    enabled: !!id,
+    enabled: !!id && !!orgId,
     staleTime: 5 * 60 * 1000,
   })
 }

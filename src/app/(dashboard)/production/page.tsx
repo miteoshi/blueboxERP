@@ -23,10 +23,13 @@ const STATUS_TABS: { label: string; value: ProductionStatus | '' }[] = [
   { label: 'Completed',   value: 'completed' },
 ]
 
+import { useOrgId } from '@/lib/hooks/use-tenant'
+
 export default function ProductionPage() {
   const [status, setStatus] = useState<ProductionStatus | ''>('')
   const [search, setSearch] = useState('')
   const { data: profile } = useProfile()
+  const orgId = useOrgId()
 
   const canCreate    = profile?.role === 'admin' || profile?.role === 'manager'
   const isProduction = profile?.role === 'production'
@@ -38,12 +41,18 @@ export default function ProductionPage() {
   const supabase = createClient()
 
   useEffect(() => {
+    if (!orgId) return
     const channel = supabase
-      .channel('production-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'production_orders' }, () => refetch())
+      .channel(`production-realtime-${orgId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'production_orders',
+        filter: `org_id=eq.${orgId}`,
+      }, () => refetch())
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [])
+  }, [orgId, supabase, refetch])
 
   const filtered = (orders ?? []).filter(o => {
     if (!search) return true

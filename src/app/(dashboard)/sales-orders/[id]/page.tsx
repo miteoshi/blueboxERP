@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useOrgId } from "@/lib/hooks/use-tenant";
 import { useParams, useRouter } from 'next/navigation'
 import { useSalesOrder, useUpdateSOStatus, useRecordPayment } from '@/lib/hooks/use-sales-orders'
 import { useCanApprove, useCanSell } from '@/lib/hooks/use-profile'
@@ -26,6 +27,7 @@ export default function SalesOrderDetailPage() {
   const router   = useRouter()
   const supabase = createClient()
   const qc       = useQueryClient()
+  const orgId = useOrgId();
 
   const canApprove = useCanApprove()
   const canSell    = useCanSell()
@@ -41,20 +43,24 @@ export default function SalesOrderDetailPage() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
   // ── All reservations for this SO (active + partially_consumed) ─
-  const { data: reservations } = useQuery({
-    queryKey: ['so-reservations', id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('stock_reservations')
-        .select('id, item_id, qty_reserved, qty_consumed, status')
-        .eq('ref_type', 'sales_order')
-        .eq('ref_id', id)
-        .in('status', ['active', 'partially_consumed'])
-      if (error) throw error
-      return data ?? []
-    },
-    staleTime: 30 * 1000,
-  })
+const { data: reservations } = useQuery({
+  queryKey: ["so-reservations", orgId, id],
+  queryFn: async () => {
+    if (!orgId || !id) return [];
+
+    const { data, error } = await supabase
+      .from("stock_reservations")
+      .select("id, item_id, qty_reserved, qty_consumed, status")
+      .eq("ref_type", "sales_order")
+      .eq("ref_id", id)
+      .in("status", ["active", "partially_consumed"]);
+
+    if (error) throw error;
+    return data ?? [];
+  },
+  enabled: !!orgId && !!id,
+  staleTime: 30 * 1000,
+});
 
   const hasReservations = (reservations?.length ?? 0) > 0
 
@@ -74,6 +80,12 @@ export default function SalesOrderDetailPage() {
 
   // ── Reserve stock ─────────────────────────────────────────
   async function handleReserveStock() {
+
+    if (!orgId) {
+      toast.error("Organization not loaded");
+      return;
+    }
+
     setReservingStock(true)
     try {
       let allSucceeded = true
@@ -85,8 +97,12 @@ export default function SalesOrderDetailPage() {
             refType: 'sales_order',
             refId:   salesOrder.id,
           })
-        } catch (err: any) {
-          toast.error(`${line.item?.name}: ${err.message}`)
+        } catch (err: unknown) {
+          toast.error(
+            `${line.item?.name}: ${
+              err instanceof Error ? err.message : "Failed to reserve stock"
+            }`
+          );
           allSucceeded = false
           break
         }
@@ -94,7 +110,7 @@ export default function SalesOrderDetailPage() {
       if (allSucceeded) {
         updateStatus({ id, status: 'ready' })
         toast.success('Stock reserved — order is now ready to dispatch')
-        qc.invalidateQueries({ queryKey: ['so-reservations', id] })
+        qc.invalidateQueries({ queryKey: ["so-reservations", orgId, id] });
         refetch()
       }
     } finally {
@@ -109,38 +125,46 @@ export default function SalesOrderDetailPage() {
   //   2. Mark SO as 'cancelled'
   //   3. Invalidate queries so UI reflects the freed stock
   async function handleCancel() {
+
+    if (!orgId) {
+      toast.error("Organization not loaded");
+      return;
+    }
+    
     setCancelling(true)
     try {
       // Release each reservation individually
       // releaseInventory with no qtyToRelease = release all remaining
-      const activeReservations = reservations ?? []
+      const activeReservations = reservations ?? [];
 
       for (const reservation of activeReservations) {
         await releaseInventory({
           reservationId: reservation.id,
           notes: `SO cancelled — ${salesOrder.so_number}`,
-        })
+        });
       }
 
       // Mark SO as cancelled
-      updateStatus({ id, status: 'cancelled' })
+      updateStatus({ id, status: "cancelled" });
 
       if (activeReservations.length > 0) {
         toast.success(
           `SO ${salesOrder.so_number} cancelled — ${activeReservations.length} reservation(s) released back to available stock`
-        )
+        );
       } else {
-        toast.success(`SO ${salesOrder.so_number} cancelled`)
+        toast.success(`SO ${salesOrder.so_number} cancelled`);
       }
 
-      qc.invalidateQueries({ queryKey: ['so-reservations', id] })
-      qc.invalidateQueries({ queryKey: ['stock-levels'] })
-      setShowCancelConfirm(false)
-      refetch()
-    } catch (err: any) {
-      toast.error(`Cancel failed: ${err.message}`)
+      qc.invalidateQueries({ queryKey: ["so-reservations", orgId, id] });
+      qc.invalidateQueries({ queryKey: ["stock-levels"] });
+      setShowCancelConfirm(false);
+      refetch();
+    } catch (err: unknown) {
+      toast.error(
+        `Cancel failed: ${err instanceof Error ? err.message : "Unknown error"}`
+      );
     } finally {
-      setCancelling(false)
+      setCancelling(false);
     }
   }
 

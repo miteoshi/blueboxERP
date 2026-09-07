@@ -1,11 +1,11 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/layout/sidebar'
-import { Header } from '@/components/layout/header'
+import { TenantProvider } from '@/components/providers/tenant-provider'
 
 // This layout wraps every page inside (dashboard)
 // It checks auth server-side as a second layer of protection
-// (middleware already redirects, but this is a belt-and-suspenders check)
+// and ensures the user belongs to an organization before entering.
 export default async function DashboardLayout({
   children,
 }: {
@@ -18,24 +18,34 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
+  // Server-side check: if profile has no org_id, route to onboarding
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('org_id')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (profile && !profile.org_id) {
+    redirect('/onboarding' as any)
+  }
+
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <TenantProvider>
+      <div className="flex min-h-screen bg-slate-50">
 
-      {/* Fixed sidebar */}
-      <Sidebar />
+        {/* Fixed sidebar */}
+        <Sidebar />
 
-      {/* Main content — offset by sidebar width */}
-      <div className="flex-1 flex flex-col ml-64">
+        {/* Main content — offset by sidebar width */}
+        <div className="flex-1 flex flex-col ml-64">
 
-        {/* Sticky header */}
-        {/* <Header /> */}
+          {/* Page content */}
+          <main className="flex-1 p-6 animate-fade-in">
+            {children}
+          </main>
 
-        {/* Page content */}
-        <main className="flex-1 p-6 animate-fade-in">
-          {children}
-        </main>
-
+        </div>
       </div>
-    </div>
+    </TenantProvider>
   )
 }

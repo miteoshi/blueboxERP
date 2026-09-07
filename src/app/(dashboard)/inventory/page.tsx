@@ -5,10 +5,11 @@ import { useStockLevels, useReorderAlerts } from '@/lib/hooks/use-stock'
 import { PageHeader } from '@/components/layout/page-header'
 import { StatCard } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { TableLoader } from '@/components/ui/spinner'
 import { formatQty } from '@/lib/utils/format'
+import { useProfile } from '@/lib/hooks/use-profile'
+import Link from 'next/link'
 import {
   Search, AlertTriangle, Package,
   TrendingDown, CheckCircle2, Filter
@@ -17,6 +18,7 @@ import {
 import type { Enums } from '@/lib/types/database'
 import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useOrgId } from '@/lib/hooks/use-tenant'
 
 type ItemCategory = Enums<'item_category'>
 const CATEGORIES: ItemCategory[] = [
@@ -29,6 +31,10 @@ export default function InventoryPage() {
   const [search, setSearch]     = useState('')
   const [category, setCategory] = useState<ItemCategory | ''>('')
   const [showLowOnly, setShowLowOnly] = useState(false)
+  const orgId = useOrgId()
+
+  const { data: profile } = useProfile()
+  const canAdjust = profile?.role === 'admin' || profile?.role === 'manager' || profile?.role === 'store'
 
 
   const { data: alerts } = useReorderAlerts()
@@ -46,16 +52,18 @@ export default function InventoryPage() {
   // ↓
   // UI updates live
 useEffect(() => {
+  if (!orgId) return
   const channel = supabase
-    .channel('inventory-balance')
+    .channel(`inventory-balance-${orgId}`)
     .on('postgres_changes', {
       event: 'UPDATE',
       schema: 'public',
       table: 'inventory_balance',
+      filter: `org_id=eq.${orgId}`,
     }, () => refetch())
     .subscribe()
   return () => { supabase.removeChannel(channel) }
-}, [])
+}, [orgId, supabase, refetch])
 
 
 
@@ -76,7 +84,15 @@ useEffect(() => {
       <PageHeader
         title="Inventory"
         description="Live stock levels — updated in real time"
-      />
+      >
+        {canAdjust && (
+          <Link href="/inventory/adjust">
+            <Button size="sm">
+              Adjust Stock
+            </Button>
+          </Link>
+        )}
+      </PageHeader>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

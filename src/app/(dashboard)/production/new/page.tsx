@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useOrgId } from '@/lib/hooks/use-tenant'
 import { reserveInventory } from '@/lib/utils/inventory'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
@@ -33,48 +34,59 @@ interface FinishedItem {
   unit:      string
 }
 
-function useManufacturedItems() {
-  const supabase = createClient()
+function useManufacturedItems(orgId: string | null) {
+  const supabase = createClient();
+
   return useQuery({
-    queryKey: ['manufactured-items'],
+    queryKey: ["manufactured-items", orgId],
     queryFn: async () => {
+      if (!orgId) return [];
+
       const { data, error } = await supabase
-        .from('items')
-        .select('id, item_code, name, unit, category')
-        .eq('is_manufactured', true)
-        .eq('is_active', true)
-        .order('name')
-      if (error) throw error
-      return data ?? []
+        .from("items")
+        .select("id, item_code, name, unit, category")
+        .eq("is_manufactured", true)
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      return data ?? [];
     },
+    enabled: !!orgId,
     staleTime: 5 * 60 * 1000,
-  })
+  });
 }
 
-function useRawMaterialItems() {
-  const supabase = createClient()
+function useRawMaterialItems(orgId: string | null) {
+  const supabase = createClient();
+
   return useQuery({
-    queryKey: ['raw-material-items'],
+    queryKey: ["raw-material-items", orgId],
     queryFn: async () => {
+      if (!orgId) return [];
+
       const { data, error } = await supabase
-        .from('items')
-        .select('id, item_code, name, unit, category')
-        .eq('is_raw_material', true)
-        .eq('is_active', true)
-        .order('name')
-      if (error) throw error
-      return data ?? []
+        .from("items")
+        .select("id, item_code, name, unit, category")
+        .eq("is_raw_material", true)
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      return data ?? [];
     },
+    enabled: !!orgId,
     staleTime: 5 * 60 * 1000,
-  })
+  });
 }
 
 export default function NewProductionPage() {
   const router   = useRouter()
   const supabase = createClient()
+  const orgId    = useOrgId()
 
-  const { data: mfgItems } = useManufacturedItems()
-  const { data: rawItems  } = useRawMaterialItems()
+const { data: mfgItems } = useManufacturedItems(orgId);
+const { data: rawItems } = useRawMaterialItems(orgId);
 
   const [finishedItem, setFinishedItem] = useState<FinishedItem | null>(null)
   const [finishQty,    setFinishQty]    = useState<number>(1)
@@ -229,14 +241,22 @@ export default function NewProductionPage() {
     if (rawMaterials.length === 0) { toast.error('Add raw materials');                       return }
     if (hasShortage)               { toast.error('Insufficient stock for some materials');   return }
 
+    if (!orgId) {
+      toast.error("Organization not loaded");
+      return;
+    }
     setSaving(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      const { data: prdNo }    = await supabase.rpc('next_prd_no')
+      const { data: prdNo, error: rpcErr } = await supabase.rpc('next_prd_no', {
+        p_org_id: orgId,
+      })
+      if (rpcErr) throw rpcErr
 
       const { data: prd, error: prdErr } = await supabase
         .from('production_orders')
         .insert({
+          org_id:      orgId,
           po_number:   prdNo as string,
           so_id:       null,
           status:      'pending',
@@ -276,8 +296,8 @@ export default function NewProductionPage() {
       toast.success(`${prd.po_number} created — ${finishQty} units planned, materials reserved`)
       router.push(`/production/${prd.id}`)
 
-    } catch (err: any) {
-      toast.error(err.message)
+    } catch (err: unknown) {
+  toast.error(err instanceof Error ? err.message : 'Failed to create production order')
     } finally {
       setSaving(false)
     }

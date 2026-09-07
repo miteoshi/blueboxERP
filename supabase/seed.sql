@@ -21,6 +21,20 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+-- =========================================================================
+-- Multi-tenancy seed shim
+-- =========================================================================
+-- Use a fixed seed organization ID so this works even when seed.sql is
+-- executed in batches/connections. Do not use a TEMP table here.
+INSERT INTO "public"."organizations" ("id", "name", "slug")
+VALUES ('00000000-0000-0000-0000-000000000001', 'Blue Box Seed Co', 'blue-box-seed')
+ON CONFLICT ("id") DO NOTHING;
+
+-- Existing seed rows do not contain org_id. Temporarily allow NULL while
+-- the dump data is loaded; org_id is backfilled at the end of this file.
+ALTER TABLE "public"."items"             ALTER COLUMN "org_id" DROP NOT NULL;
+ALTER TABLE "public"."inventory_balance" ALTER COLUMN "org_id" DROP NOT NULL;
+
 --
 -- Data for Name: audit_log_entries; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin
 --
@@ -1020,5 +1034,28 @@ SELECT pg_catalog.setval('"public"."seq_so"', 1, false);
 --
 
 -- \unrestrict UZpne27CGriA1RpwWJIqJOWRqXXLlHCA6dzAkMAVRDPuS0mO00ZIARJ66H2j7aR
+
+
+-- =========================================================================
+-- Multi-tenancy seed shim: backfill org_id, restore constraints
+-- =========================================================================
+UPDATE "public"."items"
+SET "org_id" = '00000000-0000-0000-0000-000000000001'
+WHERE "org_id" IS NULL;
+
+UPDATE "public"."inventory_balance"
+SET "org_id" = '00000000-0000-0000-0000-000000000001'
+WHERE "org_id" IS NULL;
+
+UPDATE "public"."profiles"
+SET "org_id" = '00000000-0000-0000-0000-000000000001'
+WHERE "org_id" IS NULL;
+
+UPDATE "public"."audit_logs"
+SET "org_id" = '00000000-0000-0000-0000-000000000001'
+WHERE "org_id" IS NULL;
+
+ALTER TABLE "public"."items"             ALTER COLUMN "org_id" SET NOT NULL;
+ALTER TABLE "public"."inventory_balance" ALTER COLUMN "org_id" SET NOT NULL;
 
 RESET ALL;

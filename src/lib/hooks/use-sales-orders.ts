@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useOrgId } from '@/lib/hooks/use-tenant'
 import { toast } from 'sonner'
 
 import type { Enums } from '@/lib/types/database'
@@ -14,11 +15,14 @@ export function useSalesOrders(filters?: {
   search?: string
 }) {
   const supabase = createClient()
+  const orgId = useOrgId()
 
   return useQuery({
-    queryKey: ['sales-orders', filters],
+    queryKey: ['sales-orders', orgId, filters],
     queryFn: async () => {
-      let query = supabase
+    if (!orgId) return []
+
+    let query = supabase
         .from('sales_orders')
         .select(`
           *,
@@ -39,17 +43,19 @@ export function useSalesOrders(filters?: {
       return data
     },
     staleTime: 30 * 1000,
+    enabled: !!orgId,
   })
 }
 
 // ── Single sales order with full detail ───────────────────────
 export function useSalesOrder(id: string | null) {
   const supabase = createClient()
+  const orgId = useOrgId()
 
   return useQuery({
-    queryKey: ['sales-orders', id],
+    queryKey: ['sales-orders', orgId, id],
     queryFn: async () => {
-      if (!id) return null
+      if (!id || !orgId) return null
       const { data, error } = await supabase
         .from('sales_orders')
         .select(`
@@ -70,7 +76,7 @@ export function useSalesOrder(id: string | null) {
       if (error) throw error
       return data
     },
-    enabled: !!id,
+    enabled: !!id && !!orgId,
     staleTime: 30 * 1000,
   })
 }

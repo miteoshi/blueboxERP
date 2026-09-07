@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useOrgId } from "@/lib/hooks/use-tenant";
 import { useItems } from '@/lib/hooks/use-items'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
@@ -21,54 +22,64 @@ const CATEGORIES: ItemCategory[] = [
 ]
 
 // Fetch items with their current prices joined
-function useItemsWithPrices(search: string, category: ItemCategory | '') {
-  const supabase = createClient()
+function useItemsWithPrices(
+  search: string,
+  category: ItemCategory | "",
+  orgId: string | null
+) {
+  const supabase = createClient();
   return useQuery({
-    queryKey: ['items-with-prices', search, category],
+    queryKey: ["items-with-prices", orgId, search, category],
     queryFn: async () => {
+      if (!orgId) return [];
+
       let query = supabase
-        .from('items')
-        .select(`
+        .from("items")
+        .select(
+          `
           id, item_code, name, category, sub_category,
           material_type, size_spec, unit, hsn_code,
           is_traded, is_manufactured, is_raw_material,
           reorder_level, is_active
-        `)
-        .eq('is_active', true)
-        .order('category')
-        .order('item_code')
-
-      if (category) query = query.eq('category', category)
-      if (search) {
-        query = query.or(
-          `name.ilike.%${search}%,item_code.ilike.%${search}%`
+        `
         )
+        .eq("is_active", true)
+        .order("category")
+        .order("item_code");
+
+      if (category) query = query.eq("category", category);
+      if (search) {
+        query = query.or(`name.ilike.%${search}%,item_code.ilike.%${search}%`);
       }
 
-      const { data: items, error } = await query
-      if (error) throw error
+      const { data: items, error } = await query;
+      if (error) throw error;
 
       // Get current prices separately from the view
       const { data: prices } = await supabase
-        .from('v_current_prices')
-        .select('item_id, purchase_rate, selling_rate, gst_percent, rate_unit')
+        .from("v_current_prices")
+        .select("item_id, purchase_rate, selling_rate, gst_percent, rate_unit");
 
-      const priceMap = new Map(prices?.map(p => [p.item_id, p]) ?? [])
+      const priceMap = new Map(prices?.map((p) => [p.item_id, p]) ?? []);
 
-      return items?.map(item => ({
-        ...item,
-        price: priceMap.get(item.id) ?? null,
-      })) ?? []
+      return (
+        items?.map((item) => ({
+          ...item,
+          price: priceMap.get(item.id) ?? null,
+        })) ?? []
+      );
     },
+    enabled: !!orgId,
     staleTime: 3 * 60 * 1000,
-  })
+  });
 }
 
 export default function ItemsPage() {
-  const [search, setSearch]     = useState('')
-  const [category, setCategory] = useState<ItemCategory | ''>('')
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState<ItemCategory | "">("");
+  const orgId = useOrgId();
 
-  const { data: items, isLoading } = useItemsWithPrices(search, category)
+  const { data: items, isLoading } = useItemsWithPrices(search, category, orgId);
 
   return (
     <div>

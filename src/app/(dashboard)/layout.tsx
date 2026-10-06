@@ -29,6 +29,14 @@ export default async function DashboardLayout({
     redirect('/onboarding' as any)
   }
 
+  // Manual access switch — flip organizations.access_status in Supabase to
+  // 'suspended' and every user in that org gets routed here on next load.
+  const { data: isActive } = await supabase.rpc('org_is_active')
+
+  if (isActive === false) {
+    redirect('/suspended' as any)
+  }
+
   return (
     <TenantProvider>
       <div className="flex min-h-screen bg-slate-50">

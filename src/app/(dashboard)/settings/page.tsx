@@ -46,6 +46,7 @@ function useAllProfiles(orgId: string | null) {
       const { data, error } = await supabase
         .from("profiles")
         .select("id, full_name, role, is_active, created_at")
+        .eq("org_id", orgId)
         .order("full_name");
 
       if (error) throw error;
@@ -66,10 +67,21 @@ function useItemsWithPrices(search: string, orgId: string | null) {
 
       let query = supabase
         .from("items")
-        .select("id, item_code, name, unit, category")
-        .eq("is_active", true)
-        .order("category")
-        .order("item_code");
+        .select(
+                      `
+              id,
+              item_code,
+              name,
+              unit,
+              category_id,
+              item_category:item_categories (
+                id,
+                name
+              )
+            `
+                    )
+                    .eq("is_active", true)
+                    .order("category_id");
 
       if (search) {
         query = query.or(`name.ilike.%${search}%,item_code.ilike.%${search}%`);
@@ -261,15 +273,16 @@ export default function SettingsPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-slate-100 p-1 rounded-lg w-fit">
-        {TABS.map(tab => (
+        {TABS.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`
               px-4 py-2 rounded-md text-sm font-medium transition-all
-              ${activeTab === tab
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
+              ${
+                activeTab === tab
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
               }
             `}
           >
@@ -279,34 +292,52 @@ export default function SettingsPage() {
       </div>
 
       {/* ══ USERS ══════════════════════════════════════════════ */}
-      {activeTab === 'Users' && (
+      {activeTab === "Users" && (
         <div>
           <div className="mb-4 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-5 py-3">
             <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-amber-800">
               <strong>To add new users:</strong> Go to your Supabase Dashboard →
-              Authentication → Users → Add User. Their profile appears here automatically
-              with the <strong>viewer</strong> role. Upgrade the role below.
+              Authentication → Users → Add User. Their profile appears here
+              automatically with the <strong>viewer</strong> role. Upgrade the
+              role below.
             </div>
           </div>
 
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            {loadingProfiles ? <TableLoader /> : (
+            {loadingProfiles ? (
+              <TableLoader />
+            ) : (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">User</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Current Role</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Change Role</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Status</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Joined</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Actions</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
+                      User
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
+                      Current Role
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
+                      Change Role
+                    </th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
+                      Status
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
+                      Joined
+                    </th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {profiles?.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="text-center py-10 text-slate-400 text-sm">
+                      <td
+                        colSpan={6}
+                        className="text-center py-10 text-slate-400 text-sm"
+                      >
                         No user profiles found
                       </td>
                     </tr>
@@ -314,12 +345,18 @@ export default function SettingsPage() {
                   {profiles?.map((profile: any) => (
                     <tr
                       key={profile.id}
-                      className={`hover:bg-slate-50 transition-colors ${!profile.is_active ? 'opacity-50' : ''}`}
+                      className={`hover:bg-slate-50 transition-colors ${
+                        !profile.is_active ? "opacity-50" : ""
+                      }`}
                     >
                       <td className="px-4 py-3">
-                        <div className="font-semibold text-slate-900">{profile.full_name}</div>
+                        <div className="font-semibold text-slate-900">
+                          {profile.full_name}
+                        </div>
                         {profile.id === me?.id && (
-                          <div className="text-xs text-blue-500 font-medium">You</div>
+                          <div className="text-xs text-blue-500 font-medium">
+                            You
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -332,7 +369,12 @@ export default function SettingsPage() {
                           <select
                             value={profile.role}
                             disabled={updatingRole === profile.id}
-                            onChange={e => handleRoleChange(profile.id, e.target.value as UserRole)}
+                            onChange={(e) =>
+                              handleRoleChange(
+                                profile.id,
+                                e.target.value as UserRole
+                              )
+                            }
                             className="
                               px-2 py-1.5 text-xs rounded-lg border border-slate-200
                               bg-white focus:outline-none focus:ring-1 focus:ring-blue-500
@@ -347,12 +389,16 @@ export default function SettingsPage() {
                             <option value="admin">admin</option>
                           </select>
                         ) : (
-                          <span className="text-xs text-slate-400 italic">Cannot change own role</span>
+                          <span className="text-xs text-slate-400 italic">
+                            Cannot change own role
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <Badge variant={profile.is_active ? 'success' : 'default'}>
-                          {profile.is_active ? 'Active' : 'Inactive'}
+                        <Badge
+                          variant={profile.is_active ? "success" : "default"}
+                        >
+                          {profile.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-slate-500 text-xs">
@@ -363,14 +409,16 @@ export default function SettingsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleToggleUser(profile.id, profile.is_active)}
+                            onClick={() =>
+                              handleToggleUser(profile.id, profile.is_active)
+                            }
                             className={
                               profile.is_active
-                                ? 'text-red-500 hover:bg-red-50'
-                                : 'text-green-600 hover:bg-green-50'
+                                ? "text-red-500 hover:bg-red-50"
+                                : "text-green-600 hover:bg-green-50"
                             }
                           >
-                            {profile.is_active ? 'Deactivate' : 'Activate'}
+                            {profile.is_active ? "Deactivate" : "Activate"}
                           </Button>
                         )}
                       </td>
@@ -384,12 +432,13 @@ export default function SettingsPage() {
       )}
 
       {/* ══ PRICE UPDATE ═══════════════════════════════════════ */}
-      {activeTab === 'Price Update' && (
+      {activeTab === "Price Update" && (
         <div>
           <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl px-5 py-3 text-sm text-blue-800">
-            Updating a price <strong>creates a new record</strong> effective from today and
-            closes the previous one. Old quotations and invoices are unaffected — they
-            always stored the rate at the time of creation.
+            Updating a price <strong>creates a new record</strong> effective
+            from today and closes the previous one. Old quotations and invoices
+            are unaffected — they always stored the rate at the time of
+            creation.
           </div>
 
           {/* Search */}
@@ -399,7 +448,7 @@ export default function SettingsPage() {
                 type="text"
                 placeholder="Search items by name or code…"
                 value={priceSearch}
-                onChange={e => setPriceSearch(e.target.value)}
+                onChange={(e) => setPriceSearch(e.target.value)}
                 className="
                   flex-1 max-w-sm px-3 py-2 text-sm rounded-lg border border-slate-300
                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
@@ -412,59 +461,88 @@ export default function SettingsPage() {
           </div>
 
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            {loadingItems ? <TableLoader /> : (
+            {loadingItems ? (
+              <TableLoader />
+            ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200">
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Item</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Category</th>
-                      <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Unit</th>
-                      <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Purchase Rate</th>
-                      <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Selling Rate</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Since</th>
-                      <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Update</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
+                        Item
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
+                        Category
+                      </th>
+                      <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
+                        Unit
+                      </th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
+                        Purchase Rate
+                      </th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
+                        Selling Rate
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
+                        Since
+                      </th>
+                      <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
+                        Update
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {items?.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="text-center py-10 text-slate-400 text-sm">
+                        <td
+                          colSpan={7}
+                          className="text-center py-10 text-slate-400 text-sm"
+                        >
                           No items found
                         </td>
                       </tr>
                     )}
                     {items?.map((item: any) => (
-                      <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                      <tr
+                        key={item.id}
+                        className="hover:bg-slate-50 transition-colors"
+                      >
                         <td className="px-4 py-3">
                           <span className="font-mono text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded mr-2">
                             {item.item_code}
                           </span>
-                          <span className="font-medium text-slate-900">{item.name}</span>
+                          <span className="font-medium text-slate-900">
+                            {item.name}
+                          </span>
                         </td>
                         <td className="px-4 py-3">
-                          <Badge variant="default">{item.category}</Badge>
+                          <Badge variant="default">
+                            {item.item_category?.name ?? "—"}
+                          </Badge>
                         </td>
                         <td className="px-4 py-3 text-center font-mono text-xs text-slate-500">
                           {item.unit}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-slate-600">
-                          {item.currentPrice?.purchase_rate
-                            ? formatCurrency(item.currentPrice.purchase_rate)
-                            : <span className="text-slate-300">—</span>
-                          }
+                          {item.currentPrice?.purchase_rate ? (
+                            formatCurrency(item.currentPrice.purchase_rate)
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
-                          {item.currentPrice?.selling_rate
-                            ? formatCurrency(item.currentPrice.selling_rate)
-                            : <span className="text-slate-300 font-normal">—</span>
-                          }
+                          {item.currentPrice?.selling_rate ? (
+                            formatCurrency(item.currentPrice.selling_rate)
+                          ) : (
+                            <span className="text-slate-300 font-normal">
+                              —
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-400">
                           {item.currentPrice?.effective_from
                             ? formatDate(item.currentPrice.effective_from)
-                            : '—'
-                          }
+                            : "—"}
                         </td>
                         <td className="px-4 py-3">
                           {editingPrice === item.id ? (
@@ -475,7 +553,7 @@ export default function SettingsPage() {
                                 step="any"
                                 placeholder="Purchase ₹"
                                 value={newPurchase}
-                                onChange={e => setNewPurchase(e.target.value)}
+                                onChange={(e) => setNewPurchase(e.target.value)}
                                 className="w-24 px-2 py-1 text-xs rounded border border-slate-200 text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
                               />
                               <input
@@ -484,7 +562,7 @@ export default function SettingsPage() {
                                 step="any"
                                 placeholder="Selling ₹"
                                 value={newSelling}
-                                onChange={e => setNewSelling(e.target.value)}
+                                onChange={(e) => setNewSelling(e.target.value)}
                                 className="w-24 px-2 py-1 text-xs rounded border border-slate-200 text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
                               />
                               <button
@@ -506,9 +584,13 @@ export default function SettingsPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                setEditingPrice(item.id)
-                                setNewPurchase(String(item.currentPrice?.purchase_rate ?? ''))
-                                setNewSelling(String(item.currentPrice?.selling_rate ?? ''))
+                                setEditingPrice(item.id);
+                                setNewPurchase(
+                                  String(item.currentPrice?.purchase_rate ?? "")
+                                );
+                                setNewSelling(
+                                  String(item.currentPrice?.selling_rate ?? "")
+                                );
                               }}
                             >
                               <Tag className="w-3.5 h-3.5" />
@@ -527,7 +609,7 @@ export default function SettingsPage() {
       )}
 
       {/* ══ RECONCILE ══════════════════════════════════════════ */}
-      {activeTab === 'Reconcile' && (
+      {activeTab === "Reconcile" && (
         <div className="max-w-2xl">
           <Card>
             <CardHeader>
@@ -538,21 +620,25 @@ export default function SettingsPage() {
             </CardHeader>
             <CardBody className="space-y-4">
               <p className="text-sm text-slate-600 leading-relaxed">
-                This function recalculates every item's inventory balance from scratch
-                using the raw <strong>stock_movements</strong> ledger as the source of truth.
-                It compares the recalculated values against the cached
-                <strong> inventory_balance</strong> table and corrects any discrepancies.
+                This function recalculates every item's inventory balance from
+                scratch using the raw <strong>stock_movements</strong> ledger as
+                the source of truth. It compares the recalculated values against
+                the cached
+                <strong> inventory_balance</strong> table and corrects any
+                discrepancies.
               </p>
 
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-600">
-                In normal operation this should report <strong>zero discrepancies.</strong>{' '}
-                Run it if inventory numbers appear incorrect after investigation,
-                after a manual database edit, or after a system migration.
+                In normal operation this should report{" "}
+                <strong>zero discrepancies.</strong> Run it if inventory numbers
+                appear incorrect after investigation, after a manual database
+                edit, or after a system migration.
               </div>
 
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-                <strong>Safe to run anytime.</strong> It only corrects the cached balance rows —
-                it never touches the immutable stock_movements ledger.
+                <strong>Safe to run anytime.</strong> It only corrects the
+                cached balance rows — it never touches the immutable
+                stock_movements ledger.
               </div>
 
               <Button
@@ -570,21 +656,31 @@ export default function SettingsPage() {
                   {reconcileResult.length === 0 ? (
                     <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-800">
                       <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
-                      All inventory balances are correct — no discrepancies found
+                      All inventory balances are correct — no discrepancies
+                      found
                     </div>
                   ) : (
                     <div>
                       <p className="text-sm font-semibold text-amber-700 mb-3">
-                        Fixed {reconcileResult.length} discrepanc{reconcileResult.length === 1 ? 'y' : 'ies'}:
+                        Fixed {reconcileResult.length} discrepanc
+                        {reconcileResult.length === 1 ? "y" : "ies"}:
                       </p>
                       <div className="overflow-x-auto rounded-lg border border-slate-200">
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-200">
-                              <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase">Item ID</th>
-                              <th className="text-right px-3 py-2 font-semibold text-slate-500 uppercase">Old Qty</th>
-                              <th className="text-right px-3 py-2 font-semibold text-slate-500 uppercase">New Qty</th>
-                              <th className="text-right px-3 py-2 font-semibold text-slate-500 uppercase">Difference</th>
+                              <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase">
+                                Item ID
+                              </th>
+                              <th className="text-right px-3 py-2 font-semibold text-slate-500 uppercase">
+                                Old Qty
+                              </th>
+                              <th className="text-right px-3 py-2 font-semibold text-slate-500 uppercase">
+                                New Qty
+                              </th>
+                              <th className="text-right px-3 py-2 font-semibold text-slate-500 uppercase">
+                                Difference
+                              </th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
@@ -599,8 +695,15 @@ export default function SettingsPage() {
                                 <td className="px-3 py-2 text-right tabular-nums font-semibold text-slate-900">
                                   {r.new_qty}
                                 </td>
-                                <td className={`px-3 py-2 text-right tabular-nums font-bold ${r.diff > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                  {r.diff > 0 ? '+' : ''}{r.diff}
+                                <td
+                                  className={`px-3 py-2 text-right tabular-nums font-bold ${
+                                    r.diff > 0
+                                      ? "text-green-600"
+                                      : "text-red-600"
+                                  }`}
+                                >
+                                  {r.diff > 0 ? "+" : ""}
+                                  {r.diff}
                                 </td>
                               </tr>
                             ))}
@@ -616,5 +719,5 @@ export default function SettingsPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

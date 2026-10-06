@@ -44,7 +44,7 @@ function useManufacturedItems(orgId: string | null) {
 
       const { data, error } = await supabase
         .from("items")
-        .select("id, item_code, name, unit, category")
+        .select("id, item_code, name, unit, category_id")
         .eq("is_manufactured", true)
         .eq("is_active", true)
         .order("name");
@@ -67,7 +67,7 @@ function useRawMaterialItems(orgId: string | null) {
 
       const { data, error } = await supabase
         .from("items")
-        .select("id, item_code, name, unit, category")
+        .select("id, item_code, name, unit, category_id")
         .eq("is_raw_material", true)
         .eq("is_active", true)
         .order("name");

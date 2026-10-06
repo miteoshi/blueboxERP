@@ -20,7 +20,10 @@ export function useProfile() {
   // ── Listen for auth state changes and immediately clear the cache ──
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+      if (event === 'SIGNED_OUT') {
+        queryClient.removeQueries({ queryKey: ['profile'] })
+        queryClient.removeQueries({ queryKey: ['tenant-context'] })
+      } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
         queryClient.invalidateQueries({ queryKey: ['profile'] })
         queryClient.invalidateQueries({ queryKey: ['tenant-context'] })
       }
@@ -31,8 +34,8 @@ export function useProfile() {
   return useQuery({
     queryKey: ['profile', orgId],
     queryFn: async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user || !orgId) return null
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user || !orgId) return null
 
       const { data, error } = await supabase
         .from('profiles')

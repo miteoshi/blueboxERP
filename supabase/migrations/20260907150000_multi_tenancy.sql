@@ -1,7 +1,7 @@
 -- =========================================================================
 -- Blue Box ERP — Multi-Tenancy Migration
--- Safe to run on an EMPTY database (no backfill needed).
--- Run this as one transaction against your Supabase project.
+-- Safe on both an empty database and one with existing data (backfills
+-- pre-existing rows into a default organization before enforcing NOT NULL).
 -- =========================================================================
 
 begin;
@@ -28,9 +28,6 @@ alter table "public"."organizations" enable row level security;
 
 -- -------------------------------------------------------------------------
 -- 2. org_id on profiles + my_org() helper + onboarding RPC
---    (Moved ahead of the organizations policies below: those policies
---    reference profiles.org_id / my_org(), so the column and function must
---    exist first or CREATE POLICY fails with "column org_id does not exist".)
 -- -------------------------------------------------------------------------
 
 alter table "public"."profiles"
@@ -45,9 +42,6 @@ $$ select org_id from public.profiles where id = auth.uid() $$;
 alter function "public"."my_org"() owner to "postgres";
 grant execute on function "public"."my_org"() to authenticated, service_role;
 
--- Update the new-user trigger: if the auth user was invited with an org_id
--- in their metadata (set by whoever invited them via the admin API), assign
--- it immediately. Otherwise org_id stays null until they create/join one.
 create or replace function "public"."handle_new_user"() returns trigger
     language plpgsql security definer set search_path to public as
 $$
@@ -63,8 +57,6 @@ begin
 end;
 $$;
 
--- Self-serve org creation for a brand-new signup with no org yet.
--- Caller becomes that org's admin. Fails if they already belong to one.
 create or replace function "public"."create_organization"("p_name" text) returns uuid
     language plpgsql security definer set search_path to public as
 $$
@@ -89,13 +81,9 @@ $$;
 alter function "public"."create_organization"(text) owner to "postgres";
 grant execute on function "public"."create_organization"(text) to authenticated;
 
--- Now that my_org() exists, the organizations table's own RLS policies:
-
--- Any authenticated member of an org can read their own org row.
 create policy "member reads own org" on "public"."organizations"
     for select using (id = public.my_org());
 
--- Only an org's admin can update it.
 create policy "admin updates own org" on "public"."organizations"
     for update using (id = public.my_org() and public.my_role() = 'admin');
 
@@ -111,7 +99,6 @@ create table if not exists "public"."org_sequences" (
 );
 alter table "public"."org_sequences" owner to "postgres";
 alter table "public"."org_sequences" enable row level security;
--- No direct client access needed; only touched via next_org_seq() below.
 
 create or replace function "public"."next_org_seq"("p_org_id" uuid, "p_seq_name" text)
 returns bigint
@@ -130,8 +117,6 @@ end;
 $$;
 alter function "public"."next_org_seq"(uuid, text) owner to "postgres";
 
--- Replace the old global-sequence numbering functions with org-scoped ones.
--- NOTE: signatures change (now take p_org_id) — update call sites in your app.
 create or replace function "public"."next_dc_no"("p_org_id" uuid) returns text
     language sql set search_path to public as
 $$ select 'DC-' || to_char(current_date,'YYYY') || '-' || lpad(public.next_org_seq(p_org_id,'dc')::text, 4, '0') $$;
@@ -158,39 +143,97 @@ grant execute on function "public"."next_prd_no"(uuid) to authenticated, service
 grant execute on function "public"."next_qt_no"(uuid) to authenticated, service_role;
 grant execute on function "public"."next_so_no"(uuid) to authenticated, service_role;
 
--- Old global sequences (seq_dc, seq_grn, seq_prd, seq_qt, seq_so) are left in
--- place but unused going forward — safe to drop later once you confirm
--- nothing still references the old zero-arg numbering functions.
-
 drop function if exists public.next_dc_no();
 drop function if exists public.next_grn_no();
 drop function if exists public.next_prd_no();
 drop function if exists public.next_qt_no();
 drop function if exists public.next_so_no();
 
-
-
 -- -------------------------------------------------------------------------
 -- 4. org_id on every top-level business table
+--    Nullable first, backfilled into a default org, then NOT NULL — safe
+--    whether the database is empty (local) or already has rows (cloud).
 -- -------------------------------------------------------------------------
 
-alter table "public"."clients"            add column "org_id" uuid not null references "public"."organizations"("id");
-alter table "public"."suppliers"          add column "org_id" uuid not null references "public"."organizations"("id");
-alter table "public"."items"              add column "org_id" uuid not null references "public"."organizations"("id");
-alter table "public"."bom"                add column "org_id" uuid not null references "public"."organizations"("id");
-alter table "public"."item_prices"        add column "org_id" uuid not null references "public"."organizations"("id");
-alter table "public"."quotations"         add column "org_id" uuid not null references "public"."organizations"("id");
-alter table "public"."sales_orders"       add column "org_id" uuid not null references "public"."organizations"("id");
-alter table "public"."production_orders"  add column "org_id" uuid not null references "public"."organizations"("id");
-alter table "public"."workers"            add column "org_id" uuid not null references "public"."organizations"("id");
-alter table "public"."stock_movements"    add column "org_id" uuid not null references "public"."organizations"("id");
-alter table "public"."stock_reservations" add column "org_id" uuid not null references "public"."organizations"("id");
-alter table "public"."inventory_balance"  add column "org_id" uuid not null references "public"."organizations"("id");
-alter table "public"."inventory_ops_log"  add column "org_id" uuid not null references "public"."organizations"("id");
-alter table "public"."delivery_challans"  add column "org_id" uuid not null references "public"."organizations"("id");
-alter table "public"."inbound_receipts"   add column "org_id" uuid not null references "public"."organizations"("id");
-alter table "public"."approvals"          add column "org_id" uuid not null references "public"."organizations"("id");
-alter table "public"."audit_logs"         add column "org_id" uuid references "public"."organizations"("id"); -- nullable: system-level rows may have none
+alter table "public"."clients"            add column "org_id" uuid references "public"."organizations"("id");
+alter table "public"."suppliers"          add column "org_id" uuid references "public"."organizations"("id");
+alter table "public"."items"              add column "org_id" uuid references "public"."organizations"("id");
+alter table "public"."bom"                add column "org_id" uuid references "public"."organizations"("id");
+alter table "public"."item_prices"        add column "org_id" uuid references "public"."organizations"("id");
+alter table "public"."quotations"         add column "org_id" uuid references "public"."organizations"("id");
+alter table "public"."sales_orders"       add column "org_id" uuid references "public"."organizations"("id");
+alter table "public"."production_orders"  add column "org_id" uuid references "public"."organizations"("id");
+alter table "public"."workers"            add column "org_id" uuid references "public"."organizations"("id");
+alter table "public"."stock_movements"    add column "org_id" uuid references "public"."organizations"("id");
+alter table "public"."stock_reservations" add column "org_id" uuid references "public"."organizations"("id");
+alter table "public"."inventory_balance"  add column "org_id" uuid references "public"."organizations"("id");
+alter table "public"."inventory_ops_log"  add column "org_id" uuid references "public"."organizations"("id");
+alter table "public"."delivery_challans"  add column "org_id" uuid references "public"."organizations"("id");
+alter table "public"."inbound_receipts"   add column "org_id" uuid references "public"."organizations"("id");
+alter table "public"."approvals"          add column "org_id" uuid references "public"."organizations"("id");
+alter table "public"."audit_logs"         add column "org_id" uuid references "public"."organizations"("id"); -- stays nullable
+
+do $$
+declare
+  v_default_org_id uuid;
+  v_needs_backfill boolean;
+begin
+  select exists (select 1 from public.items limit 1)
+      or exists (select 1 from public.profiles where org_id is null limit 1)
+      or exists (select 1 from public.inventory_balance limit 1)
+      or exists (select 1 from public.clients limit 1)
+      or exists (select 1 from public.suppliers limit 1)
+      or exists (select 1 from public.quotations limit 1)
+      or exists (select 1 from public.sales_orders limit 1)
+      or exists (select 1 from public.production_orders limit 1)
+      or exists (select 1 from public.workers limit 1)
+    into v_needs_backfill;
+
+  if v_needs_backfill then
+    insert into public.organizations (name, slug)
+    values ('Default Organization', 'default')
+    returning id into v_default_org_id;
+
+    update public.items              set org_id = v_default_org_id where org_id is null;
+    update public.inventory_balance  set org_id = v_default_org_id where org_id is null;
+    update public.clients            set org_id = v_default_org_id where org_id is null;
+    update public.suppliers          set org_id = v_default_org_id where org_id is null;
+    update public.bom                set org_id = v_default_org_id where org_id is null;
+    update public.item_prices        set org_id = v_default_org_id where org_id is null;
+    update public.quotations         set org_id = v_default_org_id where org_id is null;
+    update public.sales_orders       set org_id = v_default_org_id where org_id is null;
+    update public.production_orders  set org_id = v_default_org_id where org_id is null;
+    update public.workers            set org_id = v_default_org_id where org_id is null;
+    update public.stock_movements    set org_id = v_default_org_id where org_id is null;
+    update public.stock_reservations set org_id = v_default_org_id where org_id is null;
+    update public.inventory_ops_log  set org_id = v_default_org_id where org_id is null;
+    update public.delivery_challans  set org_id = v_default_org_id where org_id is null;
+    update public.inbound_receipts   set org_id = v_default_org_id where org_id is null;
+    update public.approvals          set org_id = v_default_org_id where org_id is null;
+    update public.audit_logs         set org_id = v_default_org_id where org_id is null;
+
+    update public.profiles
+    set org_id = v_default_org_id, role = 'admin'
+    where org_id is null;
+  end if;
+end $$;
+
+alter table "public"."clients"            alter column "org_id" set not null;
+alter table "public"."suppliers"          alter column "org_id" set not null;
+alter table "public"."items"              alter column "org_id" set not null;
+alter table "public"."bom"                alter column "org_id" set not null;
+alter table "public"."item_prices"        alter column "org_id" set not null;
+alter table "public"."quotations"         alter column "org_id" set not null;
+alter table "public"."sales_orders"       alter column "org_id" set not null;
+alter table "public"."production_orders"  alter column "org_id" set not null;
+alter table "public"."workers"            alter column "org_id" set not null;
+alter table "public"."stock_movements"    alter column "org_id" set not null;
+alter table "public"."stock_reservations" alter column "org_id" set not null;
+alter table "public"."inventory_balance"  alter column "org_id" set not null;
+alter table "public"."inventory_ops_log"  alter column "org_id" set not null;
+alter table "public"."delivery_challans"  alter column "org_id" set not null;
+alter table "public"."inbound_receipts"   alter column "org_id" set not null;
+alter table "public"."approvals"          alter column "org_id" set not null;
 
 create index "idx_clients_org" on "public"."clients" ("org_id");
 create index "idx_suppliers_org" on "public"."suppliers" ("org_id");
@@ -207,8 +250,6 @@ create index "idx_inventory_balance_org" on "public"."inventory_balance" ("org_i
 create index "idx_delivery_challans_org" on "public"."delivery_challans" ("org_id");
 create index "idx_inbound_receipts_org" on "public"."inbound_receipts" ("org_id");
 
--- item_code, so_number, po_number, quotation_no, challan_no, receipt_no were
--- globally unique — now they only need to be unique PER ORG.
 alter table "public"."items" drop constraint "items_item_code_key";
 alter table "public"."items" add constraint "items_org_item_code_key" unique ("org_id","item_code");
 
@@ -227,8 +268,6 @@ alter table "public"."delivery_challans" add constraint "delivery_challans_org_c
 alter table "public"."inbound_receipts" drop constraint "inbound_receipts_receipt_no_key";
 alter table "public"."inbound_receipts" add constraint "inbound_receipts_org_receipt_no_key" unique ("org_id","receipt_no");
 
--- workers.email was globally unique — same worker can't (currently) belong to
--- two orgs; make it unique per org instead.
 drop index if exists "public"."workers_email_unique";
 create unique index "workers_org_email_unique" on "public"."workers" ("org_id","email") where ("email" is not null);
 
@@ -236,8 +275,6 @@ create unique index "workers_org_email_unique" on "public"."workers" ("org_id","
 -- 5. Update RLS policies: every "auth.uid() IS NOT NULL" read policy and
 --    every role-based write policy must also scope to org_id = my_org().
 -- -------------------------------------------------------------------------
-
--- Simple pattern used below: drop the old policy, recreate scoped to org.
 
 drop policy if exists "auth reads clients"    on "public"."clients";
 drop policy if exists "auth reads suppliers"  on "public"."suppliers";
@@ -273,7 +310,6 @@ create policy "org reads grn"        on "public"."inbound_receipts" for select u
 create policy "org reads approvals"  on "public"."approvals" for select using (org_id = public.my_org());
 create policy "org reads audit"      on "public"."audit_logs" for select using (org_id = public.my_org());
 
--- Role-based write policies: add the org scope alongside the existing role check.
 drop policy if exists "sales manages cli" on "public"."clients";
 create policy "org sales manages cli" on "public"."clients"
     using (org_id = public.my_org() and public.my_role() = any (array['admin','sales','manager']::public.user_role[]));
@@ -326,7 +362,6 @@ drop policy if exists "mgr creates approval" on "public"."approvals";
 create policy "org mgr creates approval" on "public"."approvals"
     for insert with check (org_id = public.my_org() and public.my_role() = any (array['admin','manager']::public.user_role[]));
 
--- profiles: members can read/manage only within their own org.
 drop policy if exists "admin manages" on "public"."profiles";
 create policy "org admin manages profiles" on "public"."profiles"
     using (org_id = public.my_org() and public.my_role() = 'admin');
@@ -335,10 +370,6 @@ drop policy if exists "admin reads all" on "public"."profiles";
 create policy "org admin reads all" on "public"."profiles"
     for select using (org_id = public.my_org() and public.my_role() = 'admin');
 
--- "own profile" policy is unaffected — a user can always read their own row,
--- which is how the client discovers its own org_id in the first place.
-
--- inventory_ops_log: idempotency log stays readable by its creator or org admin.
 drop policy if exists "user reads own ops" on "public"."inventory_ops_log";
 create policy "org user reads own ops" on "public"."inventory_ops_log"
     for select using (
@@ -428,7 +459,6 @@ end;
 $$;
 alter function "public"."assert_item_in_my_org"(uuid) owner to "postgres";
 
--- lock_inventory_balance: stamp org_id when auto-creating a balance row.
 create or replace function "public"."lock_inventory_balance"("p_item_id" "uuid") returns "public"."inventory_balance"
     language plpgsql security definer set search_path to 'public' as
 $$
@@ -461,8 +491,6 @@ begin
 end;
 $$;
 
--- sync_inventory_balance trigger: stamp org_id on upsert too (belt-and-braces
--- for any path that inserts a balance row outside lock_inventory_balance).
 create or replace function "public"."sync_inventory_balance"() returns trigger
     language plpgsql security definer set search_path to 'public' as
 $$
@@ -493,11 +521,6 @@ begin
   return new;
 end;
 $$;
-
--- Add the org guard + org_id stamping to every ledger-mutating RPC.
--- (Each function is reproduced with the single addition of an
---  assert_item_in_my_org() call and org_id on inserted rows; everything
---  else is identical to your existing logic.)
 
 create or replace function "public"."adjust_inventory"("p_operation_id" "uuid","p_item_id" "uuid","p_delta" numeric,"p_reason" "text","p_ref_id" "uuid" default null)
 returns jsonb language plpgsql security definer set search_path to 'public' as
@@ -788,7 +811,6 @@ begin
 end;
 $$;
 
--- reconcile_inventory_balance: scope to the caller's org and admin role, unchanged logic otherwise.
 create or replace function "public"."reconcile_inventory_balance"() returns table("item_id" uuid, "old_qty" numeric, "new_qty" numeric, "diff" numeric)
 language plpgsql security definer set search_path to 'public' as
 $$

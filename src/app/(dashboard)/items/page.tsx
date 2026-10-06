@@ -2,34 +2,32 @@
 
 import { useState } from 'react'
 import { useOrgId } from "@/lib/hooks/use-tenant";
-import { useItems } from '@/lib/hooks/use-items'
+
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { TableLoader } from '@/components/ui/spinner'
 import { formatCurrency } from '@/lib/utils/format'
-import { Search, Package } from 'lucide-react'
+import { Search} from 'lucide-react'
 import Link from 'next/link'
-import type { Enums } from '@/lib/types/database'
+
 import { createClient } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { useItemCategories } from '@/lib/hooks/use-items';
 
-type ItemCategory = Enums<'item_category'>
-
-const CATEGORIES: ItemCategory[] = [
-  'Conductor','Cable','Insulator','Structural','Clamp',
-  'Stay Set','TF Belt','Hardware','GOD','LA',
-  'Fastener','Earthing','DB','Lug','Accessories'
-]
 
 // Fetch items with their current prices joined
 function useItemsWithPrices(
   search: string,
-  category: ItemCategory | "",
+  categoryId: string,
   orgId: string | null
 ) {
   const supabase = createClient();
+
   return useQuery({
-    queryKey: ["items-with-prices", orgId, search, category],
+    queryKey: ["items-with-prices", orgId, search, categoryId],
+
     queryFn: async () => {
       if (!orgId) return [];
 
@@ -37,25 +35,28 @@ function useItemsWithPrices(
         .from("items")
         .select(
           `
-          id, item_code, name, category, sub_category,
+          id, item_code, name, category_id, sub_category,
           material_type, size_spec, unit, hsn_code,
           is_traded, is_manufactured, is_raw_material,
           reorder_level, is_active
         `
         )
         .eq("is_active", true)
-        .order("category")
+        .order("category_id")
         .order("item_code");
 
-      if (category) query = query.eq("category", category);
+      if (categoryId) {
+        query = query.eq("category_id", categoryId);
+      }
+
       if (search) {
         query = query.or(`name.ilike.%${search}%,item_code.ilike.%${search}%`);
       }
 
       const { data: items, error } = await query;
+
       if (error) throw error;
 
-      // Get current prices separately from the view
       const { data: prices } = await supabase
         .from("v_current_prices")
         .select("item_id, purchase_rate, selling_rate, gst_percent, rate_unit");
@@ -69,24 +70,55 @@ function useItemsWithPrices(
         })) ?? []
       );
     },
+
     enabled: !!orgId,
     staleTime: 3 * 60 * 1000,
   });
 }
 
 export default function ItemsPage() {
+  const router = useRouter()
+  
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<ItemCategory | "">("");
+  const [categoryId, setCategoryId] = useState("");
   const orgId = useOrgId();
 
-  const { data: items, isLoading } = useItemsWithPrices(search, category, orgId);
+  const { data: categories, isLoading: isCategoriesLoading } =
+    useItemCategories();
+
+    const categoryNameById = new Map(
+      categories?.map((category) => [category.id, category.name]) ?? []
+    );
+
+  const { data: items, isLoading } = useItemsWithPrices(
+    search,
+    categoryId,
+    orgId
+  );
 
   return (
     <div>
       <PageHeader
         title="Items"
-        description="Master catalogue — all 141 products, raw materials and traded goods"
-      />
+        description="Master catalogue — all products, raw materials and traded goods"
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push("/items/import")}
+        >
+          Import Items
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push("/items/import-bom")}
+        >
+          Import BOM
+        </Button>
+
+      </PageHeader>
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
@@ -97,7 +129,7 @@ export default function ItemsPage() {
               type="text"
               placeholder="Search by name or code…"
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               className="
                 w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-300
                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
@@ -106,13 +138,17 @@ export default function ItemsPage() {
           </div>
 
           <select
-            value={category}
-            onChange={e => setCategory(e.target.value as ItemCategory | '')}
-            className="px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            disabled={isCategoriesLoading}
+            className="px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
           >
             <option value="">All Categories</option>
-            {CATEGORIES.map(c => (
-              <option key={c} value={c}>{c}</option>
+
+            {categories?.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
             ))}
           </select>
 
@@ -131,25 +167,44 @@ export default function ItemsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Code</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Name</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Category</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Material</th>
-                  <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Unit</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Purchase Rate</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Selling Rate</th>
-                  <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Type</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">
+                    Code
+                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                    Name
+                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                    Category
+                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                    Material
+                  </th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                    Unit
+                  </th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                    Purchase Rate
+                  </th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                    Selling Rate
+                  </th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                    Type
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {items?.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="text-center py-12 text-slate-400 text-sm">
+                    <td
+                      colSpan={8}
+                      className="text-center py-12 text-slate-400 text-sm"
+                    >
                       No items found
                     </td>
                   </tr>
                 )}
-                {items?.map(item => (
+                {items?.map((item) => (
                   <tr
                     key={item.id}
                     className="hover:bg-slate-50 transition-colors cursor-pointer"
@@ -162,7 +217,10 @@ export default function ItemsPage() {
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={`/items/${item.id}`} className="font-medium text-slate-900 hover:text-blue-600">
+                      <Link
+                        href={`/items/${item.id}`}
+                        className="font-medium text-slate-900 hover:text-blue-600"
+                      >
                         {item.name}
                       </Link>
                       {item.size_spec && (
@@ -172,10 +230,14 @@ export default function ItemsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <Badge variant="default">{item.category}</Badge>
+                      <Badge variant="default">
+                        {item.category_id
+                          ? categoryNameById.get(item.category_id) ?? "—"
+                          : "—"}
+                      </Badge>
                     </td>
                     <td className="px-4 py-3 text-slate-600">
-                      {item.material_type ?? '—'}
+                      {item.material_type ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className="font-mono text-xs text-slate-500">
@@ -183,22 +245,28 @@ export default function ItemsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right text-slate-700 tabular-nums">
-                      {item.price?.purchase_rate
-                        ? formatCurrency(item.price.purchase_rate)
-                        : <span className="text-slate-300">—</span>
-                      }
+                      {item.price?.purchase_rate ? (
+                        formatCurrency(item.price.purchase_rate)
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-slate-900 tabular-nums">
-                      {item.price?.selling_rate
-                        ? formatCurrency(item.price.selling_rate)
-                        : <span className="text-slate-300 font-normal">—</span>
-                      }
+                      {item.price?.selling_rate ? (
+                        formatCurrency(item.price.selling_rate)
+                      ) : (
+                        <span className="text-slate-300 font-normal">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
-                        {item.is_traded      && <Badge variant="info">Traded</Badge>}
-                        {item.is_manufactured && <Badge variant="purple">Mfg</Badge>}
-                        {item.is_raw_material && <Badge variant="teal">Raw</Badge>}
+                        {item.is_traded && <Badge variant="info">Traded</Badge>}
+                        {item.is_manufactured && (
+                          <Badge variant="purple">Mfg</Badge>
+                        )}
+                        {item.is_raw_material && (
+                          <Badge variant="teal">Raw</Badge>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -209,5 +277,5 @@ export default function ItemsPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

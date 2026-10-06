@@ -744,6 +744,47 @@ export type Database = {
           },
         ]
       }
+      item_categories: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          org_id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          org_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          org_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_categories_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_prices: {
         Row: {
           created_at: string
@@ -837,7 +878,7 @@ export type Database = {
       }
       items: {
         Row: {
-          category: Database["public"]["Enums"]["item_category"]
+          category_id: string | null
           created_at: string
           created_by: string | null
           hsn_code: string | null
@@ -859,7 +900,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          category: Database["public"]["Enums"]["item_category"]
+          category_id?: string | null
           created_at?: string
           created_by?: string | null
           hsn_code?: string | null
@@ -881,7 +922,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          category?: Database["public"]["Enums"]["item_category"]
+          category_id?: string | null
           created_at?: string
           created_by?: string | null
           hsn_code?: string | null
@@ -909,6 +950,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_org_category_fk"
+            columns: ["org_id", "category_id"]
+            isOneToOne: false
+            referencedRelation: "item_categories"
+            referencedColumns: ["org_id", "id"]
           },
           {
             foreignKeyName: "items_org_id_fkey"
@@ -947,27 +995,36 @@ export type Database = {
       }
       organizations: {
         Row: {
+          access_status: string
           created_at: string
           id: string
           is_active: boolean
           name: string
           slug: string | null
+          suspended_at: string | null
+          suspended_reason: string | null
           updated_at: string
         }
         Insert: {
+          access_status?: string
           created_at?: string
           id?: string
           is_active?: boolean
           name: string
           slug?: string | null
+          suspended_at?: string | null
+          suspended_reason?: string | null
           updated_at?: string
         }
         Update: {
+          access_status?: string
           created_at?: string
           id?: string
           is_active?: boolean
           name?: string
           slug?: string | null
+          suspended_at?: string | null
+          suspended_reason?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1854,6 +1911,7 @@ export type Database = {
           balance_updated_at: string | null
           below_reorder: boolean | null
           category: string | null
+          category_id: string | null
           item_code: string | null
           item_id: string | null
           name: string | null
@@ -1861,7 +1919,7 @@ export type Database = {
           qty_on_hand: number | null
           qty_reserved: number | null
           reorder_level: number | null
-          unit: string | null
+          unit: Database["public"]["Enums"]["unit_of_measure"] | null
         }
         Relationships: []
       }
@@ -1887,6 +1945,7 @@ export type Database = {
           balance_updated_at: string | null
           below_reorder: boolean | null
           category: string | null
+          category_id: string | null
           item_code: string | null
           item_id: string | null
           name: string | null
@@ -1894,7 +1953,7 @@ export type Database = {
           qty_on_hand: number | null
           qty_reserved: number | null
           reorder_level: number | null
-          unit: string | null
+          unit: Database["public"]["Enums"]["unit_of_measure"] | null
         }
         Relationships: []
       }
@@ -1973,6 +2032,7 @@ export type Database = {
       next_prd_no: { Args: { p_org_id: string }; Returns: string }
       next_qt_no: { Args: { p_org_id: string }; Returns: string }
       next_so_no: { Args: { p_org_id: string }; Returns: string }
+      org_is_active: { Args: never; Returns: boolean }
       produce_inventory: {
         Args: {
           p_item_id: string

@@ -19,7 +19,7 @@ export function useStockLevels(search?: string) {
         let query = supabase
         .from('v_stock_levels')
         .select('*')
-        .order('category')
+        .order('category_id')
         .order('name')
 
       if (search) {

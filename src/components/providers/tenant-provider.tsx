@@ -54,7 +54,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
    *      ↓
    * organizations.id
    */
-  const { data, isLoading, isError, error, refetch } = useQuery({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["tenant-context"],
 
     queryFn: async () => {
@@ -63,11 +63,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         error: userError,
       } = await supabase.auth.getUser();
 
-      if (userError) {
-        throw userError;
-      }
-
-      if (!user) {
+      if (userError || !user) {
         return {
           user: null,
           profile: null,
@@ -161,11 +157,20 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
-      if (
-        event === "SIGNED_IN" ||
-        event === "SIGNED_OUT" ||
-        event === "USER_UPDATED"
-      ) {
+      if (event === "SIGNED_OUT") {
+        queryClient.setQueryData(["tenant-context"], {
+          user: null,
+          profile: null,
+          organization: null,
+          orgId: null,
+        });
+        queryClient.removeQueries({
+          queryKey: ["tenant-context"],
+        });
+        queryClient.removeQueries({
+          queryKey: ["profile"],
+        });
+      } else if (event === "SIGNED_IN" || event === "USER_UPDATED") {
         queryClient.invalidateQueries({
           queryKey: ["tenant-context"],
         });
@@ -182,10 +187,19 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   }, [supabase, queryClient]);
 
   /*
-   * Users with a profile but no organization must complete onboarding.
+   * Redirect guards for unauthenticated or un-onboarded users.
    */
   useEffect(() => {
     if (isLoading) return;
+
+    if (
+      !user &&
+      !pathname.startsWith("/login") &&
+      !pathname.startsWith("/auth")
+    ) {
+      router.push("/login");
+      return;
+    }
 
     if (
       user &&
@@ -199,28 +213,26 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   }, [isLoading, user, profile, orgId, pathname, router]);
 
   async function handleSignOut() {
-    const { error: signOutError } = await supabase.auth.signOut();
-
-    if (signOutError) {
+    try {
+      queryClient.setQueryData(["tenant-context"], {
+        user: null,
+        profile: null,
+        organization: null,
+        orgId: null,
+      });
+      await supabase.auth.signOut();
+      queryClient.clear();
+      router.push("/login");
+    } catch (signOutError) {
       console.error("Failed to sign out:", signOutError);
-      return;
+      router.push("/login");
     }
-
-    queryClient.removeQueries({
-      queryKey: ["tenant-context"],
-    });
-
-    queryClient.removeQueries({
-      queryKey: ["profile"],
-    });
-
-    router.push("/login");
   }
 
   /*
    * 1. Tenant context is being resolved.
    */
-  if (isLoading) {
+  if (isLoading || (isFetching && !organization && !!user)) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
         <PageLoader />
@@ -229,11 +241,27 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   }
 
   /*
-   * 2. Tenant resolution itself failed.
+   * 2. Unauthenticated user on a protected route.
+   * Render PageLoader while Next.js transitions to /login.
+   */
+  if (!user) {
+    if (pathname.startsWith("/login") || pathname.startsWith("/auth")) {
+      return <>{children}</>;
+    }
+
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
+        <PageLoader />
+      </div>
+    );
+  }
+
+  /*
+   * 3. Tenant resolution itself failed for an authenticated user.
    *
    * Do not treat a database/network error as "no organization".
    */
-  if (isError) {
+  if (isError && !isFetching) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-900 p-6">
         <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-800 p-8 text-center shadow-xl">
@@ -327,6 +355,14 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
    * or is inactive.
    */
   if (user && profile && orgId && (!organization || !organization.is_active)) {
+    if (isFetching) {
+      return (
+        <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
+          <PageLoader />
+        </div>
+      );
+    }
+
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-900 p-6">
         <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-800 p-8 text-center shadow-xl">
@@ -364,7 +400,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     role,
     isLoading,
     isError,
-    error: error instanceof Error ? error : null,
+    error: (error as unknown as Error) || null,
     refetch: async () => {
       await refetch();
     },

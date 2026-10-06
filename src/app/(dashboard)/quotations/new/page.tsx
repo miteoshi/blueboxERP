@@ -69,7 +69,7 @@ function useItemsForQuote() {
       if (!orgId) return [];
       const { data: items, error } = await supabase
         .from("items")
-        .select("id, item_code, name, unit, hsn_code, category")
+        .select("id, item_code, name, unit, hsn_code, category_id")
         .eq("is_active", true)
         .order("name");
       if (error) throw error;

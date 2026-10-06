@@ -409,11 +409,71 @@ INSERT INTO "public"."audit_logs" ("id", "table_name", "record_id", "action", "o
 	('4b250e72-8713-44b0-84f1-fc3bc2eb85d3', 'items', '42375aed-8d23-4020-b07c-b9de9681fb0a', 'INSERT', NULL, '{"id": "42375aed-8d23-4020-b07c-b9de9681fb0a", "name": "Aluminium Bobin LT Line", "unit": "No.", "notes": null, "category": "Accessories", "hsn_code": "4822", "is_active": true, "is_traded": true, "item_code": "ACC-015", "size_spec": "LT", "created_at": "2026-05-16T01:03:33.351499+00:00", "created_by": null, "updated_at": "2026-05-16T01:03:33.351499+00:00", "reorder_qty": 0.00, "sub_category": "Bobin", "material_type": "Aluminium", "reorder_level": 0.00, "is_manufactured": false, "is_raw_material": false}', NULL, '2026-05-16 01:03:33.351499+00');
 
 
+
+
+-- =========================================================================
+-- Item category seed
+-- =========================================================================
+
+INSERT INTO "public"."item_categories" (
+    "org_id",
+    "code",
+    "name"
+)
+VALUES
+    ('00000000-0000-0000-0000-000000000001', 'CONDUCTOR', 'Conductor'),
+    ('00000000-0000-0000-0000-000000000001', 'CABLE', 'Cable'),
+    ('00000000-0000-0000-0000-000000000001', 'INSULATOR', 'Insulator'),
+    ('00000000-0000-0000-0000-000000000001', 'STRUCTURAL', 'Structural'),
+    ('00000000-0000-0000-0000-000000000001', 'CLAMP', 'Clamp'),
+    ('00000000-0000-0000-0000-000000000001', 'STAY_SET', 'Stay Set'),
+    ('00000000-0000-0000-0000-000000000001', 'TF_BELT', 'TF Belt'),
+    ('00000000-0000-0000-0000-000000000001', 'HARDWARE', 'Hardware'),
+    ('00000000-0000-0000-0000-000000000001', 'GOD', 'GOD'),
+    ('00000000-0000-0000-0000-000000000001', 'LA', 'LA'),
+    ('00000000-0000-0000-0000-000000000001', 'FASTENER', 'Fastener'),
+    ('00000000-0000-0000-0000-000000000001', 'EARTHING', 'Earthing'),
+    ('00000000-0000-0000-0000-000000000001', 'DB', 'DB'),
+    ('00000000-0000-0000-0000-000000000001', 'LUG', 'Lug'),
+    ('00000000-0000-0000-0000-000000000001', 'ACCESSORIES', 'Accessories')
+ON CONFLICT ("org_id", "code") DO NOTHING;
+
+
+
 --
 -- Data for Name: items; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO "public"."items" ("id", "item_code", "name", "category", "sub_category", "material_type", "size_spec", "unit", "hsn_code", "is_traded", "is_manufactured", "is_raw_material", "reorder_level", "reorder_qty", "notes", "is_active", "created_by", "created_at", "updated_at") VALUES
+
+INSERT INTO "public"."items" (
+    "id", "item_code", "name", "category_id", "sub_category",
+    "material_type", "size_spec", "unit", "hsn_code",
+    "is_traded", "is_manufactured", "is_raw_material",
+    "reorder_level", "reorder_qty", "notes", "is_active",
+    "created_by", "created_at", "updated_at"
+)
+SELECT
+     v."id"::uuid,
+    v."item_code",
+    v."name",
+    c."id",
+    v."sub_category",
+    v."material_type"::public.material_type,
+    v."size_spec",
+    v."unit"::public.unit_of_measure,
+    v."hsn_code",
+    v."is_traded",
+    v."is_manufactured",
+    v."is_raw_material",
+    v."reorder_level",
+    v."reorder_qty",
+    v."notes",
+	v."is_active",
+	v."created_by"::uuid,
+	v."created_at"::timestamptz,
+	v."updated_at"::timestamptz
+FROM (
+    VALUES
 	('4d7648eb-ce9e-4a58-8012-9c482369f919', 'CON-001', 'ACSR Dog Conductor', 'Conductor', 'ACSR', 'Aluminium', '0.1 sqmm | 2.5mtr/kg | 394kg/km', 'Mtr', '7604', true, false, false, 0.00, 0.00, NULL, true, NULL, '2026-05-16 01:03:33.351499+00', '2026-05-16 01:03:33.351499+00'),
 	('fb20b785-e3fe-488c-971c-f633f89bbcee', 'CON-002', 'ACSR Raccoon Conductor', 'Conductor', 'ACSR', 'Aluminium', '80 sqmm | 3.2mtr/kg | 310kg/km', 'Mtr', '7604', true, false, false, 0.00, 0.00, NULL, true, NULL, '2026-05-16 01:03:33.351499+00', '2026-05-16 01:03:33.351499+00'),
 	('1e42e2e3-2763-485c-afa4-122a9aab01ab', 'CON-003', 'ACSR Rabbit Conductor', 'Conductor', 'ACSR', 'Aluminium', '50 sqmm | 4.7mtr/kg | 214kg/km', 'Mtr', '7604', true, false, false, 0.00, 0.00, NULL, true, NULL, '2026-05-16 01:03:33.351499+00', '2026-05-16 01:03:33.351499+00'),
@@ -617,7 +677,16 @@ INSERT INTO "public"."items" ("id", "item_code", "name", "category", "sub_catego
 	('28868702-13c7-4563-8c4a-760620a2e965', 'ACC-012', 'Alkathene Pipe', 'Accessories', 'Pipe', 'HDPE', '', 'Mtr', '', true, false, false, 0.00, 0.00, NULL, true, NULL, '2026-05-16 01:03:33.351499+00', '2026-05-16 01:03:33.351499+00'),
 	('e4c094db-8734-404b-87e7-5814f6e45948', 'ACC-013', 'Danger Board 22KV 33KV', 'Accessories', 'Signage', 'Other', '22KV/33KV', 'No.', '7313', true, false, false, 0.00, 0.00, NULL, true, NULL, '2026-05-16 01:03:33.351499+00', '2026-05-16 01:03:33.351499+00'),
 	('e51ccbf7-a575-4e51-b971-00517aaecec0', 'ACC-014', 'Danger Board 11KV', 'Accessories', 'Signage', 'Other', '11KV', 'No.', '7313', true, false, false, 0.00, 0.00, NULL, true, NULL, '2026-05-16 01:03:33.351499+00', '2026-05-16 01:03:33.351499+00'),
-	('42375aed-8d23-4020-b07c-b9de9681fb0a', 'ACC-015', 'Aluminium Bobin LT Line', 'Accessories', 'Bobin', 'Aluminium', 'LT', 'No.', '4822', true, false, false, 0.00, 0.00, NULL, true, NULL, '2026-05-16 01:03:33.351499+00', '2026-05-16 01:03:33.351499+00');
+	('42375aed-8d23-4020-b07c-b9de9681fb0a', 'ACC-015', 'Aluminium Bobin LT Line', 'Accessories', 'Bobin', 'Aluminium', 'LT', 'No.', '4822', true, false, false, 0.00, 0.00, NULL, true, NULL, '2026-05-16 01:03:33.351499+00', '2026-05-16 01:03:33.351499+00')) AS v(
+    "id", "item_code", "name", "category_name", "sub_category",
+    "material_type", "size_spec", "unit", "hsn_code",
+    "is_traded", "is_manufactured", "is_raw_material",
+    "reorder_level", "reorder_qty", "notes", "is_active",
+    "created_by", "created_at", "updated_at"
+)
+JOIN "public"."item_categories" AS c
+    ON c."org_id" = '00000000-0000-0000-0000-000000000001'
+   AND c."name" = v."category_name";
 
 
 --
@@ -1043,6 +1112,8 @@ UPDATE "public"."items"
 SET "org_id" = '00000000-0000-0000-0000-000000000001'
 WHERE "org_id" IS NULL;
 
+
+
 UPDATE "public"."inventory_balance"
 SET "org_id" = '00000000-0000-0000-0000-000000000001'
 WHERE "org_id" IS NULL;
@@ -1058,4 +1129,10 @@ WHERE "org_id" IS NULL;
 ALTER TABLE "public"."items"             ALTER COLUMN "org_id" SET NOT NULL;
 ALTER TABLE "public"."inventory_balance" ALTER COLUMN "org_id" SET NOT NULL;
 
+
+
+
 RESET ALL;
+
+
+

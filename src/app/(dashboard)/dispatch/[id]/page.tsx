@@ -52,7 +52,17 @@ function useChallan(id: string, orgId: string | null) {
           creator:profiles!delivery_challans_created_by_fkey ( full_name ),
           delivery_challan_lines (
             id, qty, unit, rate, line_total,
-            item:items ( id, item_code, name, unit, category ),
+            item:items (
+                        id,
+                        item_code,
+                        name,
+                        unit,
+                        category_id,
+                        item_category:item_categories (
+                          id,
+                          name
+                        )
+                      ),
             so_line:sales_order_lines ( id, qty, qty_dispatched )
           )
         `
@@ -422,7 +432,9 @@ async function handleMarkDelivered() {
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <Badge variant="default">{line.item?.category}</Badge>
+                        <Badge variant="default">
+                          {line.item?.item_category?.name ?? "—"}
+                        </Badge>
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
                         {formatQty(line.qty, line.unit)}

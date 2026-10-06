@@ -13,6 +13,7 @@ export default function OnboardingPage() {
   const queryClient = useQueryClient()
 
   const [orgName, setOrgName] = useState('')
+  const [fullName, setFullName] = useState('')
   const [loading, setLoading] = useState(false)
   const [checking, setChecking] = useState(true)
 
@@ -25,10 +26,14 @@ export default function OnboardingPage() {
         return
       }
 
+      if (user.user_metadata?.full_name) {
+        setFullName(user.user_metadata.full_name)
+      }
+
       // Check if user already has an org_id
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("org_id")
+        .select("org_id, full_name")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -38,15 +43,13 @@ export default function OnboardingPage() {
         return;
       }
 
-      if (profile?.org_id) {
-        router.push("/");
-        return;
+      if (profile?.full_name && !user.user_metadata?.full_name) {
+        setFullName(profile.full_name);
       }
 
       if (profile?.org_id) {
-        // Already in an organization, redirect to dashboard
-        router.push('/')
-        return
+        router.push("/");
+        return;
       }
 
       setChecking(false)
@@ -64,16 +67,35 @@ export default function OnboardingPage() {
 
     setLoading(true)
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+
       const { data: orgId, error } = await supabase.rpc("create_organization", {
         p_name: orgName.trim(),
       });
 
       if (error) throw error;
 
+      if (user && fullName.trim()) {
+        try {
+          await supabase.auth.updateUser({
+            data: { full_name: fullName.trim() },
+          });
+          await supabase
+            .from("profiles")
+            .update({ full_name: fullName.trim() })
+            .eq("id", user.id);
+        } catch (nameErr) {
+          console.error("Could not update display name:", nameErr);
+        }
+      }
+
       toast.success("Organization created successfully!");
-      // Invalidate queries so tenant context picks up the new org immediately
-      queryClient.invalidateQueries({ queryKey: ["tenant-context"] });
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      
+      // Await refetch before navigating so the fresh organization is ready in cache
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["tenant-context"] }),
+        queryClient.refetchQueries({ queryKey: ["profile"] }),
+      ]);
 
       router.push("/");
       router.refresh();
@@ -87,8 +109,19 @@ export default function OnboardingPage() {
   }
 
   async function handleSignOut() {
-    await supabase.auth.signOut()
-    router.push('/login')
+    try {
+      queryClient.setQueryData(["tenant-context"], {
+        user: null,
+        profile: null,
+        organization: null,
+        orgId: null,
+      })
+      await supabase.auth.signOut()
+      queryClient.clear()
+      router.push('/login')
+    } catch {
+      router.push('/login')
+    }
   }
 
   if (checking) {
@@ -342,6 +375,18 @@ export default function OnboardingPage() {
 
             <form onSubmit={handleCreateOrg}>
               <div style={{ marginBottom: 16 }}>
+                <label className="field-label">Your Full Name</label>
+                <input
+                  className="field-input"
+                  type="text"
+                  value={fullName}
+                  onChange={e => setFullName(e.target.value)}
+                  placeholder="e.g. Piyush Joshi"
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
                 <label className="field-label">Organization Name</label>
                 <input
                   className="field-input"
@@ -350,7 +395,6 @@ export default function OnboardingPage() {
                   onChange={e => setOrgName(e.target.value)}
                   required
                   placeholder="e.g. Apex Electrical Industries"
-                  autoFocus
                 />
               </div>
 

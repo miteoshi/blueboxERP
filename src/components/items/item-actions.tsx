@@ -18,7 +18,6 @@ interface Option {
 }
 
 type FormState = {
-  item_code: string;
   name: string;
   category_id: string;
   sub_category: string;
@@ -51,6 +50,7 @@ type ReferenceCheck = {
     | "production_order_items";
   label: string;
   column: ReferenceColumn;
+  selectColumn: string;
 };
 
 const inputClass =
@@ -74,7 +74,8 @@ function errorMessage(error: any, fallback: string) {
 function deleteErrorMessage(error: any) {
   const message = String(error?.message ?? "");
   const detail = String(error?.details ?? "");
-  const combined = `${message} ${detail}`.toLowerCase();
+  const hint = String(error?.hint ?? "");
+  const combined = `${message} ${detail} ${hint}`.toLowerCase();
 
   if (error?.code === "23503" || combined.includes("foreign key")) {
     if (combined.includes("bom")) {
@@ -121,7 +122,7 @@ function deleteErrorMessage(error: any) {
       return "Cannot delete item: it is referenced by production order items.";
     }
 
-    return `Cannot delete item because another record references it. Database error: ${message}`;
+    return "Cannot delete item because another record references it.";
   }
 
   return message || "Cannot delete item.";
@@ -140,7 +141,6 @@ export default function ItemActions({ item, stockQty }: ItemActionsProps) {
   const [units, setUnits] = useState<Option[]>([]);
 
   const [form, setForm] = useState<FormState>({
-    item_code: item.item_code ?? "",
     name: item.name ?? "",
     category_id: item.category_id ?? "",
     sub_category: item.sub_category ?? "",
@@ -158,6 +158,8 @@ export default function ItemActions({ item, stockQty }: ItemActionsProps) {
 
   useEffect(() => {
     if (!editing) return;
+
+    let cancelled = false;
 
     async function loadOptions() {
       const [categoryResult, materialResult, unitResult] = await Promise.all([
@@ -180,20 +182,25 @@ export default function ItemActions({ item, stockQty }: ItemActionsProps) {
           .order("name"),
       ]);
 
+      if (cancelled) return;
+
       if (categoryResult.error) {
-        return toast.error(
+        toast.error(
           `Could not load categories: ${categoryResult.error.message}`
         );
+        return;
       }
 
       if (materialResult.error) {
-        return toast.error(
+        toast.error(
           `Could not load material types: ${materialResult.error.message}`
         );
+        return;
       }
 
       if (unitResult.error) {
-        return toast.error(`Could not load units: ${unitResult.error.message}`);
+        toast.error(`Could not load units: ${unitResult.error.message}`);
+        return;
       }
 
       setCategories(categoryResult.data ?? []);
@@ -202,6 +209,10 @@ export default function ItemActions({ item, stockQty }: ItemActionsProps) {
     }
 
     loadOptions();
+
+    return () => {
+      cancelled = true;
+    };
   }, [editing]);
 
   function setField<K extends keyof FormState>(field: K, value: FormState[K]) {
@@ -213,7 +224,6 @@ export default function ItemActions({ item, stockQty }: ItemActionsProps) {
 
   function openEdit() {
     setForm({
-      item_code: item.item_code ?? "",
       name: item.name ?? "",
       category_id: item.category_id ?? "",
       sub_category: item.sub_category ?? "",
@@ -234,61 +244,63 @@ export default function ItemActions({ item, stockQty }: ItemActionsProps) {
   }
 
   async function handleSave() {
-    const itemCode = form.item_code.trim();
-
-    if (!itemCode) {
-      return toast.error("Item code is required.");
-    }
-
     if (!form.name.trim()) {
-      return toast.error("Item name is required.");
+      toast.error("Item name is required.");
+      return;
     }
 
     if (!form.category_id) {
-      return toast.error("Category is required.");
+      toast.error("Category is required.");
+      return;
     }
 
     if (!form.material_type_id) {
-      return toast.error("Material type is required.");
+      toast.error("Material type is required.");
+      return;
     }
 
     if (!form.unit_id) {
-      return toast.error("Unit is required.");
+      toast.error("Unit is required.");
+      return;
     }
 
     if (!form.is_traded && !form.is_manufactured && !form.is_raw_material) {
-      return toast.error("Select at least one item type.");
+      toast.error("Select at least one item type.");
+      return;
+    }
+
+    const reorderLevel =
+      form.reorder_level === "" ? null : Number(form.reorder_level);
+
+    const reorderQty =
+      form.reorder_qty === "" ? null : Number(form.reorder_qty);
+
+    if (reorderLevel !== null && !Number.isFinite(reorderLevel)) {
+      toast.error("Reorder level must be a valid number.");
+      return;
+    }
+
+    if (reorderQty !== null && !Number.isFinite(reorderQty)) {
+      toast.error("Reorder quantity must be a valid number.");
+      return;
+    }
+
+    if (reorderLevel !== null && reorderLevel < 0) {
+      toast.error("Reorder level cannot be negative.");
+      return;
+    }
+
+    if (reorderQty !== null && reorderQty < 0) {
+      toast.error("Reorder quantity cannot be negative.");
+      return;
     }
 
     setSaving(true);
 
     try {
-      /*
-       * Check whether another item in this organization already
-       * uses the new item code.
-       */
-      const { data: duplicateItem, error: duplicateError } = await supabase
-        .from("items")
-        .select("id")
-        .eq("item_code", itemCode)
-        .neq("id", item.id)
-        .maybeSingle();
-
-      if (duplicateError) {
-        throw duplicateError;
-      }
-
-      if (duplicateItem) {
-        toast.error(
-          `Cannot save item: item code "${itemCode}" already exists.`
-        );
-        return;
-      }
-
       const { error } = await supabase
         .from("items")
         .update({
-          item_code: itemCode,
           name: form.name.trim(),
           category_id: form.category_id,
           sub_category: form.sub_category.trim() || null,
@@ -299,10 +311,8 @@ export default function ItemActions({ item, stockQty }: ItemActionsProps) {
           is_traded: form.is_traded,
           is_manufactured: form.is_manufactured,
           is_raw_material: form.is_raw_material,
-          reorder_level:
-            form.reorder_level === "" ? null : Number(form.reorder_level),
-          reorder_qty:
-            form.reorder_qty === "" ? null : Number(form.reorder_qty),
+          reorder_level: reorderLevel,
+          reorder_qty: reorderQty,
           notes: form.notes.trim() || null,
         })
         .eq("id", item.id);
@@ -322,75 +332,7 @@ export default function ItemActions({ item, stockQty }: ItemActionsProps) {
   }
 
   async function handleDelete() {
-    if (stockQty !== 0) {
-      toast.error(
-        `Cannot delete item: current on-hand quantity is ${stockQty}. Quantity must be 0.`
-      );
-      return;
-    }
-
-    const checks: ReferenceCheck[] = [
-      {
-        table: "bom",
-        label: "BOM records",
-        column: "finished_item_id",
-      },
-      {
-        table: "bom",
-        label: "BOM component references",
-        column: "component_id",
-      },
-      {
-        table: "item_prices",
-        label: "price history records",
-        column: "item_id",
-      },
-      {
-        table: "inventory_balance",
-        label: "inventory balance records",
-        column: "item_id",
-      },
-      {
-        table: "inventory_ops_log",
-        label: "inventory operation records",
-        column: "item_id",
-      },
-      {
-        table: "stock_movements",
-        label: "stock movement records",
-        column: "item_id",
-      },
-      {
-        table: "stock_reservations",
-        label: "stock reservation records",
-        column: "item_id",
-      },
-      {
-        table: "inbound_receipt_lines",
-        label: "inbound receipt lines",
-        column: "item_id",
-      },
-      {
-        table: "delivery_challan_lines",
-        label: "delivery challan lines",
-        column: "item_id",
-      },
-      {
-        table: "quotation_lines",
-        label: "quotation lines",
-        column: "item_id",
-      },
-      {
-        table: "sales_order_lines",
-        label: "sales order lines",
-        column: "item_id",
-      },
-      {
-        table: "production_order_items",
-        label: "production order items",
-        column: "item_id",
-      },
-    ];
+    if (deleting) return;
 
     if (
       !window.confirm(
@@ -403,12 +345,119 @@ export default function ItemActions({ item, stockQty }: ItemActionsProps) {
     setDeleting(true);
 
     try {
+      /*
+       * Check the live inventory balance immediately before deletion.
+       * Do not rely only on the stockQty prop because it may be stale.
+       */
+      const { data: balance, error: balanceError } = await supabase
+        .from("inventory_balance")
+        .select("current_qty")
+        .eq("item_id", item.id)
+        .maybeSingle();
+
+      if (balanceError) {
+        throw balanceError;
+      }
+
+      const currentQty = Number(balance?.current_qty ?? 0);
+
+      if (!Number.isFinite(currentQty)) {
+        throw new Error("Could not determine the current inventory quantity.");
+      }
+
+      if (currentQty !== 0) {
+        toast.error(
+          `Cannot delete item: current on-hand quantity is ${currentQty}. Quantity must be 0.`
+        );
+        return;
+      }
+
+      /*
+       * Every selectColumn below is a real column in the corresponding
+       * table. These queries only need a valid column so Supabase can
+       * return an exact count without fetching rows.
+       */
+      const checks: ReferenceCheck[] = [
+        {
+          table: "bom",
+          label: "BOM records",
+          column: "finished_item_id",
+          selectColumn: "id",
+        },
+        {
+          table: "bom",
+          label: "BOM component references",
+          column: "component_id",
+          selectColumn: "id",
+        },
+        {
+          table: "item_prices",
+          label: "price history records",
+          column: "item_id",
+          selectColumn: "id",
+        },
+        {
+          table: "inventory_balance",
+          label: "inventory balance records",
+          column: "item_id",
+          selectColumn: "item_id",
+        },
+        {
+          table: "inventory_ops_log",
+          label: "inventory operation records",
+          column: "item_id",
+          selectColumn: "operation_id",
+        },
+        {
+          table: "stock_movements",
+          label: "stock movement records",
+          column: "item_id",
+          selectColumn: "id",
+        },
+        {
+          table: "stock_reservations",
+          label: "stock reservation records",
+          column: "item_id",
+          selectColumn: "id",
+        },
+        {
+          table: "inbound_receipt_lines",
+          label: "inbound receipt lines",
+          column: "item_id",
+          selectColumn: "id",
+        },
+        {
+          table: "delivery_challan_lines",
+          label: "delivery challan lines",
+          column: "item_id",
+          selectColumn: "id",
+        },
+        {
+          table: "quotation_lines",
+          label: "quotation lines",
+          column: "item_id",
+          selectColumn: "id",
+        },
+        {
+          table: "sales_order_lines",
+          label: "sales order lines",
+          column: "item_id",
+          selectColumn: "id",
+        },
+        {
+          table: "production_order_items",
+          label: "production order items",
+          column: "item_id",
+          selectColumn: "id",
+        },
+      ];
+
       const results = await Promise.all(
         checks.map(async (check) => ({
           ...check,
           result: await supabase
             .from(check.table)
-            .select("id", {
+            .select(check.selectColumn, {
               count: "exact",
               head: true,
             })
@@ -435,10 +484,18 @@ export default function ItemActions({ item, stockQty }: ItemActionsProps) {
         return;
       }
 
-      const { error } = await supabase.from("items").delete().eq("id", item.id);
+      /*
+       * The checks above are for a friendly user-facing message.
+       * PostgreSQL foreign keys remain the final protection against
+       * deleting an item that becomes referenced concurrently.
+       */
+      const { error: deleteError } = await supabase
+        .from("items")
+        .delete()
+        .eq("id", item.id);
 
-      if (error) {
-        throw error;
+      if (deleteError) {
+        throw deleteError;
       }
 
       toast.success("Item deleted successfully.");
@@ -480,19 +537,19 @@ export default function ItemActions({ item, stockQty }: ItemActionsProps) {
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
-                All item properties can be changed. Item code cannot be changed.
+                Item code cannot be changed. All other editable item properties
+                can be updated.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-6 py-5">
-              {/* <Field label="Item Code">
+              <Field label="Item Code">
                 <input
-                  value={form.item_code}
-                  onChange={(e) => setField("item_code", e.target.value)}
-                  disabled={saving}
+                  value={item.item_code ?? ""}
+                  disabled
                   className={inputClass}
                 />
-              </Field> */}
+              </Field>
 
               <Field label="Name">
                 <input
@@ -584,6 +641,7 @@ export default function ItemActions({ item, stockQty }: ItemActionsProps) {
               <Field label="Reorder Level">
                 <input
                   type="number"
+                  min="0"
                   step="any"
                   value={form.reorder_level}
                   onChange={(e) => setField("reorder_level", e.target.value)}
@@ -595,6 +653,7 @@ export default function ItemActions({ item, stockQty }: ItemActionsProps) {
               <Field label="Reorder Quantity">
                 <input
                   type="number"
+                  min="0"
                   step="any"
                   value={form.reorder_qty}
                   onChange={(e) => setField("reorder_qty", e.target.value)}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useOrgId } from "@/lib/hooks/use-tenant";
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
@@ -17,30 +18,35 @@ import { formatDate, formatQty } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { ArrowLeft, Users, Package, Plus, Info } from 'lucide-react'
 
-function useWorkers() {
-  const supabase = createClient()
+function useWorkers(orgId: string | null) {
+  const supabase = createClient();
   return useQuery({
-    queryKey: ['workers'],
+    queryKey: ["workers", orgId],
     queryFn: async () => {
+      if (!orgId) return [];
+
       const { data, error } = await supabase
-        .from('workers')
-        .select('id, name, skill')
-        .eq('is_active', true)
-        .order('name')
-      if (error) throw error
-      return data
+        .from("workers")
+        .select("id, name, skill")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      return data;
     },
+    enabled: !!orgId,
     staleTime: 5 * 60 * 1000,
-  })
+  });
 }
 
 export default function ProductionDetailPage() {
-  const { id } = useParams<{ id: string }>()
-  const router = useRouter()
+const { id } = useParams<{ id: string }>();
+const router = useRouter();
+const orgId = useOrgId();
 
-  const { data: order, isLoading } = useProductionOrder(id)
-  const { mutate: assignWorker, isPending: assigningWorker } = useAssignWorker()
-  const { data: workers = [] } = useWorkers()
+const { data: order, isLoading } = useProductionOrder(id);
+const { mutate: assignWorker, isPending: assigningWorker } = useAssignWorker();
+const { data: workers = [] } = useWorkers(orgId);
   const [selectedWorker, setSelectedWorker] = useState('')
 
   if (isLoading) return <PageLoader />
@@ -77,18 +83,21 @@ export default function ProductionDetailPage() {
         <div className="mb-6 flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-5 py-3">
           <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-blue-800">
-            To start, pause, or complete this production order, go to{' '}
-            <a href="/tasks" className="font-semibold underline underline-offset-2">My Tasks</a>.
-            This page is for viewing order details only.
+            To start, pause, or complete this production order, go to{" "}
+            <a
+              href="/tasks"
+              className="font-semibold underline underline-offset-2"
+            >
+              My Tasks
+            </a>
+            . This page is for viewing order details only.
           </p>
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
         {/* ── Left: Details + Workers ── */}
         <div className="space-y-4">
-
           {/* Status card */}
           <Card>
             <CardBody className="space-y-3">
@@ -98,7 +107,9 @@ export default function ProductionDetailPage() {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">PRD Number</span>
-                <span className="font-mono font-bold text-slate-900">{order.po_number}</span>
+                <span className="font-mono font-bold text-slate-900">
+                  {order.po_number}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">Type</span>
@@ -107,17 +118,21 @@ export default function ProductionDetailPage() {
               {order.start_date && (
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">Started</span>
-                  <span className="text-slate-700">{formatDate(order.start_date)}</span>
+                  <span className="text-slate-700">
+                    {formatDate(order.start_date)}
+                  </span>
                 </div>
               )}
               {order.target_date && (
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">Target</span>
-                  <span className={
-                    !isCompleted && new Date(order.target_date) < new Date()
-                      ? 'text-red-500 font-medium'
-                      : 'text-slate-700'
-                  }>
+                  <span
+                    className={
+                      !isCompleted && new Date(order.target_date) < new Date()
+                        ? "text-red-500 font-medium"
+                        : "text-slate-700"
+                    }
+                  >
                     {formatDate(order.target_date)}
                   </span>
                 </div>
@@ -125,7 +140,9 @@ export default function ProductionDetailPage() {
               {order.completed_date && (
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">Completed</span>
-                  <span className="text-green-600 font-medium">{formatDate(order.completed_date)}</span>
+                  <span className="text-green-600 font-medium">
+                    {formatDate(order.completed_date)}
+                  </span>
                 </div>
               )}
               {creator && (
@@ -136,7 +153,9 @@ export default function ProductionDetailPage() {
               )}
               {order.notes && (
                 <div className="pt-2 border-t border-slate-100">
-                  <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Notes</p>
+                  <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">
+                    Notes
+                  </p>
                   <p className="text-sm text-slate-700">{order.notes}</p>
                 </div>
               )}
@@ -154,13 +173,19 @@ export default function ProductionDetailPage() {
             </CardHeader>
             <CardBody className="space-y-3">
               {assignments.length === 0 && (
-                <p className="text-xs text-slate-400">No workers assigned yet</p>
+                <p className="text-xs text-slate-400">
+                  No workers assigned yet
+                </p>
               )}
               {assignments.map((a: any) => (
                 <div key={a.id} className="flex items-center justify-between">
                   <div>
-                    <div className="text-sm font-medium text-slate-900">{a.worker?.name}</div>
-                    <div className="text-xs text-slate-400">{a.worker?.skill}</div>
+                    <div className="text-sm font-medium text-slate-900">
+                      {a.worker?.name}
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      {a.worker?.skill}
+                    </div>
                   </div>
                   {a.hours_worked && (
                     <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
@@ -174,29 +199,31 @@ export default function ProductionDetailPage() {
                 <div className="pt-2 border-t border-slate-100 space-y-2">
                   <select
                     value={selectedWorker}
-                    onChange={e => setSelectedWorker(e.target.value)}
+                    onChange={(e) => setSelectedWorker(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                   >
                     <option value="">Select worker…</option>
                     {workers
-                      .filter(w => !assignedWorkerIds.includes(w.id))
-                      .map(w => (
+                      .filter((w) => !assignedWorkerIds.includes(w.id))
+                      .map((w) => (
                         <option key={w.id} value={w.id}>
                           {w.name} — {w.skill}
                         </option>
-                      ))
-                    }
+                      ))}
                   </select>
                   <Button
                     size="sm"
                     variant="secondary"
                     loading={assigningWorker}
                     onClick={() => {
-                      if (!selectedWorker) { toast.error('Select a worker'); return }
+                      if (!selectedWorker) {
+                        toast.error("Select a worker");
+                        return;
+                      }
                       assignWorker(
                         { productionOrderId: id, workerId: selectedWorker },
-                        { onSuccess: () => setSelectedWorker('') }
-                      )
+                        { onSuccess: () => setSelectedWorker("") }
+                      );
                     }}
                     className="w-full text-purple-700 bg-purple-50 hover:bg-purple-100"
                   >
@@ -211,7 +238,6 @@ export default function ProductionDetailPage() {
 
         {/* ── Right: Items + reserved materials ── */}
         <div className="lg:col-span-2 space-y-6">
-
           {/* Finished items */}
           <Card>
             <CardHeader>
@@ -222,10 +248,16 @@ export default function ProductionDetailPage() {
             </CardHeader>
             <div className="divide-y divide-slate-50">
               {items.map((item: any) => {
-                const pct   = item.qty_required > 0
-                  ? Math.min(100, Math.round((item.qty_produced / item.qty_required) * 100))
-                  : 0
-                const isDone = pct >= 100
+                const pct =
+                  item.qty_required > 0
+                    ? Math.min(
+                        100,
+                        Math.round(
+                          (item.qty_produced / item.qty_required) * 100
+                        )
+                      )
+                    : 0;
+                const isDone = pct >= 100;
 
                 return (
                   <div key={item.id} className="px-5 py-4">
@@ -234,23 +266,38 @@ export default function ProductionDetailPage() {
                         <span className="font-mono text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded mr-2">
                           {item.item?.item_code}
                         </span>
-                        <span className="font-semibold text-slate-900">{item.item?.name}</span>
+                        <span className="font-semibold text-slate-900">
+                          {item.item?.name}
+                        </span>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <div className={`font-bold text-sm ${isDone ? 'text-green-600' : 'text-slate-900'}`}>
-                          {formatQty(item.qty_produced, item.unit)} / {formatQty(item.qty_required, item.unit)}
+                        <div
+                          className={`font-bold text-sm ${
+                            isDone ? "text-green-600" : "text-slate-900"
+                          }`}
+                        > 
+                          {formatQty(item.qty_produced, item.unit?.name)} /{" "}
+                          {formatQty(item.qty_required, item.unit?.name)}
                         </div>
-                        {isDone && <div className="text-xs text-green-600">Complete ✓</div>}
+                        {isDone && (
+                          <div className="text-xs text-green-600">
+                            Complete ✓
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-slate-100 rounded-full h-2">
                         <div
-                          className={`h-2 rounded-full transition-all ${isDone ? 'bg-green-500' : 'bg-purple-500'}`}
+                          className={`h-2 rounded-full transition-all ${
+                            isDone ? "bg-green-500" : "bg-purple-500"
+                          }`}
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      <span className="text-xs text-slate-500 tabular-nums w-10 text-right">{pct}%</span>
+                      <span className="text-xs text-slate-500 tabular-nums w-10 text-right">
+                        {pct}%
+                      </span>
                     </div>
                     {isCompleted && isDone && (
                       <p className="text-xs text-green-600 mt-2">
@@ -258,7 +305,7 @@ export default function ProductionDetailPage() {
                       </p>
                     )}
                   </div>
-                )
+                );
               })}
             </div>
           </Card>
@@ -266,54 +313,71 @@ export default function ProductionDetailPage() {
           {/* Reserved raw materials */}
           <ReservedMaterialsCard
             productionOrderId={id}
+            orgId={orgId}
             isPending={isPending}
             isInProgress={isInProgress}
           />
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 // ── Reserved materials sub-component (view only) ─────────────
 function ReservedMaterialsCard({
   productionOrderId,
+  orgId,
   isPending,
   isInProgress,
 }: {
-  productionOrderId: string
-  isPending: boolean
-  isInProgress: boolean
+  productionOrderId: string;
+  orgId: string | null;
+  isPending: boolean;
+  isInProgress: boolean;
 }) {
-  const supabase = createClient()
+  const supabase = createClient();
 
   const { data: reservations } = useQuery({
-    queryKey: ['production-reservations', productionOrderId],
+    queryKey: ["production-reservations", orgId, productionOrderId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('stock_reservations')
-        .select(`
-          id, qty_reserved, qty_consumed, qty_released, status,
-          item:items ( id, item_code, name, unit )
-        `)
-        .eq('ref_type', 'production_order')
-        .eq('ref_id', productionOrderId)
-        .order('created_at')
-      if (error) throw error
-      return data ?? []
-    },
-    staleTime: 30 * 1000,
-  })
+      if (!orgId) return [];
 
-  if (!reservations || reservations.length === 0) return null
+      const { data, error } = await supabase
+        .from("stock_reservations")
+        .select(
+          `
+          id, qty_reserved, qty_consumed, qty_released, status,
+          item:items (
+            id,
+            item_code,
+            name,
+            unit_id,
+            unit:units (
+              id,
+              name
+            )
+          )
+        `
+        )
+        .eq("ref_type", "production_order")
+        .eq("ref_id", productionOrderId)
+        .order("created_at");
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!orgId && !!productionOrderId,
+    staleTime: 30 * 1000,
+  });
+
+  if (!reservations || reservations.length === 0) return null;
 
   const statusColors: Record<string, any> = {
-    active:             'warning',
-    consumed:           'success',
-    partially_consumed: 'info',
-    released:           'default',
-    expired:            'danger',
-  }
+    active: "warning",
+    consumed: "success",
+    partially_consumed: "info",
+    released: "default",
+    expired: "danger",
+  };
 
   return (
     <Card>
@@ -337,10 +401,18 @@ function ReservedMaterialsCard({
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-100">
-              <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Material</th>
-              <th className="text-right px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Reserved</th>
-              <th className="text-right px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Consumed</th>
-              <th className="text-center px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Status</th>
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
+                Material
+              </th>
+              <th className="text-right px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
+                Reserved
+              </th>
+              <th className="text-right px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
+                Consumed
+              </th>
+              <th className="text-center px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
+                Status
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -350,19 +422,27 @@ function ReservedMaterialsCard({
                   <span className="font-mono text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded mr-2">
                     {r.item?.item_code}
                   </span>
-                  <span className="font-medium text-slate-900">{r.item?.name}</span>
+                  <span className="font-medium text-slate-900">
+                    {r.item?.name}
+                  </span>
                 </td>
                 <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-slate-900">
-                  {formatQty(r.qty_reserved, r.item?.unit)}
+                  {formatQty(r.qty_reserved, r.item?.unit?.name)}
                 </td>
                 <td className="px-4 py-2.5 text-right tabular-nums">
-                  <span className={r.qty_consumed > 0 ? 'text-green-600 font-medium' : 'text-slate-400'}>
-                    {formatQty(r.qty_consumed, r.item?.unit)}
+                  <span
+                    className={
+                      r.qty_consumed > 0
+                        ? "text-green-600 font-medium"
+                        : "text-slate-400"
+                    }
+                  >
+                    {formatQty(r.qty_consumed, r.item?.unit?.name)}
                   </span>
                 </td>
                 <td className="px-4 py-2.5 text-center">
-                  <Badge variant={statusColors[r.status] ?? 'default'}>
-                    {r.status.replace('_', ' ')}
+                  <Badge variant={statusColors[r.status] ?? "default"}>
+                    {r.status.replace("_", " ")}
                   </Badge>
                 </td>
               </tr>
@@ -371,5 +451,5 @@ function ReservedMaterialsCard({
         </table>
       </div>
     </Card>
-  )
+  );
 }

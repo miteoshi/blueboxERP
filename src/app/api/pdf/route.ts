@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const type = searchParams.get('type')
-  const id   = searchParams.get('id')
+  const id = searchParams.get('id')
 
   if (!type || !id) {
     return NextResponse.json({ error: 'type and id are required' }, { status: 400 })
@@ -21,24 +21,71 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select(`
+      org_id,
+      organizations:org_id (
+        name,
+        address,
+        city,
+        state,
+        pincode,
+        phone,
+        email,
+        gst_number
+      )
+    `)
+    .eq("id", user.id)
+    .single()
+
+  if (profileError || !profile?.org_id) {
+    return NextResponse.json(
+      { error: "User is not associated with an organization" },
+      { status: 403 }
+    )
+  }
+
+  const org = profile.organizations as {
+    name?: string
+    address?: string
+    city?: string
+    state?: string
+    pincode?: string
+    phone?: string
+    email?: string
+    gst_number?: string
+  } | null
+
   try {
     switch (type) {
-      case 'quotation': return generateQuotationHTML(supabase, id)
-      case 'challan':   return generateChallanHTML(supabase, id)
-      case 'grn':       return generateGrnHTML(supabase, id)
+      case 'quotation':
+        return generateQuotationHTML(supabase, id, org)
+
+      case 'challan':
+        return generateChallanHTML(supabase, id, org)
+
+      case 'grn':
+        return generateGrnHTML(supabase, id, org)
+
       default:
         return NextResponse.json({ error: 'Unknown document type' }, { status: 400 })
     }
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  } catch (err: unknown) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 
 // ── Shared print CSS ──────────────────────────────────────────
+
 const CSS = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: Arial, sans-serif; font-size: 12px; color: #111; background: #fff; }
@@ -78,21 +125,79 @@ const CSS = `
 
 const inr = (n: number | null | undefined) =>
   n != null
-    ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(n)
+    ? new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR'
+      }).format(n)
     : '—'
 
 const dt = (d: string | null | undefined) =>
-  d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+  d
+    ? new Date(d).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      })
+    : '—'
+
+type Organization = {
+  name?: string
+  address?: string
+  city?: string
+  state?: string
+  pincode?: string
+  phone?: string
+  email?: string
+  gst_number?: string
+}
+
+// ── Organization Header ───────────────────────────────────────
+
+function organizationHeader(org: Organization | null) {
+  const address = [
+    org?.address,
+    org?.city,
+    org?.state,
+    org?.pincode
+  ].filter(Boolean).join(', ')
+
+  const contact = [
+    org?.phone,
+    org?.email
+  ].filter(Boolean).join(' | ')
+
+  return `
+    <div class="company-name">${org?.name ?? 'Blue Box ERP'}</div>
+    ${address ? `<div class="company-sub">${address}</div>` : ''}
+    ${contact ? `<div class="company-sub">${contact}</div>` : ''}
+    ${org?.gst_number ? `<div class="company-sub">GST: ${org.gst_number}</div>` : ''}
+  `
+}
 
 // ── Quotation ─────────────────────────────────────────────────
-async function generateQuotationHTML(supabase: any, id: string) {
+
+async function generateQuotationHTML(
+  supabase: any,
+  id: string,
+  org: Organization | null
+) {
   const { data: qt, error } = await supabase
     .from('quotations')
     .select(`
       *,
       client:clients ( name, phone, gst_number, address, city ),
       quotation_lines (
-        *, item:items ( item_code, name, unit, hsn_code )
+        *,
+        item:items (
+          item_code,
+          name,
+          unit_id,
+          hsn_code,
+          unit:units (
+            id,
+            name
+          )
+        )
       )
     `)
     .eq('id', id)
@@ -100,7 +205,8 @@ async function generateQuotationHTML(supabase: any, id: string) {
 
   if (error || !qt) throw new Error('Quotation not found')
 
-  const lines = (qt.quotation_lines ?? []).sort((a: any, b: any) => a.sort_order - b.sort_order)
+  const lines = (qt.quotation_lines ?? [])
+    .sort((a: any, b: any) => a.sort_order - b.sort_order)
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <title>${qt.quotation_no}</title><style>${CSS}</style></head>
@@ -108,11 +214,9 @@ async function generateQuotationHTML(supabase: any, id: string) {
 
   <div class="header">
     <div>
-      <div class="company-name">High Power Electricals</div>
-      <div class="company-sub">Electrical Hardware Supply &amp; Manufacturing</div>
-      <div class="company-sub">Panvel, Maharashtra &nbsp;|&nbsp; GST: 27XXXXX1234X1ZX</div>
-      <div class="company-sub">+91 98765 43210 &nbsp;|&nbsp; info@highpowerelectricals.in</div>
+      ${organizationHeader(org)}
     </div>
+
     <div>
       <div class="doc-title">QUOTATION</div>
       <div class="doc-no">${qt.quotation_no}</div>
@@ -129,6 +233,7 @@ async function generateQuotationHTML(supabase: any, id: string) {
         ${qt.client?.address ? qt.client.address + ', ' + (qt.client.city ?? '') : ''}
       </div>
     </div>
+
     <div class="meta-box">
       <div class="meta-label">Quotation Details</div>
       <div class="meta-value">
@@ -153,10 +258,12 @@ async function generateQuotationHTML(supabase: any, id: string) {
         <th class="r" style="width:95px">Amount (₹)</th>
       </tr>
     </thead>
+
     <tbody>
       ${lines.map((l: any, i: number) => {
         const sub = l.qty * l.unit_rate
         const gst = sub * Number(l.gst_percent) / 100
+
         return `<tr>
           <td class="c">${i + 1}</td>
           <td>
@@ -165,7 +272,7 @@ async function generateQuotationHTML(supabase: any, id: string) {
           </td>
           <td class="c">${l.item?.hsn_code ?? '—'}</td>
           <td class="r">${l.qty}</td>
-          <td class="c">${l.unit}</td>
+          <td class="c">${l.unit?.name ?? '—'}</td>
           <td class="r">${inr(l.unit_rate)}</td>
           <td class="c">${l.gst_percent}%</td>
           <td class="r">${inr(sub + gst)}</td>
@@ -175,9 +282,20 @@ async function generateQuotationHTML(supabase: any, id: string) {
   </table>
 
   <div class="totals">
-    <div class="totals-row"><span>Subtotal</span><span>${inr(qt.subtotal)}</span></div>
-    <div class="totals-row"><span>GST</span><span>${inr(qt.gst_amount)}</span></div>
-    <div class="totals-row bold"><span>Total Amount</span><span>${inr(qt.total_amount)}</span></div>
+    <div class="totals-row">
+      <span>Subtotal</span>
+      <span>${inr(qt.subtotal)}</span>
+    </div>
+
+    <div class="totals-row">
+      <span>GST</span>
+      <span>${inr(qt.gst_amount)}</span>
+    </div>
+
+    <div class="totals-row bold">
+      <span>Total Amount</span>
+      <span>${inr(qt.total_amount)}</span>
+    </div>
   </div>
 
   ${qt.notes ? '<div class="terms"><strong>Notes:</strong> ' + qt.notes + '</div>' : ''}
@@ -199,21 +317,30 @@ async function generateQuotationHTML(supabase: any, id: string) {
       <div class="sign-line"></div>
       <div class="sign-label">Client Signature &amp; Stamp</div>
     </div>
+
     <div class="sign-box">
       <div class="sign-line"></div>
-      <div class="sign-label">For High Power Electricals</div>
+      <div class="sign-label">For ${org?.name ?? 'Blue Box ERP'}</div>
     </div>
   </div>
 
 </div>
+
 <script>window.onload = () => window.print()</script>
 </body></html>`
 
-  return new NextResponse(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+  return new NextResponse(html, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8' }
+  })
 }
 
 // ── Delivery Challan ──────────────────────────────────────────
-async function generateChallanHTML(supabase: any, id: string) {
+
+async function generateChallanHTML(
+  supabase: any,
+  id: string,
+  org: Organization | null
+) {
   const { data: dc, error } = await supabase
     .from('delivery_challans')
     .select(`
@@ -221,7 +348,16 @@ async function generateChallanHTML(supabase: any, id: string) {
       client:clients ( name, phone, gst_number, address, city ),
       sales_order:sales_orders ( so_number ),
       delivery_challan_lines (
-        *, item:items ( item_code, name, unit )
+        *,
+        item:items (
+          item_code,
+          name,
+          unit_id,
+          unit:units (
+            id,
+            name
+          )
+        )
       )
     `)
     .eq('id', id)
@@ -229,12 +365,15 @@ async function generateChallanHTML(supabase: any, id: string) {
 
   if (error || !dc) throw new Error('Challan not found')
 
-  const lines    = dc.delivery_challan_lines ?? []
+  const lines = dc.delivery_challan_lines ?? []
   const totalQty = lines.reduce((s: number, l: any) => s + l.qty, 0)
 
   const transportLabel: Record<string, string> = {
-    own_truck: 'Own Truck', client_truck: 'Client Truck',
-    supplier_truck: 'Supplier Truck', courier: 'Courier', hand_delivery: 'Hand Delivery',
+    own_truck: 'Own Truck',
+    client_truck: 'Client Truck',
+    supplier_truck: 'Supplier Truck',
+    courier: 'Courier',
+    hand_delivery: 'Hand Delivery',
   }
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -243,10 +382,9 @@ async function generateChallanHTML(supabase: any, id: string) {
 
   <div class="header">
     <div>
-      <div class="company-name">High Power Electricals</div>
-      <div class="company-sub">Electrical Hardware Supply &amp; Manufacturing</div>
-      <div class="company-sub">Panvel, Maharashtra</div>
+      ${organizationHeader(org)}
     </div>
+
     <div>
       <div class="doc-title">DELIVERY CHALLAN</div>
       <div class="doc-no">${dc.challan_no}</div>
@@ -263,14 +401,15 @@ async function generateChallanHTML(supabase: any, id: string) {
         ${dc.client?.address ? dc.client.address + ', ' + (dc.client.city ?? '') : ''}
       </div>
     </div>
+
     <div class="meta-box">
       <div class="meta-label">Dispatch Details</div>
       <div class="meta-value">
         <strong>Challan Date:</strong> ${dt(dc.challan_date)}<br>
         ${dc.sales_order ? '<strong>Against SO:</strong> ' + dc.sales_order.so_number + '<br>' : ''}
         <strong>Transport:</strong> ${transportLabel[dc.transport_mode] ?? dc.transport_mode}<br>
-        ${dc.vehicle_no  ? '<strong>Vehicle No.:</strong> ' + dc.vehicle_no  + '<br>' : ''}
-        ${dc.driver_name ? '<strong>Driver:</strong> '      + dc.driver_name + '<br>' : ''}
+        ${dc.vehicle_no ? '<strong>Vehicle No.:</strong> ' + dc.vehicle_no + '<br>' : ''}
+        ${dc.driver_name ? '<strong>Driver:</strong> ' + dc.driver_name + '<br>' : ''}
         <strong>Status:</strong> ${dc.status?.toUpperCase()}
       </div>
     </div>
@@ -288,13 +427,14 @@ async function generateChallanHTML(supabase: any, id: string) {
         <th class="r" style="width:95px">Value (₹)</th>
       </tr>
     </thead>
+
     <tbody>
       ${lines.map((l: any, i: number) => `<tr>
         <td class="c">${i + 1}</td>
         <td><strong>${l.item?.name ?? '—'}</strong></td>
         <td class="c"><span class="mono">${l.item?.item_code ?? ''}</span></td>
         <td class="r"><strong>${l.qty}</strong></td>
-        <td class="c">${l.unit}</td>
+        <td class="c">${l.unit?.name ?? '—'}</td>
         <td class="r">${l.rate ? inr(l.rate) : '—'}</td>
         <td class="r">${l.line_total ? inr(l.line_total) : '—'}</td>
       </tr>`).join('')}
@@ -302,8 +442,15 @@ async function generateChallanHTML(supabase: any, id: string) {
   </table>
 
   <div class="totals">
-    <div class="totals-row"><span>Total Qty</span><span>${totalQty}</span></div>
-    <div class="totals-row bold"><span>Challan Value</span><span>${inr(dc.total_amount)}</span></div>
+    <div class="totals-row">
+      <span>Total Qty</span>
+      <span>${totalQty}</span>
+    </div>
+
+    <div class="totals-row bold">
+      <span>Challan Value</span>
+      <span>${inr(dc.total_amount)}</span>
+    </div>
   </div>
 
   <div class="terms">
@@ -317,28 +464,46 @@ async function generateChallanHTML(supabase: any, id: string) {
       <div class="sign-line"></div>
       <div class="sign-label">Receiver's Signature &amp; Stamp</div>
     </div>
+
     <div class="sign-box">
       <div class="sign-line"></div>
-      <div class="sign-label">For High Power Electricals</div>
+      <div class="sign-label">For ${org?.name ?? 'Blue Box ERP'}</div>
     </div>
   </div>
 
 </div>
+
 <script>window.onload = () => window.print()</script>
 </body></html>`
 
-  return new NextResponse(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+  return new NextResponse(html, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8' }
+  })
 }
 
 // ── GRN ───────────────────────────────────────────────────────
-async function generateGrnHTML(supabase: any, id: string) {
+
+async function generateGrnHTML(
+  supabase: any,
+  id: string,
+  org: Organization | null
+) {
   const { data: grn, error } = await supabase
     .from('inbound_receipts')
     .select(`
       *,
       supplier:suppliers ( name, phone, gst_number, city ),
       inbound_receipt_lines (
-        *, item:items ( item_code, name, unit )
+        *,
+        item:items (
+          item_code,
+          name,
+          unit_id,
+          unit:units (
+            id,
+            name
+          )
+        )
       )
     `)
     .eq('id', id)
@@ -346,7 +511,7 @@ async function generateGrnHTML(supabase: any, id: string) {
 
   if (error || !grn) throw new Error('GRN not found')
 
-  const lines     = grn.inbound_receipt_lines ?? []
+  const lines = grn.inbound_receipt_lines ?? []
   const grandTotal = (grn.total_amount ?? 0) + (grn.gst_amount ?? 0)
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -355,10 +520,9 @@ async function generateGrnHTML(supabase: any, id: string) {
 
   <div class="header">
     <div>
-      <div class="company-name">High Power Electricals</div>
-      <div class="company-sub">Electrical Hardware Supply &amp; Manufacturing</div>
-      <div class="company-sub">Panvel, Maharashtra</div>
+      ${organizationHeader(org)}
     </div>
+
     <div>
       <div class="doc-title">GOODS RECEIVED NOTE</div>
       <div class="doc-no">${grn.receipt_no}</div>
@@ -375,15 +539,16 @@ async function generateGrnHTML(supabase: any, id: string) {
         ${grn.supplier?.city ?? ''}
       </div>
     </div>
+
     <div class="meta-box">
       <div class="meta-label">Receipt Details</div>
       <div class="meta-value">
         <strong>GRN No.:</strong> ${grn.receipt_no}<br>
         <strong>Date:</strong> ${dt(grn.receipt_date)}<br>
         <strong>Transport:</strong> ${grn.transport_mode?.replace('_', ' ') ?? '—'}<br>
-        ${grn.vehicle_no  ? '<strong>Vehicle:</strong> '   + grn.vehicle_no  + '<br>' : ''}
-        ${grn.challan_no  ? '<strong>Sup. Challan:</strong> ' + grn.challan_no + '<br>' : ''}
-        ${grn.invoice_no  ? '<strong>Invoice No.:</strong> '  + grn.invoice_no : ''}
+        ${grn.vehicle_no ? '<strong>Vehicle:</strong> ' + grn.vehicle_no + '<br>' : ''}
+        ${grn.challan_no ? '<strong>Sup. Challan:</strong> ' + grn.challan_no + '<br>' : ''}
+        ${grn.invoice_no ? '<strong>Invoice No.:</strong> ' + grn.invoice_no : ''}
       </div>
     </div>
   </div>
@@ -401,6 +566,7 @@ async function generateGrnHTML(supabase: any, id: string) {
         <th class="r" style="width:95px">Amount (₹)</th>
       </tr>
     </thead>
+
     <tbody>
       ${lines.map((l: any, i: number) => `<tr>
         <td class="c">${i + 1}</td>
@@ -410,7 +576,7 @@ async function generateGrnHTML(supabase: any, id: string) {
         </td>
         <td class="r">${l.qty_ordered ?? '—'}</td>
         <td class="r"><strong>${l.qty_received}</strong></td>
-        <td class="c">${l.unit}</td>
+        <td class="c">${l.unit?.name ?? '—'}</td>
         <td class="r">${inr(l.rate)}</td>
         <td class="c">${l.gst_percent}%</td>
         <td class="r">${inr(l.line_total)}</td>
@@ -419,9 +585,20 @@ async function generateGrnHTML(supabase: any, id: string) {
   </table>
 
   <div class="totals">
-    <div class="totals-row"><span>Subtotal</span><span>${inr(grn.total_amount)}</span></div>
-    <div class="totals-row"><span>GST</span><span>${inr(grn.gst_amount)}</span></div>
-    <div class="totals-row bold"><span>Total</span><span>${inr(grandTotal)}</span></div>
+    <div class="totals-row">
+      <span>Subtotal</span>
+      <span>${inr(grn.total_amount)}</span>
+    </div>
+
+    <div class="totals-row">
+      <span>GST</span>
+      <span>${inr(grn.gst_amount)}</span>
+    </div>
+
+    <div class="totals-row bold">
+      <span>Total</span>
+      <span>${inr(grandTotal)}</span>
+    </div>
   </div>
 
   ${grn.notes ? '<div class="terms"><strong>Notes:</strong> ' + grn.notes + '</div>' : ''}
@@ -431,10 +608,12 @@ async function generateGrnHTML(supabase: any, id: string) {
       <div class="sign-line"></div>
       <div class="sign-label">Received By</div>
     </div>
+
     <div class="sign-box">
       <div class="sign-line"></div>
       <div class="sign-label">Store Keeper</div>
     </div>
+
     <div class="sign-box">
       <div class="sign-line"></div>
       <div class="sign-label">Authorised Signatory</div>
@@ -442,8 +621,11 @@ async function generateGrnHTML(supabase: any, id: string) {
   </div>
 
 </div>
+
 <script>window.onload = () => window.print()</script>
 </body></html>`
 
-  return new NextResponse(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+  return new NextResponse(html, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8' }
+  })
 }

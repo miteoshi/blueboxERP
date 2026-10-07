@@ -23,10 +23,13 @@ const STATUS_TABS: { label: string; value: ProductionStatus | '' }[] = [
   { label: 'Completed',   value: 'completed' },
 ]
 
+import { useOrgId } from '@/lib/hooks/use-tenant'
+
 export default function ProductionPage() {
   const [status, setStatus] = useState<ProductionStatus | ''>('')
   const [search, setSearch] = useState('')
   const { data: profile } = useProfile()
+  const orgId = useOrgId()
 
   const canCreate    = profile?.role === 'admin' || profile?.role === 'manager'
   const isProduction = profile?.role === 'production'
@@ -38,12 +41,18 @@ export default function ProductionPage() {
   const supabase = createClient()
 
   useEffect(() => {
+    if (!orgId) return
     const channel = supabase
-      .channel('production-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'production_orders' }, () => refetch())
+      .channel(`production-realtime-${orgId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'production_orders',
+        filter: `org_id=eq.${orgId}`,
+      }, () => refetch())
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [])
+  }, [orgId, supabase, refetch])
 
   const filtered = (orders ?? []).filter(o => {
     if (!search) return true
@@ -144,7 +153,9 @@ export default function ProductionPage() {
                   return (
                     <tr
                       key={order.id}
-                      className={`hover:bg-slate-50 transition-colors ${isOverdue ? 'bg-red-50/30' : ''}`}
+                      className={`hover:bg-slate-50 transition-colors ${
+                        isOverdue ? "bg-red-50/30" : ""
+                      }`}
                     >
                       {/* PRD number — plain text for production, link for others */}
                       <td className="px-4 py-3">
@@ -174,26 +185,39 @@ export default function ProductionPage() {
                                 {order.so.so_number}
                               </Link>
                             ) : (
-                              <span className="text-slate-400 text-xs">Stock build</span>
+                              <span className="text-slate-400 text-xs">
+                                Stock build
+                              </span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-slate-700">{order.so?.client?.name ?? '—'}</td>
+                          <td className="px-4 py-3 text-slate-700">
+                            {order.so?.client?.name ?? "—"}
+                          </td>
                         </>
                       )}
 
                       <td className="px-4 py-3">
                         <div className="space-y-0.5">
                           {items.slice(0, 2).map((item: any) => (
-                            <div key={item.id} className="text-xs text-slate-600">
-                              <span className="font-mono text-slate-400 mr-1">{item.item?.item_code}</span>
-                              {formatQty(item.qty_required, item.unit)}
+                            <div
+                              key={item.id}
+                              className="text-xs text-slate-600"
+                            >
+                              <span className="font-mono text-slate-400 mr-1">
+                                {item.item?.item_code}
+                              </span>
+                              {formatQty(item.qty_required, item.unit?.name)}
                               {item.qty_produced > 0 && (
-                                <span className="text-green-600 ml-1">({formatQty(item.qty_produced)} done)</span>
+                                <span className="text-green-600 ml-1">
+                                  ({formatQty(item.qty_produced)} done)
+                                </span>
                               )}
                             </div>
                           ))}
                           {items.length > 2 && (
-                            <div className="text-xs text-slate-400">+{items.length - 2} more</div>
+                            <div className="text-xs text-slate-400">
+                              +{items.length - 2} more
+                            </div>
                           )}
                         </div>
                       </td>
@@ -202,23 +226,38 @@ export default function ProductionPage() {
                         {assignments.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {assignments.slice(0, 3).map((a: any) => (
-                              <span key={a.id} className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
-                                {a.worker?.name?.split(' ')[0]}
+                              <span
+                                key={a.id}
+                                className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded"
+                              >
+                                {a.worker?.name?.split(" ")[0]}
                               </span>
                             ))}
                             {assignments.length > 3 && (
-                              <span className="text-xs text-slate-400">+{assignments.length - 3}</span>
+                              <span className="text-xs text-slate-400">
+                                +{assignments.length - 3}
+                              </span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-slate-300 text-xs">Unassigned</span>
+                          <span className="text-slate-300 text-xs">
+                            Unassigned
+                          </span>
                         )}
                       </td>
 
                       <td className="px-4 py-3">
-                        <span className={isOverdue ? 'text-red-600 font-medium' : 'text-slate-600'}>
-                          {order.target_date ? formatDate(order.target_date) : '—'}
-                          {isOverdue && ' ⚠'}
+                        <span
+                          className={
+                            isOverdue
+                              ? "text-red-600 font-medium"
+                              : "text-slate-600"
+                          }
+                        >
+                          {order.target_date
+                            ? formatDate(order.target_date)
+                            : "—"}
+                          {isOverdue && " ⚠"}
                         </span>
                       </td>
 
@@ -235,7 +274,7 @@ export default function ProductionPage() {
                         </Link>
                       </td>
                     </tr>
-                  )
+                  );
                 })}
               </tbody>
             </table>

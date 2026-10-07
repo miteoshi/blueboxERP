@@ -3,50 +3,50 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { Tables, TablesInsert, TablesUpdate, Enums } from '@/lib/types/database'
+import { useOrgId } from '@/lib/hooks/use-tenant'
+import type { Tables, Enums } from '@/lib/types/database'
 
 export type Profile = Tables<'profiles'>
 export type UserRole = Enums<'user_role'>
 
 // Returns the current logged-in user's profile row.
-// staleTime is 0 so it always re-fetches on mount after a login/logout.
+// StaleTime is 0 so it always re-fetches on mount after a login/logout.
 // The auth state listener below also invalidates it on any session change.
 export function useProfile() {
   const supabase    = createClient()
   const queryClient = useQueryClient()
+  const orgId = useOrgId()
 
   // ── Listen for auth state changes and immediately clear the cache ──
-  // This fires on: SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED, USER_UPDATED
-  // Without this, the previous user's profile sits in cache until staleTime expires.
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
-        // Invalidate forces an immediate re-fetch with the new session
+      if (event === 'SIGNED_OUT') {
+        queryClient.removeQueries({ queryKey: ['profile'] })
+        queryClient.removeQueries({ queryKey: ['tenant-context'] })
+      } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
         queryClient.invalidateQueries({ queryKey: ['profile'] })
+        queryClient.invalidateQueries({ queryKey: ['tenant-context'] })
       }
     })
     return () => subscription.unsubscribe()
   }, [supabase, queryClient])
 
   return useQuery({
-    queryKey: ['profile'],
+    queryKey: ['profile', orgId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return null
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user || !orgId) return null
 
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
 
       if (error) throw error
-      return data as Profile
+      return (data as Profile) ?? null
     },
-    // ── Drop staleTime to 0 ───────────────────────────────────────────
-    // Previous value was 5 mins — that's what caused the stale profile
-    // to persist after login. 0 means always re-fetch on mount, which is
-    // fast (single row select) and safe since role rarely changes mid-session.
+    enabled: !!orgId,
     staleTime: 0,
   })
 }

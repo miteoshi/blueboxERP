@@ -12,74 +12,90 @@ import {
   Factory, AlertTriangle,
 } from 'lucide-react'
 import Link from 'next/link'
+import { useOrgId } from '@/lib/hooks/use-tenant'
 
 // ── Data hooks ────────────────────────────────────────────────
 
-function useDashboardStats() {
-  const supabase = createClient()
+function useDashboardStats(orgId: string | null) {
+
+
+
+  const supabase = createClient();
   return useQuery({
-    queryKey: ['dashboard-stats'],
+    queryKey: ["dashboard-stats", orgId],
     queryFn: async () => {
+      if (!orgId) {
+        return {
+          pendingApprovals: 0,
+          activeOrders: 0,
+          inProduction: 0,
+        };
+      }
       const [
         { count: pendingApprovals },
         { count: activeOrders },
         { count: inProduction },
       ] = await Promise.all([
         supabase
-          .from('quotations')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'pending_approval'),
+          .from("quotations")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending_approval"),
         supabase
-          .from('sales_orders')
-          .select('id', { count: 'exact', head: true })
-          .in('status', ['confirmed', 'in_production', 'ready']),
+          .from("sales_orders")
+          .select("id", { count: "exact", head: true })
+          .in("status", ["confirmed", "in_production", "ready"]),
         supabase
-          .from('production_orders')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'in_progress'),
-      ])
+          .from("production_orders")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "in_progress"),
+      ]);
       return {
         pendingApprovals: pendingApprovals ?? 0,
-        activeOrders:     activeOrders     ?? 0,
-        inProduction:     inProduction     ?? 0,
-      }
+        activeOrders: activeOrders ?? 0,
+        inProduction: inProduction ?? 0,
+      };
     },
+    enabled: !!orgId,
     staleTime: 30 * 1000,
-  })
+  });
 }
 
-function useReorderAlerts() {
-  const supabase = createClient()
+function useReorderAlerts(orgId: string | null) {
+  const supabase = createClient();
   return useQuery({
-    queryKey: ['reorder-alerts'],
+    queryKey: ["reorder-alerts", orgId],
     queryFn: async () => {
+      if (!orgId) return [];
       const { data, error } = await supabase
-        .from('v_reorder_alerts')
-        .select('*')
-        .order('qty_available', { ascending: true })
-        .limit(5)
-      if (error) throw error
-      return data
+        .from("v_reorder_alerts")
+        .select("*")
+        .order("qty_available", { ascending: true })
+        .limit(5);
+      if (error) throw error;
+      return data;
     },
+    enabled: !!orgId,
     staleTime: 60 * 1000,
-  })
+  });
 }
 
-function useRecentOrders() {
+function useRecentOrders(orgId: string | null) {
   const supabase = createClient()
   return useQuery({
-    queryKey: ['recent-orders'],
+    queryKey: ["recent-orders", orgId],
     queryFn: async () => {
+      if (!orgId) return [];
       const { data, error } = await supabase
-        .from('v_so_pipeline')
-        .select('*')
-        .order('order_date', { ascending: false })
-        .limit(6)
-      if (error) throw error
-      return data
+        .from("v_so_pipeline")
+        .select("*")
+        .order("order_date", { ascending: false })
+        .limit(6);
+      if (error) throw error;
+      return data;
     },
+    enabled: !!orgId,
     staleTime: 30 * 1000,
-  })
+  });
 }
 
 // ── Component ─────────────────────────────────────────────────
@@ -87,23 +103,27 @@ function useRecentOrders() {
 export default function DashboardPage() {
   const supabase = createClient()
   const qc       = useQueryClient()
+  const orgId    = useOrgId()
 
-  const { data: stats }        = useDashboardStats()
-  const { data: alerts }       = useReorderAlerts()
-  const { data: recentOrders } = useRecentOrders()
+  const { data: stats }        = useDashboardStats(orgId)
+  const { data: alerts }       = useReorderAlerts(orgId)
+  const { data: recentOrders } = useRecentOrders(orgId)
 
   const alertCount = alerts?.length ?? 0
 
   // ── Realtime subscriptions ─────────────────────────────────
   useEffect(() => {
+    if (!orgId) return
+
     const channel = supabase
-      .channel('dashboard-realtime')
+      .channel(`dashboard-realtime-${orgId}`)
 
       // Inventory balance changes → refresh reorder alerts + stats
       .on('postgres_changes', {
         event:  'UPDATE',
         schema: 'public',
         table:  'inventory_balance',
+        filter: `org_id=eq.${orgId}`,
       }, () => {
         qc.invalidateQueries({ queryKey: ['reorder-alerts'] })
       })
@@ -113,6 +133,7 @@ export default function DashboardPage() {
         event:  '*',
         schema: 'public',
         table:  'sales_orders',
+        filter: `org_id=eq.${orgId}`,
       }, () => {
         qc.invalidateQueries({ queryKey: ['recent-orders'] })
         qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
@@ -123,6 +144,7 @@ export default function DashboardPage() {
         event:  '*',
         schema: 'public',
         table:  'quotations',
+        filter: `org_id=eq.${orgId}`,
       }, () => {
         qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
       })
@@ -132,6 +154,7 @@ export default function DashboardPage() {
         event:  '*',
         schema: 'public',
         table:  'production_orders',
+        filter: `org_id=eq.${orgId}`,
       }, () => {
         qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
       })
@@ -139,7 +162,7 @@ export default function DashboardPage() {
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [])
+  }, [orgId, supabase, qc])
 
   return (
     <div>

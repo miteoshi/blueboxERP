@@ -12,6 +12,8 @@ import { Badge, ProductionStatusBadge } from '@/components/ui/badge'
 import { PageLoader, TableLoader } from '@/components/ui/spinner'
 import { formatDate, formatQty } from '@/lib/utils/format'
 import { toast } from 'sonner'
+import { useOrgId } from "@/lib/hooks/use-tenant";
+
 import {
   Play, CheckCircle, ClipboardList,
   Package, HardHat, Calendar, AlertTriangle
@@ -21,89 +23,123 @@ import Link from 'next/link'
 // ── Fetch tasks assigned to the current user's worker profile ─
 // Workers are matched by name to profiles.full_name
 // OR admin/manager sees ALL pending/in_progress tasks
-function useTasks(profileId: string | undefined, role: string | undefined) {
-  const supabase = createClient()
+function useTasks(
+  profileId: string | undefined,
+  role: string | undefined,
+  orgId: string | null
+) {
+  const supabase = createClient();
 
   return useQuery({
-    queryKey: ['tasks', profileId, role],
+    queryKey: ["tasks", orgId, profileId, role],
     queryFn: async () => {
-      if (!profileId) return []
+      if (!profileId || !orgId) return [];
 
       // Admin/manager — see all active production orders
-      if (role === 'admin' || role === 'manager') {
+      if (role === "admin" || role === "manager") {
         const { data, error } = await supabase
-          .from('production_orders')
-          .select(`
+          .from("production_orders")
+          .select(
+            `
             id, po_number, status,
             start_date, target_date, completed_date, notes,
             created_at,
-            production_order_items (
-              id, qty_required, qty_produced, unit,
-              item:items ( id, item_code, name, unit )
-            ),
+              production_order_items (
+                id,
+                qty_required,
+                qty_produced,
+                unit_id,
+                unit:units (
+                  id,
+                  name
+                ),
+                item:items (
+                  id,
+                  item_code,
+                  name,
+                  unit_id
+                )
+              ),
             production_assignments (
               id,
               worker:workers ( id, name, skill )
             )
-          `)
-          .in('status', ['pending', 'in_progress', 'on_hold'])
-          .order('created_at', { ascending: true })
+          `
+          )
+          .in("status", ["pending", "in_progress", "on_hold"])
+          .order("created_at", { ascending: true });
 
-        if (error) throw error
-        return data ?? []
+        if (error) throw error;
+        return data ?? [];
       }
 
       // Production worker — see only their assigned tasks
       // Match worker record by email from auth session (reliable, no name typo issues)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user?.email) return []
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user?.email) return [];
 
       // Find worker by email match
       const { data: worker } = await supabase
-        .from('workers')
-        .select('id')
-        .ilike('email', user.email)
-        .eq('is_active', true)
-        .maybeSingle()
+        .from("workers")
+        .select("id")
+        .ilike("email", user.email)
+        .eq("is_active", true)
+        .maybeSingle();
 
-      if (!worker) return []
+      if (!worker) return [];
 
       // Get production orders assigned to this worker
       const { data: assignments } = await supabase
-        .from('production_assignments')
-        .select('production_order_id')
-        .eq('worker_id', worker.id)
+        .from("production_assignments")
+        .select("production_order_id")
+        .eq("worker_id", worker.id);
 
-      if (!assignments || assignments.length === 0) return []
+      if (!assignments || assignments.length === 0) return [];
 
-      const orderIds = assignments.map(a => a.production_order_id)
+      const orderIds = assignments.map((a) => a.production_order_id);
 
       const { data, error } = await supabase
-        .from('production_orders')
-        .select(`
+        .from("production_orders")
+        .select(
+          `
           id, po_number, status,
           start_date, target_date, completed_date, notes,
           created_at,
-          production_order_items (
-            id, qty_required, qty_produced, unit,
-            item:items ( id, item_code, name, unit )
-          ),
+            production_order_items (
+              id,
+              qty_required,
+              qty_produced,
+              unit_id,
+              unit:units (
+                id,
+                name
+              ),
+              item:items (
+                id,
+                item_code,
+                name,
+                unit_id
+              )
+            ),
           production_assignments (
             id,
             worker:workers ( id, name, skill )
           )
-        `)
-        .in('id', orderIds)
-        .in('status', ['pending', 'in_progress', 'on_hold'])
-        .order('created_at', { ascending: true })
+        `
+        )
+        .in("id", orderIds)
+        .in("status", ["pending", "in_progress", "on_hold"])
+        .order("created_at", { ascending: true });
 
-      if (error) throw error
-      return data ?? []
+      if (error) throw error;
+      return data ?? [];
     },
-    enabled: !!profileId,
+    enabled: !!profileId && !!orgId,
     staleTime: 30 * 1000,
     refetchInterval: 60 * 1000,
-  })
+  });
 }
 
 export default function TasksPage() {
@@ -111,11 +147,13 @@ export default function TasksPage() {
   const qc       = useQueryClient()
 
   const { data: profile, isLoading: profileLoading } = useProfile()
+  const orgId = useOrgId();
 
   const { data: tasks, isLoading: tasksLoading } = useTasks(
     profile?.id,
-    profile?.role
-  )
+    profile?.role,
+    orgId
+  );
 
   const [startingId,    setStartingId]    = useState<string | null>(null)
   const [completingId,  setCompletingId]  = useState<string | null>(null)
@@ -173,8 +211,8 @@ export default function TasksPage() {
       qc.invalidateQueries({ queryKey: ['stock-levels'] })
       toast.success(`${poNumber} started — materials consumed`)
 
-    } catch (err: any) {
-      toast.error(err.message)
+    } catch (err: unknown) {
+  toast.error(err instanceof Error ? err.message : 'Operation failed')
     } finally {
       setStartingId(null)
     }
@@ -216,8 +254,8 @@ export default function TasksPage() {
       qc.invalidateQueries({ queryKey: ['stock-levels'] })
       toast.success(`${poNumber} completed — finished goods added to stock`)
 
-    } catch (err: any) {
-      toast.error(err.message)
+    } catch (err: unknown) {
+  toast.error(err instanceof Error ? err.message : 'Operation failed')
     } finally {
       setCompletingId(null)
     }

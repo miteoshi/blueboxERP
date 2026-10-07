@@ -32,27 +32,46 @@ export default async function GrnDetailPage({ params }: Props) {
 
   const [{ data: grn }, { data: movements }] = await Promise.all([
     supabase
-      .from('inbound_receipts')
-      .select(`
+      .from("inbound_receipts")
+      .select(
+        `
         *,
         supplier:suppliers ( id, name, phone, gst_number, city ),
         receiver:profiles!inbound_receipts_received_by_fkey ( full_name ),
         creator:profiles!inbound_receipts_created_by_fkey ( full_name ),
         inbound_receipt_lines (
-          id, qty_ordered, qty_received, unit,
+          id, qty_ordered, qty_received, unit_id,
+          unit:units (
+            id, name
+          ),
           rate, gst_percent, line_total, notes,
-          item:items ( id, item_code, name, unit, category )
-        )
-      `)
-      .eq('id', id)
+          item:items (
+                      id,
+                      item_code,
+                      name,
+                      unit_id,
+                      category_id,
+                      unit:units (
+                        id,
+                        name
+                      ),
+                  item_category:item_categories (
+                    id,
+                    name
+                  )
+                )
+              )
+      `
+      )
+      .eq("id", id)
       .single(),
 
     supabase
-      .from('stock_movements')
-      .select('id, qty, movement_type, movement_date, rate_at_time')
-      .eq('ref_type', 'inbound_receipt')
-      .eq('ref_id', id),
-  ])
+      .from("stock_movements")
+      .select("id, qty, movement_type, movement_date, rate_at_time")
+      .eq("ref_type", "inbound_receipt")
+      .eq("ref_id", id),
+  ]);
 
   if (!grn) notFound()
 
@@ -192,7 +211,9 @@ export default async function GrnDetailPage({ params }: Props) {
                       : null
                     return (
                       <tr key={line.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 text-slate-400 text-xs">{i + 1}</td>
+                        <td className="px-4 py-3 text-slate-400 text-xs">
+                          {i + 1}
+                        </td>
                         <td className="px-4 py-3">
                           <Link href={`/items/${line.item?.id}`}>
                             <span className="font-mono text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded mr-2">
@@ -203,32 +224,45 @@ export default async function GrnDetailPage({ params }: Props) {
                             </span>
                           </Link>
                           {line.notes && (
-                            <div className="text-xs text-slate-400 mt-0.5">{line.notes}</div>
+                            <div className="text-xs text-slate-400 mt-0.5">
+                              {line.notes}
+                            </div>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-slate-500">
-                          {line.qty_ordered ? formatQty(line.qty_ordered, line.unit) : '—'}
+                          {line.qty_ordered
+                            ? formatQty(line.qty_ordered, line.unit?.name)
+                            : "—"}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">
                           <span className="font-semibold text-slate-900">
-                            {formatQty(line.qty_received, line.unit)}
+                            {formatQty(line.qty_received, line.unit?.name)}
                           </span>
                           {variance !== null && variance !== 0 && (
-                            <div className={`text-xs ${variance > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              {variance > 0 ? '+' : ''}{formatQty(variance, line.unit)}
+                            <div
+                              className={`text-xs ${
+                                variance > 0 ? "text-green-600" : "text-red-600"
+                              }`}
+                            >
+                              {variance > 0 ? "+" : ""}
+                              {formatQty(variance, line.unit?.name)}
                             </div>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-slate-600">
                           {formatCurrency(line.rate)}
-                          <div className="text-xs text-slate-400">/{line.unit}</div>
+                          <div className="text-xs text-slate-400">
+                            /{line.unit?.name ?? "—"}
+                          </div>
                         </td>
-                        <td className="px-4 py-3 text-center text-slate-500">{line.gst_percent}%</td>
+                        <td className="px-4 py-3 text-center text-slate-500">
+                          {line.gst_percent}%
+                        </td>
                         <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
                           {formatCurrency(line.line_total)}
                         </td>
                       </tr>
-                    )
+                    );
                   })}
                 </tbody>
                 <tfoot>

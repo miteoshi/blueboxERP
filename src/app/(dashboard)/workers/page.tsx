@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useOrgId } from "@/lib/hooks/use-tenant";
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { PageHeader } from '@/components/layout/page-header'
@@ -12,20 +13,23 @@ import { formatDate } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { Plus, X, HardHat, Mail, Copy, CheckCircle, Eye, EyeOff } from 'lucide-react'
 
-function useWorkers() {
-  const supabase = createClient()
+function useWorkers(orgId: string | null) {
+  const supabase = createClient();
   return useQuery({
-    queryKey: ['workers'],
+    queryKey: ["workers", orgId],
     queryFn: async () => {
+      if (!orgId) return [];
+
       const { data, error } = await supabase
-        .from('workers')
-        .select('*')
-        .order('name')
-      if (error) throw error
-      return data
+        .from("workers")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      return data;
     },
+    enabled: !!orgId,
     staleTime: 5 * 60 * 1000,
-  })
+  });
 }
 
 // Auto-generate email from name — mirrors the server logic
@@ -69,6 +73,7 @@ const SKILLS = [
 export default function WorkersPage() {
   const supabase = createClient()
   const qc       = useQueryClient()
+  const orgId = useOrgId();
 
   const [showForm,   setShowForm]   = useState(false)
   const [editId,     setEditId]     = useState<string | null>(null)
@@ -79,7 +84,7 @@ export default function WorkersPage() {
   const [showPass,   setShowPass]   = useState(false)
   const [copied,     setCopied]     = useState<string | null>(null)
 
-  const { data: workers, isLoading } = useWorkers()
+  const { data: workers, isLoading } = useWorkers(orgId);
 
   const f = (field: keyof WorkerForm) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -109,43 +114,50 @@ export default function WorkersPage() {
     if (!form.name.trim()) { toast.error('Worker name is required'); return }
     setSaving(true)
     try {
-      const res = await fetch('/api/admin/create-worker', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/admin/create-worker", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name:  form.name.trim(),
+          name: form.name.trim(),
           skill: form.skill || null,
           phone: form.phone || null,
         }),
-      })
+      });
 
-      const json = await res.json()
+      const json = await res.json();
 
       if (!res.ok) {
         // Handle email collision suggestion
         if (res.status === 409 && json.suggestedEmail) {
-          toast.error(json.error)
+          toast.error(json.error);
         } else {
-          toast.error(json.error ?? 'Failed to create worker')
+          toast.error(json.error ?? "Failed to create worker");
         }
-        return
+        return;
       }
 
       // Show the generated credentials to admin
-      setCreated({ email: json.email, password: json.password, name: form.name.trim() })
-      qc.invalidateQueries({ queryKey: ['workers'] })
-      setForm(EMPTY)
+      setCreated({
+        email: json.email,
+        password: json.password,
+        name: form.name.trim(),
+      });
+      qc.invalidateQueries({ queryKey: ["workers"] });
+      setForm(EMPTY);
 
       if (json.emailSuffixed) {
-        toast.success(`Worker created — email adjusted to ${json.email} (name already taken)`)
+        toast.success(
+          `Worker created — email adjusted to ${json.email} (name already taken)`
+        );
       } else {
-        toast.success(`Worker account created — share credentials with ${json.generatedFrom}`)
+        toast.success(
+          `Worker account created — share credentials with ${json.generatedFrom}`
+        );
       }
-
-    } catch (err: any) {
-      toast.error(err.message)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Operation failed");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
@@ -155,21 +167,21 @@ export default function WorkersPage() {
     setSaving(true)
     try {
       const { error } = await supabase
-        .from('workers')
+        .from("workers")
         .update({
-          name:  form.name.trim(),
+          name: form.name.trim(),
           phone: form.phone || null,
           skill: form.skill || null,
         })
-        .eq('id', editId!)
-      if (error) throw error
-      toast.success('Worker updated')
-      qc.invalidateQueries({ queryKey: ['workers'] })
-      setShowForm(false)
-    } catch (err: any) {
-      toast.error(err.message)
+        .eq("id", editId!);
+      if (error) throw error;
+      toast.success("Worker updated");
+      qc.invalidateQueries({ queryKey: ["workers"] });
+      setShowForm(false);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Operation failed");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 

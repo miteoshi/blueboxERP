@@ -21,6 +21,57 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+-- =========================================================================
+-- Multi-tenancy seed shim
+-- =========================================================================
+-- Use a fixed seed organization ID so this works even when seed.sql is
+-- executed in batches/connections. Do not use a TEMP table here.
+INSERT INTO "public"."organizations" ("id", "name", "slug")
+VALUES ('00000000-0000-0000-0000-000000000001', 'Blue Box Seed Co', 'blue-box-seed')
+ON CONFLICT ("id") DO NOTHING;
+
+
+
+-- Seed material types for the fixed seed organization
+INSERT INTO public.material_types (org_id, code, name)
+VALUES
+    ('00000000-0000-0000-0000-000000000001', 'GI', 'GI'),
+    ('00000000-0000-0000-0000-000000000001', 'MS', 'MS'),
+    ('00000000-0000-0000-0000-000000000001', 'ALUMINIUM', 'Aluminium'),
+    ('00000000-0000-0000-0000-000000000001', 'COPPER', 'Copper'),
+    ('00000000-0000-0000-0000-000000000001', 'POLYMER', 'Polymer'),
+    ('00000000-0000-0000-0000-000000000001', 'PORCELAIN', 'Porcelain'),
+    ('00000000-0000-0000-0000-000000000001', 'HDPE', 'HDPE'),
+    ('00000000-0000-0000-0000-000000000001', 'CHEMICAL', 'Chemical'),
+    ('00000000-0000-0000-0000-000000000001', 'CONCRETE', 'Concrete'),
+    ('00000000-0000-0000-0000-000000000001', 'MIXED', 'Mixed'),
+    ('00000000-0000-0000-0000-000000000001', 'OTHER', 'Other')
+ON CONFLICT (org_id, code) DO NOTHING;
+
+
+
+
+-- Seed units for the fixed seed organization
+INSERT INTO public.units (org_id, code, name)
+VALUES
+    ('00000000-0000-0000-0000-000000000001', 'NO', 'No'),
+    ('00000000-0000-0000-0000-000000000001', 'SET', 'Set'),
+    ('00000000-0000-0000-0000-000000000001', 'MTR', 'Meter'),
+    ('00000000-0000-0000-0000-000000000001', 'KG', 'Kilogram'),
+    ('00000000-0000-0000-0000-000000000001', 'MM', 'Millimeter'),
+    ('00000000-0000-0000-0000-000000000001', 'CM', 'Centimeter'),
+    ('00000000-0000-0000-0000-000000000001', 'L', 'Liter'),
+    ('00000000-0000-0000-0000-000000000001', 'BOX', 'Box'),
+    ('00000000-0000-0000-0000-000000000001', 'PAIR', 'Pair'),
+    ('00000000-0000-0000-0000-000000000001', 'ROLL', 'Roll')
+ON CONFLICT (org_id, code) DO NOTHING;
+
+
+-- Existing seed rows do not contain org_id. Temporarily allow NULL while
+-- the dump data is loaded; org_id is backfilled at the end of this file.
+ALTER TABLE "public"."items"             ALTER COLUMN "org_id" DROP NOT NULL;
+ALTER TABLE "public"."inventory_balance" ALTER COLUMN "org_id" DROP NOT NULL;
+
 --
 -- Data for Name: audit_log_entries; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin
 --
@@ -175,7 +226,7 @@ INSERT INTO "auth"."refresh_tokens" ("instance_id", "id", "token", "user_id", "r
 --
 
 INSERT INTO "public"."profiles" ("id", "full_name", "role", "phone", "is_active", "created_at", "updated_at") VALUES
-	('a0e9b10d-b578-438f-8be0-25395232b24a', 'Piyush Joshi', 'manager', NULL, true, '2026-05-19 03:22:39.961577+00', '2026-05-19 03:23:22.013979+00');
+	('a0e9b10d-b578-438f-8be0-25395232b24a', 'Piyush Joshi', 'admin', NULL, true, '2026-05-19 03:22:39.961577+00', '2026-05-19 03:23:22.013979+00');
 
 
 --
@@ -395,11 +446,70 @@ INSERT INTO "public"."audit_logs" ("id", "table_name", "record_id", "action", "o
 	('4b250e72-8713-44b0-84f1-fc3bc2eb85d3', 'items', '42375aed-8d23-4020-b07c-b9de9681fb0a', 'INSERT', NULL, '{"id": "42375aed-8d23-4020-b07c-b9de9681fb0a", "name": "Aluminium Bobin LT Line", "unit": "No.", "notes": null, "category": "Accessories", "hsn_code": "4822", "is_active": true, "is_traded": true, "item_code": "ACC-015", "size_spec": "LT", "created_at": "2026-05-16T01:03:33.351499+00:00", "created_by": null, "updated_at": "2026-05-16T01:03:33.351499+00:00", "reorder_qty": 0.00, "sub_category": "Bobin", "material_type": "Aluminium", "reorder_level": 0.00, "is_manufactured": false, "is_raw_material": false}', NULL, '2026-05-16 01:03:33.351499+00');
 
 
+
+
+-- =========================================================================
+-- Item category seed
+-- =========================================================================
+
+INSERT INTO "public"."item_categories" (
+    "org_id",
+    "code",
+    "name"
+)
+VALUES
+    ('00000000-0000-0000-0000-000000000001', 'CONDUCTOR', 'Conductor'),
+    ('00000000-0000-0000-0000-000000000001', 'CABLE', 'Cable'),
+    ('00000000-0000-0000-0000-000000000001', 'INSULATOR', 'Insulator'),
+    ('00000000-0000-0000-0000-000000000001', 'STRUCTURAL', 'Structural'),
+    ('00000000-0000-0000-0000-000000000001', 'CLAMP', 'Clamp'),
+    ('00000000-0000-0000-0000-000000000001', 'STAY_SET', 'Stay Set'),
+    ('00000000-0000-0000-0000-000000000001', 'TF_BELT', 'TF Belt'),
+    ('00000000-0000-0000-0000-000000000001', 'HARDWARE', 'Hardware'),
+    ('00000000-0000-0000-0000-000000000001', 'GOD', 'GOD'),
+    ('00000000-0000-0000-0000-000000000001', 'LA', 'LA'),
+    ('00000000-0000-0000-0000-000000000001', 'FASTENER', 'Fastener'),
+    ('00000000-0000-0000-0000-000000000001', 'EARTHING', 'Earthing'),
+    ('00000000-0000-0000-0000-000000000001', 'DB', 'DB'),
+    ('00000000-0000-0000-0000-000000000001', 'LUG', 'Lug'),
+    ('00000000-0000-0000-0000-000000000001', 'ACCESSORIES', 'Accessories')
+ON CONFLICT ("org_id", "code") DO NOTHING;
+
+
+
 --
 -- Data for Name: items; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO "public"."items" ("id", "item_code", "name", "category", "sub_category", "material_type", "size_spec", "unit", "hsn_code", "is_traded", "is_manufactured", "is_raw_material", "reorder_level", "reorder_qty", "notes", "is_active", "created_by", "created_at", "updated_at") VALUES
+
+INSERT INTO "public"."items" (
+    "id", "item_code", "name", "category_id", "material_type_id", "sub_category","size_spec","unit_id", "hsn_code",
+    "is_traded", "is_manufactured", "is_raw_material",
+    "reorder_level", "reorder_qty", "notes", "is_active",
+    "created_by", "created_at", "updated_at"
+)
+SELECT
+     v."id"::uuid,
+    v."item_code",
+    v."name",
+    c."id",
+	mt."id",
+    v."sub_category",
+    v."size_spec",
+	u."id",
+    v."hsn_code",
+    v."is_traded",
+    v."is_manufactured",
+    v."is_raw_material",
+    v."reorder_level",
+    v."reorder_qty",
+    v."notes",
+	v."is_active",
+	v."created_by"::uuid,
+	v."created_at"::timestamptz,
+	v."updated_at"::timestamptz
+FROM (
+    VALUES
 	('4d7648eb-ce9e-4a58-8012-9c482369f919', 'CON-001', 'ACSR Dog Conductor', 'Conductor', 'ACSR', 'Aluminium', '0.1 sqmm | 2.5mtr/kg | 394kg/km', 'Mtr', '7604', true, false, false, 0.00, 0.00, NULL, true, NULL, '2026-05-16 01:03:33.351499+00', '2026-05-16 01:03:33.351499+00'),
 	('fb20b785-e3fe-488c-971c-f633f89bbcee', 'CON-002', 'ACSR Raccoon Conductor', 'Conductor', 'ACSR', 'Aluminium', '80 sqmm | 3.2mtr/kg | 310kg/km', 'Mtr', '7604', true, false, false, 0.00, 0.00, NULL, true, NULL, '2026-05-16 01:03:33.351499+00', '2026-05-16 01:03:33.351499+00'),
 	('1e42e2e3-2763-485c-afa4-122a9aab01ab', 'CON-003', 'ACSR Rabbit Conductor', 'Conductor', 'ACSR', 'Aluminium', '50 sqmm | 4.7mtr/kg | 214kg/km', 'Mtr', '7604', true, false, false, 0.00, 0.00, NULL, true, NULL, '2026-05-16 01:03:33.351499+00', '2026-05-16 01:03:33.351499+00'),
@@ -603,8 +713,175 @@ INSERT INTO "public"."items" ("id", "item_code", "name", "category", "sub_catego
 	('28868702-13c7-4563-8c4a-760620a2e965', 'ACC-012', 'Alkathene Pipe', 'Accessories', 'Pipe', 'HDPE', '', 'Mtr', '', true, false, false, 0.00, 0.00, NULL, true, NULL, '2026-05-16 01:03:33.351499+00', '2026-05-16 01:03:33.351499+00'),
 	('e4c094db-8734-404b-87e7-5814f6e45948', 'ACC-013', 'Danger Board 22KV 33KV', 'Accessories', 'Signage', 'Other', '22KV/33KV', 'No.', '7313', true, false, false, 0.00, 0.00, NULL, true, NULL, '2026-05-16 01:03:33.351499+00', '2026-05-16 01:03:33.351499+00'),
 	('e51ccbf7-a575-4e51-b971-00517aaecec0', 'ACC-014', 'Danger Board 11KV', 'Accessories', 'Signage', 'Other', '11KV', 'No.', '7313', true, false, false, 0.00, 0.00, NULL, true, NULL, '2026-05-16 01:03:33.351499+00', '2026-05-16 01:03:33.351499+00'),
-	('42375aed-8d23-4020-b07c-b9de9681fb0a', 'ACC-015', 'Aluminium Bobin LT Line', 'Accessories', 'Bobin', 'Aluminium', 'LT', 'No.', '4822', true, false, false, 0.00, 0.00, NULL, true, NULL, '2026-05-16 01:03:33.351499+00', '2026-05-16 01:03:33.351499+00');
+	('42375aed-8d23-4020-b07c-b9de9681fb0a', 'ACC-015', 'Aluminium Bobin LT Line', 'Accessories', 'Bobin', 'Aluminium', 'LT', 'No.', '4822', true, false, false, 0.00, 0.00, NULL, true, NULL, '2026-05-16 01:03:33.351499+00', '2026-05-16 01:03:33.351499+00')) AS v(
+    "id", "item_code", "name", "category_name", "sub_category",
+    "material_type", "size_spec", "unit", "hsn_code",
+    "is_traded", "is_manufactured", "is_raw_material",
+    "reorder_level", "reorder_qty", "notes", "is_active",
+    "created_by", "created_at", "updated_at"
+)
+JOIN "public"."item_categories" AS c
+    ON c."org_id" = '00000000-0000-0000-0000-000000000001'
+   AND c."name" = v."category_name"
+JOIN public.material_types mt
+    ON mt.org_id = '00000000-0000-0000-0000-000000000001'
+   AND lower(mt.name) = lower(v."material_type")
 
+JOIN public.units u
+    ON u.org_id = '00000000-0000-0000-0000-000000000001'
+   AND (
+        (v."unit" = 'No.'  AND u.code = 'NO')
+     OR (v."unit" = 'Mtr'  AND u.code = 'MTR')
+     OR (v."unit" = 'Kg'   AND u.code = 'KG')
+     OR (v."unit" = 'Set'  AND u.code = 'SET')
+     OR (v."unit" = 'Pair' AND u.code = 'PAIR')
+   );
+
+
+
+
+
+-- Manufacturing BOM test items
+INSERT INTO public.items (
+    id,
+    item_code,
+    name,
+    category_id,
+    material_type_id,
+    sub_category,
+    size_spec,
+    unit_id,
+    hsn_code,
+    is_traded,
+    is_manufactured,
+    is_raw_material,
+    reorder_level,
+    reorder_qty,
+    notes,
+    org_id
+)
+SELECT
+    v.id::uuid,
+    v.item_code,
+    v.name,
+    c.id,
+    mt.id,
+    v.sub_category,
+    v.size_spec,
+    u.id,
+    v.hsn_code,
+    v.is_traded,
+    v.is_manufactured,
+    v.is_raw_material,
+    v.reorder_level,
+    v.reorder_qty,
+    v.notes,
+    '00000000-0000-0000-0000-000000000001'::uuid
+FROM (
+    VALUES
+        (
+            '10000000-0000-0000-0000-000000000001',
+            'MFG-001',
+            'GOD Contact Assembly',
+            'Assembly',
+            null,
+            'NO',
+            null,
+            true,
+            true,
+            false,
+            0,
+            0,
+            'Manufacturing BOM test assembly'
+        ),
+        (
+            '10000000-0000-0000-0000-000000000002',
+            'MFG-002',
+            'GOD Contact Sub Assembly',
+            'Sub Assembly',
+            null,
+            'SET',
+            null,
+            true,
+            true,
+            true,
+            0,
+            0,
+            'Manufacturing BOM test sub-assembly'
+        ),
+        (
+            '10000000-0000-0000-0000-000000000003',
+            'MFG-003',
+            'Copper Contact Raw',
+            'Raw Material',
+            null,
+            'NO',
+            null,
+            true,
+            false,
+            true,
+            0,
+            0,
+            'Manufacturing BOM test raw material'
+        ),
+        (
+            '10000000-0000-0000-0000-000000000004',
+            'MFG-004',
+            'GOD Spring Raw',
+            'Raw Material',
+            null,
+            'NO',
+            null,
+            true,
+            false,
+            true,
+            0,
+            0,
+            'Manufacturing BOM test raw material'
+        ),
+        (
+            '10000000-0000-0000-0000-000000000005',
+            'MFG-005',
+            'GOD Rivet Raw',
+            'Raw Material',
+            null,
+            'NO',
+            null,
+            true,
+            false,
+            true,
+            0,
+            0,
+            'Manufacturing BOM test raw material'
+        )
+) AS v(
+    id,
+    item_code,
+    name,
+    sub_category,
+    size_spec,
+    unit_code,
+    hsn_code,
+    is_traded,
+    is_manufactured,
+    is_raw_material,
+    reorder_level,
+    reorder_qty,
+    notes
+)
+JOIN public.item_categories c
+    ON c.org_id = '00000000-0000-0000-0000-000000000001'
+   AND c.code = 'GOD'
+JOIN public.material_types mt
+    ON mt.org_id = '00000000-0000-0000-0000-000000000001'
+   AND mt.code = CASE
+       WHEN v.item_code = 'MFG-003' THEN 'COPPER'
+       ELSE 'GI'
+   END
+JOIN public.units u
+    ON u.org_id = '00000000-0000-0000-0000-000000000001'
+   AND u.code = v.unit_code
+ON CONFLICT (id) DO NOTHING;
 
 --
 -- Data for Name: bom; Type: TABLE DATA; Schema: public; Owner: postgres
@@ -1021,4 +1298,35 @@ SELECT pg_catalog.setval('"public"."seq_so"', 1, false);
 
 -- \unrestrict UZpne27CGriA1RpwWJIqJOWRqXXLlHCA6dzAkMAVRDPuS0mO00ZIARJ66H2j7aR
 
+
+-- =========================================================================
+-- Multi-tenancy seed shim: backfill org_id, restore constraints
+-- =========================================================================
+UPDATE "public"."items"
+SET "org_id" = '00000000-0000-0000-0000-000000000001'
+WHERE "org_id" IS NULL;
+
+
+
+UPDATE "public"."inventory_balance"
+SET "org_id" = '00000000-0000-0000-0000-000000000001'
+WHERE "org_id" IS NULL;
+
+UPDATE "public"."profiles"
+SET "org_id" = '00000000-0000-0000-0000-000000000001'
+WHERE "org_id" IS NULL;
+
+UPDATE "public"."audit_logs"
+SET "org_id" = '00000000-0000-0000-0000-000000000001'
+WHERE "org_id" IS NULL;
+
+ALTER TABLE "public"."items"             ALTER COLUMN "org_id" SET NOT NULL;
+ALTER TABLE "public"."inventory_balance" ALTER COLUMN "org_id" SET NOT NULL;
+
+
+
+
 RESET ALL;
+
+
+

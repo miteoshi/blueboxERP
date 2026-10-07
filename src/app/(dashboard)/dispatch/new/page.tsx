@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useOrgId } from '@/lib/hooks/use-tenant'
 import { dispatchInventory } from '@/lib/utils/inventory'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
@@ -17,71 +18,113 @@ import type { Enums } from '@/lib/types/database'
 type TransportMode = Enums<'transport_mode'>
 
 interface ChallanLine {
-  item_id:        string
-  item_name:      string
-  item_code:      string
-  so_line_id:     string
-  qty:            number
-  unit:           string
-  rate:           number
-  max_qty:        number
-  // ── NEW: the reservation id for this item on this SO ──────
-  reservation_id: string | null
+  item_id: string;
+  item_name: string;
+  item_code: string;
+  so_line_id: string;
+  qty: number;
+  unit_id: string;
+  unit: string;
+  rate: number;
+  max_qty: number;
+  reservation_id: string | null;
 }
 
-function useSalesOrdersForDispatch() {
-  const supabase = createClient()
+function useSalesOrdersForDispatch(orgId: string | null) {
+  const supabase = createClient();
+
   return useQuery({
-    queryKey: ['so-for-dispatch'],
+    queryKey: ["so-for-dispatch", orgId],
+
     queryFn: async () => {
+      if (!orgId) {
+        throw new Error("Organization context is not available");
+      }
+
       const { data, error } = await supabase
-        .from('sales_orders')
-        .select(`
-          id, so_number,
-          client:clients ( id, name ),
-          sales_order_lines (
-            id, qty, qty_dispatched, unit_rate, unit,
-            item:items ( id, item_code, name )
-          )
-        `)
-        .in('status', ['confirmed', 'in_production', 'ready'])
-        .order('so_number')
-      if (error) throw error
-      return data
+        .from("sales_orders")
+        .select(
+                    `
+            id,
+            so_number,
+
+            client:clients (
+              id,
+              name
+            ),
+
+            sales_order_lines (
+              id,
+              qty,
+              qty_dispatched,
+              unit_rate,
+              unit_id,
+
+              unit:units (
+                id,
+                name
+              ),
+
+              item:items (
+                id,
+                item_code,
+                name
+              )
+            )
+            `
+        )
+        .in("status", ["confirmed", "in_production", "ready"])
+        .order("so_number");
+
+      if (error) throw error;
+
+      return data;
     },
+
+    enabled: !!orgId,
     staleTime: 30 * 1000,
-  })
+  });
 }
 
 // ── NEW: fetch active reservations for the selected SO ────────
 // Returns a map of item_id → reservation_id so dispatch can
 // consume against the reservation rather than raw available stock.
-function useSOReservations(soId: string) {
-  const supabase = createClient()
+function useSOReservations(soId: string, orgId: string | null) {
+  const supabase = createClient();
+
   return useQuery({
-    queryKey: ['so-reservations-for-dispatch', soId],
-    enabled: !!soId,
+    queryKey: ["so-reservations-for-dispatch", orgId, soId],
+
+    enabled: !!orgId && !!soId,
+
     queryFn: async () => {
+      if (!orgId) {
+        throw new Error("Organization context is not available");
+      }
+
       const { data, error } = await supabase
-        .from('stock_reservations')
-        .select('id, item_id, qty_reserved, qty_consumed, status')
-        .eq('ref_type', 'sales_order')
-        .eq('ref_id', soId)
-        .in('status', ['active', 'partially_consumed'])
-      if (error) throw error
-      // item_id → reservation_id
-      return new Map((data ?? []).map(r => [r.item_id, r.id]))
+        .from("stock_reservations")
+        .select("id, item_id, qty_reserved, qty_consumed, status")
+        .eq("ref_type", "sales_order")
+        .eq("ref_id", soId)
+        .in("status", ["active", "partially_consumed"]);
+
+      if (error) throw error;
+
+      return new Map((data ?? []).map((r) => [r.item_id, r.id]));
     },
+
     staleTime: 30 * 1000,
-  })
+  });
 }
 
 export default function NewChallanPage() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const supabase     = createClient()
+  const orgId        = useOrgId()
 
-  const { data: salesOrders } = useSalesOrdersForDispatch()
+const { data: salesOrders } = useSalesOrdersForDispatch(orgId);
 
   const [selectedSoId,  setSelectedSoId]  = useState(searchParams.get('so') ?? '')
   const [challanDate,   setChallanDate]   = useState(new Date().toISOString().split('T')[0])
@@ -93,33 +136,33 @@ export default function NewChallanPage() {
   const [saving,        setSaving]        = useState(false)
 
   // ── Fetch reservations for the selected SO ────────────────
-  const { data: reservationMap } = useSOReservations(selectedSoId)
+const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
 
   // Pre-fill lines from SO when selected
   // Now also attaches reservation_id per item from reservationMap
   useEffect(() => {
-    if (!selectedSoId || !salesOrders) return
-    const so = salesOrders.find(s => s.id === selectedSoId)
-    if (!so) return
+    if (!selectedSoId || !salesOrders) return;
+    const so = salesOrders.find((s) => s.id === selectedSoId);
+    if (!so) return;
 
-    const soLines = (so.sales_order_lines as any[]) ?? []
+    const soLines = (so.sales_order_lines as any[]) ?? [];
     const remaining = soLines
-      .filter(l => (l.qty - (l.qty_dispatched ?? 0)) > 0)
-      .map(l => ({
-        item_id:        l.item?.id        ?? '',
-        item_name:      l.item?.name      ?? '',
-        item_code:      l.item?.item_code ?? '',
-        so_line_id:     l.id,
-        qty:            l.qty - (l.qty_dispatched ?? 0),
-        unit:           l.unit,
-        rate:           l.unit_rate,
-        max_qty:        l.qty - (l.qty_dispatched ?? 0),
-        // reservation_id populated once reservationMap loads (see effect below)
+      .filter((l) => l.qty - (l.qty_dispatched ?? 0) > 0)
+      .map((l) => ({
+        item_id: l.item?.id ?? "",
+        item_name: l.item?.name ?? "",
+        item_code: l.item?.item_code ?? "",
+        so_line_id: l.id,
+        qty: l.qty - (l.qty_dispatched ?? 0),
+        unit_id: l.unit_id,
+        unit: l.unit?.name ?? "",
+        rate: l.unit_rate,
+        max_qty: l.qty - (l.qty_dispatched ?? 0),
         reservation_id: reservationMap?.get(l.item?.id) ?? null,
-      }))
+      }));
 
-    setLines(remaining)
-  }, [selectedSoId, salesOrders])
+    setLines(remaining);
+  }, [selectedSoId, salesOrders, reservationMap]);
 
   // ── Re-attach reservation_ids once reservationMap loads ───
   // The SO lines effect runs before reservationMap is ready on
@@ -152,10 +195,17 @@ export default function NewChallanPage() {
   }
 
   async function handleSave() {
+
+
     if (!selectedSoId)               { toast.error('Select a sales order');        return }
     if (lines.length === 0)          { toast.error('Add at least one item');       return }
     if (lines.some(l => l.qty <= 0)) { toast.error('All quantities must be > 0'); return }
     if (lines.some(l => l.rate <= 0)){ toast.error('All rates must be > 0');      return }
+
+    if (!orgId) {
+        toast.error("Organization context is not available");
+        return;
+    }
 
     // ── Warn but allow if reservation missing ─────────────
     // This handles edge cases where SO was confirmed without reserving
@@ -175,11 +225,15 @@ export default function NewChallanPage() {
 
       // ── STEP 1: Create challan header first ───────────────
       // We need the challan id to pass as ref_id to dispatchInventory
-      const { data: dcNo } = await supabase.rpc('next_dc_no')
+      const { data: dcNo, error: rpcErr } = await supabase.rpc('next_dc_no', {
+        p_org_id: orgId,
+      })
+      if (rpcErr) throw rpcErr
 
       const { data: challan, error: dcErr } = await supabase
         .from('delivery_challans')
         .insert({
+          org_id:         orgId,
           challan_no:     dcNo as string,
           so_id:          selectedSoId,
           client_id:      selectedClient?.id,
@@ -216,17 +270,17 @@ export default function NewChallanPage() {
 
       // ── STEP 3: Insert challan lines (document record) ────
       const { error: linesErr } = await supabase
-        .from('delivery_challan_lines')
+        .from("delivery_challan_lines")
         .insert(
-          lines.map(l => ({
+          lines.map((l) => ({
             challan_id: challan.id,
-            item_id:    l.item_id,
-            so_line_id: l.so_line_id || null,
-            qty:        l.qty,
-            unit:       l.unit as any,
-            rate:       l.rate,
+            item_id: l.item_id,
+            so_line_id: l.so_line_id,
+            qty: l.qty,
+            unit_id: l.unit_id,
+            rate: l.rate,
           }))
-        )
+        );
 
       if (linesErr) throw linesErr
 

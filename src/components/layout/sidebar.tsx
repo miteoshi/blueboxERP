@@ -3,7 +3,9 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useQueryClient } from '@tanstack/react-query'
 import { useProfile } from '@/lib/hooks/use-profile'
+import { useTenant } from '@/lib/hooks/use-tenant'
 import { cn } from '@/lib/utils/cn'
 import { toast } from 'sonner'
 import { useState } from 'react'
@@ -43,8 +45,13 @@ const roleBadgeStyle: Record<UserRole, React.CSSProperties> = {
   viewer:     { background: 'rgba(100,116,139,0.15)',  color: '#94a3b8' },
 }
 
-function getInitials(name: string) {
-  return name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('')
+function getInitials(name?: string | null) {
+  if (!name || !name.trim()) return 'U'
+  const parts = name.trim().split(/\s+/)
+  if (parts.length >= 2 && parts[0] && parts[1]) {
+    return ((parts[0][0] ?? '') + (parts[1][0] ?? '')).toUpperCase()
+  }
+  return name.trim().slice(0, 2).toUpperCase()
 }
 
 interface NavItem {
@@ -62,24 +69,47 @@ interface NavGroup {
 
 const NAV: (NavItem | NavGroup)[] = [
   // ── Dashboard — everyone ──────────────────────────────────
-  { label: 'Dashboard', href: '/', icon: LayoutDashboard,
-    roles: ['admin','manager','sales','store','production','viewer'] },
+  {
+    label: "Dashboard",
+    href: "/",
+    icon: LayoutDashboard,
+    roles: ["admin", "manager", "sales", "store", "production", "viewer"],
+  },
 
   // ── My Tasks — admin, manager, production workers ─────────
-  { label: 'My Tasks', href: '/tasks', icon: ClipboardList,
-    roles: ['admin','manager','production'] },
+  {
+    label: "My Tasks",
+    href: "/tasks",
+    icon: ClipboardList,
+    roles: ["admin", "manager", "production"],
+  },
 
   // ── Production — admin, manager, production workers ───────
-  { label: 'Production', href: '/production', icon: Factory,
-    roles: ['admin','manager','production'] },
+  {
+    label: "Production",
+    href: "/production",
+    icon: Factory,
+    roles: ["admin", "manager", "production"],
+  },
 
   // ── Inbound — admin, manager, store ──────────────────────
   {
-    label: 'Inbound', icon: Truck,
-    roles: ['admin','manager','store'],
+    label: "Inbound",
+    icon: Truck,
+    roles: ["admin", "manager", "store"],
     items: [
-      { label: 'GRN List', href: '/inbound',     icon: List, roles: ['admin','manager','store'] },
-      { label: 'New GRN',  href: '/inbound/new', icon: Plus, roles: ['admin','manager','store'] },
+      {
+        label: "GRN List",
+        href: "/inbound",
+        icon: List,
+        roles: ["admin", "manager", "store"],
+      },
+      {
+        label: "New GRN",
+        href: "/inbound/new",
+        icon: Plus,
+        roles: ["admin", "manager", "store"],
+      },
     ],
   },
 
@@ -87,47 +117,95 @@ const NAV: (NavItem | NavGroup)[] = [
   // Group visible to admin, manager, sales, store, viewer
   // Each sub-item scoped independently
   {
-    label: 'Outbound', icon: Send,
-    roles: ['admin','manager','sales','store','viewer'],
+    label: "Outbound",
+    icon: Send,
+    roles: ["admin", "manager", "sales", "store", "viewer"],
     items: [
       // Quotations — admin, manager, sales, viewer (read)
-      { label: 'Quotations',   href: '/quotations',   icon: FileText,
-        roles: ['admin','manager','sales','viewer'] },
+      {
+        label: "Quotations",
+        href: "/quotations",
+        icon: FileText,
+        roles: ["admin", "manager", "sales", "viewer"],
+      },
       // Sales Orders — admin, manager, sales, viewer (read)
-      { label: 'Sales Orders', href: '/sales-orders', icon: ShoppingCart,
-        roles: ['admin','manager','sales','viewer'] },
+      {
+        label: "Sales Orders",
+        href: "/sales-orders",
+        icon: ShoppingCart,
+        roles: ["admin", "manager", "sales", "viewer"],
+      },
       // Dispatch — admin, manager, store only
-      { label: 'Dispatch',     href: '/dispatch',     icon: PackageOpen,
-        roles: ['admin','manager','store'] },
+      {
+        label: "Dispatch",
+        href: "/dispatch",
+        icon: PackageOpen,
+        roles: ["admin", "manager", "store"],
+      },
     ],
   },
 
   // ── Master Data ───────────────────────────────────────────
   {
-    label: 'Master Data', icon: BarChart3,
-    roles: ['admin','manager','sales','store','production','viewer'],
+    label: "Master Data",
+    icon: BarChart3,
+    roles: ["admin", "manager", "sales", "store", "production", "viewer"],
     items: [
       // Items — everyone
-      { label: 'Items',     href: '/items',     icon: Package,
-        roles: ['admin','manager','sales','store','production','viewer'] },
+      {
+        label: "Items",
+        href: "/items",
+        icon: Package,
+        roles: ["admin", "manager", "sales", "store", "production", "viewer"],
+      },
+      {
+        label: "Categories",
+        href: "/items/categories",
+        icon: Layers,
+        roles: ["admin", "manager", "store", "production", "viewer"],
+      },
+
+      {
+        label: "Material Types",
+        href: "/items/material-types",
+        icon: Layers,
+        roles: ["admin", "manager", "store", "production", "viewer"],
+      },
+
       // Inventory — everyone except sales (they see pricing, not stock ops)
-      { label: 'Inventory', href: '/inventory', icon: Layers,
-        roles: ['admin','manager','store','production','viewer'] },
+      {
+        label: "Inventory",
+        href: "/inventory",
+        icon: Layers,
+        roles: ["admin", "manager", "store", "production", "viewer"],
+      },
       // Clients — admin, manager, sales, viewer
-      { label: 'Clients',   href: '/clients',   icon: Users,
-        roles: ['admin','manager','sales','viewer'] },
+      {
+        label: "Clients",
+        href: "/clients",
+        icon: Users,
+        roles: ["admin", "manager", "sales", "viewer"],
+      },
       // Suppliers — admin, manager, store
-      { label: 'Suppliers', href: '/suppliers', icon: Building2,
-        roles: ['admin','manager','store'] },
+      {
+        label: "Suppliers",
+        href: "/suppliers",
+        icon: Building2,
+        roles: ["admin", "manager", "store"],
+      },
       // Workers — admin, manager only
-      { label: 'Workers',   href: '/workers',   icon: HardHat,
-        roles: ['admin','manager'] },
+      {
+        label: "Workers",
+        href: "/workers",
+        icon: HardHat,
+        roles: ["admin", "manager"],
+      },
     ],
   },
 
   // ── Settings — admin only ─────────────────────────────────
-  { label: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
-]
+  { label: "Settings", href: "/settings", icon: Settings, roles: ["admin"] },
+];
 
 const DIVIDER_BEFORE = new Set(['Settings'])
 
@@ -167,8 +245,9 @@ export function Sidebar() {
   const pathname = usePathname()
   const router   = useRouter()
   const supabase = createClient()
+  const queryClient = useQueryClient()
+  const { user, profile, organization } = useTenant()
 
-  const { data: profile } = useProfile()
   const role = profile?.role
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
@@ -197,10 +276,21 @@ export function Sidebar() {
   }
 
   async function handleSignOut() {
-    await supabase.auth.signOut()
-    toast.success('Signed out')
-    router.push('/login')
-    router.refresh()
+    try {
+      queryClient.setQueryData(["tenant-context"], {
+        user: null,
+        profile: null,
+        organization: null,
+        orgId: null,
+      })
+      await supabase.auth.signOut()
+      queryClient.clear()
+      toast.success('Signed out')
+      router.push('/login')
+    } catch (err) {
+      console.error('Sign out error:', err)
+      router.push('/login')
+    }
   }
 
   return (
@@ -216,9 +306,9 @@ export function Sidebar() {
         <div style={S.logoIcon}>
           <Zap style={{ width: 17, height: 17, color: '#fff' }} />
         </div>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', letterSpacing: '0.01em', lineHeight: 1.2 }}>
-            Blue Box
+        <div className="min-w-0 flex-1">
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', letterSpacing: '0.01em', lineHeight: 1.2 }} className="truncate" title={organization?.name || 'Blue Box'}>
+            {organization?.name || 'Blue Box'}
           </div>
           <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
             ERP System
@@ -373,17 +463,17 @@ export function Sidebar() {
       {/* ── Footer — fixed height, never shrinks ─────────────────────── */}
       <div style={{ ...S.footerBorder, flexShrink: 0, padding: '12px 12px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
 
-        {profile && (
+        {(profile || user) && (
           <div style={{ ...S.profileCard, display: 'flex', alignItems: 'center', gap: 11, padding: '10px 12px', marginBottom: 2 }}>
             <div style={S.avatar}>
-              {getInitials(profile.full_name)}
+              {getInitials(profile?.full_name || user?.email?.split('@')[0])}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12.5, fontWeight: 600, color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
-                {profile.full_name}
+                {profile?.full_name?.trim() || user?.email?.split('@')[0] || 'User'}
               </div>
-              <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
-                {(profile as any).email ?? 'Logged in'}
+              <div style={{ fontSize: 11, color: '#475569', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={user?.email || undefined}>
+                {user?.email || 'Logged in'}
               </div>
             </div>
             {role && (

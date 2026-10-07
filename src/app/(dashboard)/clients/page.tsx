@@ -12,31 +12,58 @@ import { TableLoader } from '@/components/ui/spinner'
 import { formatCurrency } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { Plus, Search, X, Users } from 'lucide-react'
+import { useOrgId } from '@/lib/hooks/use-tenant'
 
-function useClients(search: string) {
-  const supabase = createClient()
+function useClients(search: string, orgId: string | null) {
+  const supabase = createClient();
+
   return useQuery({
-    queryKey: ['clients', search],
-    queryFn: async () => {
-      let query = supabase
-        .from('clients')
-        .select(`
-          id, name, contact_person, phone, email,
-          address, city, state, gst_number,
-          credit_limit, credit_days, is_active, notes
-        `)
-        .order('name')
+    queryKey: ["clients", orgId, search],
 
-      if (search) {
-        query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`)
+    queryFn: async () => {
+      if (!orgId) {
+        throw new Error("Organization context is not available");
       }
 
-      const { data, error } = await query
-      if (error) throw error
-      return data
+      let query = supabase
+        .from("clients")
+        .select(
+          `
+          id,
+          name,
+          contact_person,
+          phone,
+          email,
+          address,
+          city,
+          state,
+          gst_number,
+          credit_limit,
+          credit_days,
+          notes,
+          is_active
+          `
+        )
+        .order("name");
+
+      if (search) {
+        query = query.or(
+          `name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`
+        );
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
     },
+
+    enabled: !!orgId,
     staleTime: 2 * 60 * 1000,
-  })
+  });
 }
 
 interface ClientForm {
@@ -62,6 +89,7 @@ const EMPTY_FORM: ClientForm = {
 export default function ClientsPage() {
   const supabase = createClient()
   const qc       = useQueryClient()
+  const orgId    = useOrgId()
 
   const [search,     setSearch]     = useState('')
   const [showForm,   setShowForm]   = useState(false)
@@ -69,7 +97,7 @@ export default function ClientsPage() {
   const [form,       setForm]       = useState<ClientForm>(EMPTY_FORM)
   const [saving,     setSaving]     = useState(false)
 
-  const { data: clients, isLoading } = useClients(search)
+  const { data: clients, isLoading } = useClients(search, orgId)
 
   function setField(field: keyof ClientForm, value: string) {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -99,42 +127,65 @@ export default function ClientsPage() {
     setShowForm(true)
   }
 
-  async function handleSave() {
-    if (!form.name.trim()) { toast.error('Client name is required'); return }
-    setSaving(true)
-    try {
-      const payload = {
-        name:           form.name.trim(),
-        contact_person: form.contact_person || null,
-        phone:          form.phone          || null,
-        email:          form.email          || null,
-        address:        form.address        || null,
-        city:           form.city           || null,
-        state:          form.state          || null,
-        gst_number:     form.gst_number     || null,
-        credit_limit:   Number(form.credit_limit) || 0,
-        credit_days:    Number(form.credit_days)  || 0,
-        notes:          form.notes          || null,
-      }
-
-      if (editId) {
-        const { error } = await supabase.from('clients').update(payload).eq('id', editId)
-        if (error) throw error
-        toast.success('Client updated')
-      } else {
-        const { error } = await supabase.from('clients').insert(payload)
-        if (error) throw error
-        toast.success('Client added')
-      }
-
-      qc.invalidateQueries({ queryKey: ['clients'] })
-      setShowForm(false)
-    } catch (err: any) {
-      toast.error(err.message)
-    } finally {
-      setSaving(false)
-    }
+async function handleSave() {
+  if (!form.name.trim()) {
+    toast.error("Client name is required");
+    return;
   }
+
+  if (!orgId) {
+    toast.error("Organization context is not available");
+    return;
+  }
+
+  setSaving(true);
+
+  try {
+    const payload = {
+      name: form.name.trim(),
+      contact_person: form.contact_person || null,
+      phone: form.phone || null,
+      email: form.email || null,
+      address: form.address || null,
+      city: form.city || null,
+      state: form.state || null,
+      gst_number: form.gst_number || null,
+      credit_limit: Number(form.credit_limit) || 0,
+      credit_days: Number(form.credit_days) || 0,
+      notes: form.notes || null,
+    };
+
+    if (editId) {
+      const { error } = await supabase
+        .from("clients")
+        .update(payload)
+        .eq("id", editId);
+
+      if (error) throw error;
+
+      toast.success("Client updated");
+    } else {
+      const { error } = await supabase.from("clients").insert({
+        ...payload,
+        org_id: orgId,
+      });
+
+      if (error) throw error;
+
+      toast.success("Client added");
+    }
+
+    await qc.invalidateQueries({ queryKey: ["clients"] });
+    setShowForm(false);
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : "Failed to save client";
+
+    toast.error(message);
+  } finally {
+    setSaving(false);
+  }
+}
 
   async function handleToggleActive(id: string, current: boolean) {
     const { error } = await supabase

@@ -1,21 +1,18 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
+import { useState } from "react";
 import { useOrgId } from "@/lib/hooks/use-tenant";
-
-import { PageHeader } from '@/components/layout/page-header'
-import { Badge } from '@/components/ui/badge'
-import { TableLoader } from '@/components/ui/spinner'
-import { formatCurrency } from '@/lib/utils/format'
-import { Search} from 'lucide-react'
-import Link from 'next/link'
-
-import { createClient } from '@/lib/supabase/client'
-import { useQuery } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { useItemCategories } from '@/lib/hooks/use-items';
-
+import { PageHeader } from "@/components/layout/page-header";
+import { Badge } from "@/components/ui/badge";
+import { TableLoader } from "@/components/ui/spinner";
+import { formatCurrency } from "@/lib/utils/format";
+import { Search } from "lucide-react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { useItemCategories } from "@/lib/hooks/use-items";
 
 // Fetch items with their current prices joined
 function useItemsWithPrices(
@@ -35,11 +32,33 @@ function useItemsWithPrices(
         .from("items")
         .select(
           `
-          id, item_code, name, category_id, sub_category,
-          material_type, size_spec, unit, hsn_code,
-          is_traded, is_manufactured, is_raw_material,
-          reorder_level, is_active
-        `
+          id,
+          item_code,
+          name,
+          category_id,
+          sub_category,
+          material_type_id,
+
+          material_type:material_types (
+            id,
+            name
+          ),
+
+          unit_id,
+
+          unit:units (
+            id,
+            name
+          ),
+
+          size_spec,
+          hsn_code,
+          is_traded,
+          is_manufactured,
+          is_raw_material,
+          reorder_level,
+          is_active
+          `
         )
         .eq("is_active", true)
         .order("category_id")
@@ -77,8 +96,7 @@ function useItemsWithPrices(
 }
 
 export default function ItemsPage() {
-  const router = useRouter()
-  
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const orgId = useOrgId();
@@ -86,9 +104,9 @@ export default function ItemsPage() {
   const { data: categories, isLoading: isCategoriesLoading } =
     useItemCategories();
 
-    const categoryNameById = new Map(
-      categories?.map((category) => [category.id, category.name]) ?? []
-    );
+  const categoryNameById = new Map(
+    categories?.map((category) => [category.id, category.name]) ?? []
+  );
 
   const { data: items, isLoading } = useItemsWithPrices(
     search,
@@ -117,7 +135,6 @@ export default function ItemsPage() {
         >
           Import BOM
         </Button>
-
       </PageHeader>
 
       {/* Filters */}
@@ -125,6 +142,7 @@ export default function ItemsPage() {
         <div className="px-5 py-4 flex flex-wrap gap-3 items-center">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+
             <input
               type="text"
               placeholder="Search by name or code…"
@@ -170,29 +188,37 @@ export default function ItemsPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">
                     Code
                   </th>
+
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     Name
                   </th>
+
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     Category
                   </th>
+
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     Material
                   </th>
+
                   <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     Unit
                   </th>
+
                   <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     Purchase Rate
                   </th>
+
                   <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     Selling Rate
                   </th>
+
                   <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     Type
                   </th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-slate-50">
                 {items?.length === 0 && (
                   <tr>
@@ -204,6 +230,7 @@ export default function ItemsPage() {
                     </td>
                   </tr>
                 )}
+
                 {items?.map((item) => (
                   <tr
                     key={item.id}
@@ -216,6 +243,7 @@ export default function ItemsPage() {
                         </span>
                       </Link>
                     </td>
+
                     <td className="px-4 py-3">
                       <Link
                         href={`/items/${item.id}`}
@@ -223,12 +251,14 @@ export default function ItemsPage() {
                       >
                         {item.name}
                       </Link>
+
                       {item.size_spec && (
                         <div className="text-xs text-slate-400 mt-0.5 truncate max-w-xs">
                           {item.size_spec}
                         </div>
                       )}
                     </td>
+
                     <td className="px-4 py-3">
                       <Badge variant="default">
                         {item.category_id
@@ -236,14 +266,17 @@ export default function ItemsPage() {
                           : "—"}
                       </Badge>
                     </td>
+
                     <td className="px-4 py-3 text-slate-600">
-                      {item.material_type ?? "—"}
+                      {item.material_type?.name ?? "—"}
                     </td>
+
                     <td className="px-4 py-3 text-center">
                       <span className="font-mono text-xs text-slate-500">
-                        {item.unit}
+                        {item.unit?.name ?? "—"}
                       </span>
                     </td>
+
                     <td className="px-4 py-3 text-right text-slate-700 tabular-nums">
                       {item.price?.purchase_rate ? (
                         formatCurrency(item.price.purchase_rate)
@@ -251,6 +284,7 @@ export default function ItemsPage() {
                         <span className="text-slate-300">—</span>
                       )}
                     </td>
+
                     <td className="px-4 py-3 text-right font-semibold text-slate-900 tabular-nums">
                       {item.price?.selling_rate ? (
                         formatCurrency(item.price.selling_rate)
@@ -258,12 +292,15 @@ export default function ItemsPage() {
                         <span className="text-slate-300 font-normal">—</span>
                       )}
                     </td>
+
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
                         {item.is_traded && <Badge variant="info">Traded</Badge>}
+
                         {item.is_manufactured && (
                           <Badge variant="purple">Mfg</Badge>
                         )}
+
                         {item.is_raw_material && (
                           <Badge variant="teal">Raw</Badge>
                         )}

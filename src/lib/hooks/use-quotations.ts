@@ -70,7 +70,17 @@ export function useQuotation(id: string | null) {
           approver:profiles!quotations_approved_by_fkey ( id, full_name ),
           quotation_lines (
             *,
-            item:items ( id, item_code, name, unit, hsn_code )
+            item:items (
+            id,
+            item_code,
+            name,
+            unit_id,
+            hsn_code,
+            unit:units (
+              id,
+              name
+            )
+          )
           )
         `)
         .eq('id', id)

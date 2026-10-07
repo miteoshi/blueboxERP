@@ -61,7 +61,9 @@ const { data: items, isLoading: itemsLoading } = useItems();
         title="Manual Stock Adjustment"
         description="Add or remove stock for physical reconciliation or write-offs"
       >
-        <Button variant="outline" size="sm" onClick={() => router.back()}>Cancel</Button>
+        <Button variant="outline" size="sm" onClick={() => router.back()}>
+          Cancel
+        </Button>
         <Button size="sm" loading={saving} onClick={handleSave}>
           <Save className="w-4 h-4" />
           Save Adjustment
@@ -72,11 +74,15 @@ const { data: items, isLoading: itemsLoading } = useItems();
         <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
         <div className="text-sm text-amber-800 space-y-1">
           <p>
-            <strong>Warning:</strong> Manual adjustments bypass the standard sales/production workflow.
+            <strong>Warning:</strong> Manual adjustments bypass the standard
+            sales/production workflow.
           </p>
           <p>
-            Use a <strong>positive</strong> number to add stock (e.g., found extra items during stocktake).<br/>
-            Use a <strong>negative</strong> number to remove stock (e.g., damaged goods, write-offs).
+            Use a <strong>positive</strong> number to add stock (e.g., found
+            extra items during stocktake).
+            <br />
+            Use a <strong>negative</strong> number to remove stock (e.g.,
+            damaged goods, write-offs).
           </p>
         </div>
       </div>
@@ -84,22 +90,23 @@ const { data: items, isLoading: itemsLoading } = useItems();
       <div className="max-w-2xl">
         <Card>
           <CardHeader>
-            <h3 className="font-semibold text-slate-900 text-sm">Adjustment Details</h3>
+            <h3 className="font-semibold text-slate-900 text-sm">
+              Adjustment Details
+            </h3>
           </CardHeader>
           <CardBody className="space-y-4">
-            
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
                 Item <span className="text-red-500">*</span>
               </label>
               <select
                 value={itemId}
-                onChange={e => setItemId(e.target.value)}
+                onChange={(e) => setItemId(e.target.value)}
                 disabled={itemsLoading}
                 className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
               >
                 <option value="">Select item…</option>
-                {items?.map(item => (
+                {items?.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.item_code} — {item.name}
                   </option>
@@ -109,8 +116,10 @@ const { data: items, isLoading: itemsLoading } = useItems();
 
             {selectedItem && (
               <div className="bg-slate-50 rounded-lg p-3 text-sm">
-                <p className="font-semibold text-slate-900">{selectedItem.name}</p>
-                <p className="text-slate-500 text-xs mt-0.5">Unit: {selectedItem.unit}</p>
+                <p className="font-semibold text-slate-900">
+                  {selectedItem.name}
+                </p>
+                <p className="text-slate-500 text-xs mt-0.5">Unit: —</p>
               </div>
             )}
 
@@ -120,7 +129,7 @@ const { data: items, isLoading: itemsLoading } = useItems();
               step="any"
               placeholder="e.g. 5 or -2"
               value={delta}
-              onChange={e => setDelta(e.target.value)}
+              onChange={(e) => setDelta(e.target.value)}
               required
             />
 
@@ -128,7 +137,7 @@ const { data: items, isLoading: itemsLoading } = useItems();
               label="Reason for Adjustment"
               placeholder="Explain why this adjustment is necessary…"
               value={reason}
-              onChange={e => setReason(e.target.value)}
+              onChange={(e) => setReason(e.target.value)}
               required
               rows={3}
             />
@@ -137,12 +146,11 @@ const { data: items, isLoading: itemsLoading } = useItems();
               label="Reference Document ID (Optional)"
               placeholder="UUID of a related document if any"
               value={refId}
-              onChange={e => setRefId(e.target.value)}
+              onChange={(e) => setRefId(e.target.value)}
             />
-
           </CardBody>
         </Card>
       </div>
     </div>
-  )
+  );
 }

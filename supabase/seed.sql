@@ -30,6 +30,43 @@ INSERT INTO "public"."organizations" ("id", "name", "slug")
 VALUES ('00000000-0000-0000-0000-000000000001', 'Blue Box Seed Co', 'blue-box-seed')
 ON CONFLICT ("id") DO NOTHING;
 
+
+
+-- Seed material types for the fixed seed organization
+INSERT INTO public.material_types (org_id, code, name)
+VALUES
+    ('00000000-0000-0000-0000-000000000001', 'GI', 'GI'),
+    ('00000000-0000-0000-0000-000000000001', 'MS', 'MS'),
+    ('00000000-0000-0000-0000-000000000001', 'ALUMINIUM', 'Aluminium'),
+    ('00000000-0000-0000-0000-000000000001', 'COPPER', 'Copper'),
+    ('00000000-0000-0000-0000-000000000001', 'POLYMER', 'Polymer'),
+    ('00000000-0000-0000-0000-000000000001', 'PORCELAIN', 'Porcelain'),
+    ('00000000-0000-0000-0000-000000000001', 'HDPE', 'HDPE'),
+    ('00000000-0000-0000-0000-000000000001', 'CHEMICAL', 'Chemical'),
+    ('00000000-0000-0000-0000-000000000001', 'CONCRETE', 'Concrete'),
+    ('00000000-0000-0000-0000-000000000001', 'MIXED', 'Mixed'),
+    ('00000000-0000-0000-0000-000000000001', 'OTHER', 'Other')
+ON CONFLICT (org_id, code) DO NOTHING;
+
+
+
+
+-- Seed units for the fixed seed organization
+INSERT INTO public.units (org_id, code, name)
+VALUES
+    ('00000000-0000-0000-0000-000000000001', 'NO', 'No'),
+    ('00000000-0000-0000-0000-000000000001', 'SET', 'Set'),
+    ('00000000-0000-0000-0000-000000000001', 'MTR', 'Meter'),
+    ('00000000-0000-0000-0000-000000000001', 'KG', 'Kilogram'),
+    ('00000000-0000-0000-0000-000000000001', 'MM', 'Millimeter'),
+    ('00000000-0000-0000-0000-000000000001', 'CM', 'Centimeter'),
+    ('00000000-0000-0000-0000-000000000001', 'L', 'Liter'),
+    ('00000000-0000-0000-0000-000000000001', 'BOX', 'Box'),
+    ('00000000-0000-0000-0000-000000000001', 'PAIR', 'Pair'),
+    ('00000000-0000-0000-0000-000000000001', 'ROLL', 'Roll')
+ON CONFLICT (org_id, code) DO NOTHING;
+
+
 -- Existing seed rows do not contain org_id. Temporarily allow NULL while
 -- the dump data is loaded; org_id is backfilled at the end of this file.
 ALTER TABLE "public"."items"             ALTER COLUMN "org_id" DROP NOT NULL;
@@ -189,7 +226,7 @@ INSERT INTO "auth"."refresh_tokens" ("instance_id", "id", "token", "user_id", "r
 --
 
 INSERT INTO "public"."profiles" ("id", "full_name", "role", "phone", "is_active", "created_at", "updated_at") VALUES
-	('a0e9b10d-b578-438f-8be0-25395232b24a', 'Piyush Joshi', 'manager', NULL, true, '2026-05-19 03:22:39.961577+00', '2026-05-19 03:23:22.013979+00');
+	('a0e9b10d-b578-438f-8be0-25395232b24a', 'Piyush Joshi', 'admin', NULL, true, '2026-05-19 03:22:39.961577+00', '2026-05-19 03:23:22.013979+00');
 
 
 --
@@ -446,8 +483,7 @@ ON CONFLICT ("org_id", "code") DO NOTHING;
 
 
 INSERT INTO "public"."items" (
-    "id", "item_code", "name", "category_id", "sub_category",
-    "material_type", "size_spec", "unit", "hsn_code",
+    "id", "item_code", "name", "category_id", "material_type_id", "sub_category","size_spec","unit_id", "hsn_code",
     "is_traded", "is_manufactured", "is_raw_material",
     "reorder_level", "reorder_qty", "notes", "is_active",
     "created_by", "created_at", "updated_at"
@@ -457,10 +493,10 @@ SELECT
     v."item_code",
     v."name",
     c."id",
+	mt."id",
     v."sub_category",
-    v."material_type"::public.material_type,
     v."size_spec",
-    v."unit"::public.unit_of_measure,
+	u."id",
     v."hsn_code",
     v."is_traded",
     v."is_manufactured",
@@ -686,8 +722,166 @@ FROM (
 )
 JOIN "public"."item_categories" AS c
     ON c."org_id" = '00000000-0000-0000-0000-000000000001'
-   AND c."name" = v."category_name";
+   AND c."name" = v."category_name"
+JOIN public.material_types mt
+    ON mt.org_id = '00000000-0000-0000-0000-000000000001'
+   AND lower(mt.name) = lower(v."material_type")
 
+JOIN public.units u
+    ON u.org_id = '00000000-0000-0000-0000-000000000001'
+   AND (
+        (v."unit" = 'No.'  AND u.code = 'NO')
+     OR (v."unit" = 'Mtr'  AND u.code = 'MTR')
+     OR (v."unit" = 'Kg'   AND u.code = 'KG')
+     OR (v."unit" = 'Set'  AND u.code = 'SET')
+     OR (v."unit" = 'Pair' AND u.code = 'PAIR')
+   );
+
+
+
+
+
+-- Manufacturing BOM test items
+INSERT INTO public.items (
+    id,
+    item_code,
+    name,
+    category_id,
+    material_type_id,
+    sub_category,
+    size_spec,
+    unit_id,
+    hsn_code,
+    is_traded,
+    is_manufactured,
+    is_raw_material,
+    reorder_level,
+    reorder_qty,
+    notes,
+    org_id
+)
+SELECT
+    v.id::uuid,
+    v.item_code,
+    v.name,
+    c.id,
+    mt.id,
+    v.sub_category,
+    v.size_spec,
+    u.id,
+    v.hsn_code,
+    v.is_traded,
+    v.is_manufactured,
+    v.is_raw_material,
+    v.reorder_level,
+    v.reorder_qty,
+    v.notes,
+    '00000000-0000-0000-0000-000000000001'::uuid
+FROM (
+    VALUES
+        (
+            '10000000-0000-0000-0000-000000000001',
+            'MFG-001',
+            'GOD Contact Assembly',
+            'Assembly',
+            null,
+            'NO',
+            null,
+            true,
+            true,
+            false,
+            0,
+            0,
+            'Manufacturing BOM test assembly'
+        ),
+        (
+            '10000000-0000-0000-0000-000000000002',
+            'MFG-002',
+            'GOD Contact Sub Assembly',
+            'Sub Assembly',
+            null,
+            'SET',
+            null,
+            true,
+            true,
+            true,
+            0,
+            0,
+            'Manufacturing BOM test sub-assembly'
+        ),
+        (
+            '10000000-0000-0000-0000-000000000003',
+            'MFG-003',
+            'Copper Contact Raw',
+            'Raw Material',
+            null,
+            'NO',
+            null,
+            true,
+            false,
+            true,
+            0,
+            0,
+            'Manufacturing BOM test raw material'
+        ),
+        (
+            '10000000-0000-0000-0000-000000000004',
+            'MFG-004',
+            'GOD Spring Raw',
+            'Raw Material',
+            null,
+            'NO',
+            null,
+            true,
+            false,
+            true,
+            0,
+            0,
+            'Manufacturing BOM test raw material'
+        ),
+        (
+            '10000000-0000-0000-0000-000000000005',
+            'MFG-005',
+            'GOD Rivet Raw',
+            'Raw Material',
+            null,
+            'NO',
+            null,
+            true,
+            false,
+            true,
+            0,
+            0,
+            'Manufacturing BOM test raw material'
+        )
+) AS v(
+    id,
+    item_code,
+    name,
+    sub_category,
+    size_spec,
+    unit_code,
+    hsn_code,
+    is_traded,
+    is_manufactured,
+    is_raw_material,
+    reorder_level,
+    reorder_qty,
+    notes
+)
+JOIN public.item_categories c
+    ON c.org_id = '00000000-0000-0000-0000-000000000001'
+   AND c.code = 'GOD'
+JOIN public.material_types mt
+    ON mt.org_id = '00000000-0000-0000-0000-000000000001'
+   AND mt.code = CASE
+       WHEN v.item_code = 'MFG-003' THEN 'COPPER'
+       ELSE 'GI'
+   END
+JOIN public.units u
+    ON u.org_id = '00000000-0000-0000-0000-000000000001'
+   AND u.code = v.unit_code
+ON CONFLICT (id) DO NOTHING;
 
 --
 -- Data for Name: bom; Type: TABLE DATA; Schema: public; Owner: postgres

@@ -45,13 +45,28 @@ export default function ImportBomPage() {
         (items ?? []).map((i) => [i.item_code.toUpperCase(), i.id])
       )
 
+
+      const { data: units, error: unitsError } = await supabase
+        .from("units")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+
+      if (unitsError) throw unitsError;
+
+      const unitsByName = new Map(
+        (units ?? []).map((u) => [u.name.toLowerCase(), u.id])
+      );
+
       const parsed = await parseSpreadsheet(file)
       if (parsed.length === 0) {
         toast.error('No rows found in that file')
         setRows([])
         return
       }
-      const results = parsed.map((raw, i) => validateBomRow(raw, i + 2, itemsByCode))
+      const results = parsed.map((raw, i) =>
+        validateBomRow(raw, i + 2, itemsByCode, unitsByName)
+      );
       setRows(results)
     } catch (err) {
       toast.error('Could not read that file — is it a valid .xlsx or .csv?')
@@ -76,10 +91,14 @@ export default function ImportBomPage() {
       const { data: { user } } = await supabase.auth.getUser()
 
     const payload = validRows.map((r) => ({
-    ...r.data!,
-    org_id: orgId,
-    created_by: user?.id ?? null,
-    }))
+      finished_item_id: r.data!.finished_item_id,
+      component_id: r.data!.component_id,
+      qty_per_unit: r.data!.qty_per_unit,
+      unit_id: r.data!.unit_id,
+      notes: r.data!.notes,
+      org_id: orgId,
+      created_by: user?.id ?? null,
+    }));
 
         const { error } = await supabase
             .from('bom')

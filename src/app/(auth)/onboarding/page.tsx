@@ -1,33 +1,47 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import { Loader2, Zap, Building2, LogOut } from 'lucide-react'
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Loader2, Zap, Building2, LogOut } from "lucide-react";
+
+type OrganizationTemplate = {
+  id: string;
+  name: string;
+};
 
 export default function OnboardingPage() {
-  const router = useRouter()
-  const supabase = createClient()
-  const queryClient = useQueryClient()
+  const router = useRouter();
+  const supabase = createClient();
+  const queryClient = useQueryClient();
 
-  const [orgName, setOrgName] = useState('')
-  const [fullName, setFullName] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [checking, setChecking] = useState(true)
+  const [orgName, setOrgName] = useState("");
+
+  const [template, setTemplate] = useState("");
+  const [templates, setTemplates] = useState<OrganizationTemplate[]>([]);
+
+  const [fullName, setFullName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  const [includeSapDefaults, setIncludeSapDefaults] = useState(false);
 
   // Verify auth state on mount
   useEffect(() => {
     async function checkAuth() {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
-        router.push('/login')
-        return
+        router.push("/login");
+        return;
       }
 
       if (user.user_metadata?.full_name) {
-        setFullName(user.user_metadata.full_name)
+        setFullName(user.user_metadata.full_name);
       }
 
       // Check if user already has an org_id
@@ -52,34 +66,72 @@ export default function OnboardingPage() {
         return;
       }
 
-      setChecking(false)
+      setChecking(false);
     }
 
-    checkAuth()
-  }, [router, supabase])
+    checkAuth();
+  }, [router, supabase]);
+
+  useEffect(() => {
+    async function loadTemplates() {
+      try {
+        const response = await fetch("/api/organizations/create");
+
+        if (!response.ok) {
+          throw new Error("Failed to load organization templates");
+        }
+
+        const data = await response.json();
+        setTemplates(data.templates ?? []);
+      } catch (error) {
+        console.error("Could not load organization templates:", error);
+      }
+    }
+
+    loadTemplates();
+  }, []);
 
   async function handleCreateOrg(e: React.FormEvent) {
-    e.preventDefault()
+    e.preventDefault();
+
     if (!orgName.trim()) {
-      toast.error('Organization name is required')
-      return
+      toast.error("Organization name is required");
+      return;
     }
 
-    setLoading(true)
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
+    setLoading(true);
 
-      const { data: orgId, error } = await supabase.rpc("create_organization", {
-        p_name: orgName.trim(),
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      const response = await fetch("/api/organizations/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orgName: orgName.trim(),
+          template: template || null,
+          includeSapDefaults,
+        }),
       });
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to create organization");
+      }
+
+      const orgId = result.orgId;
 
       if (user && fullName.trim()) {
         try {
           await supabase.auth.updateUser({
             data: { full_name: fullName.trim() },
           });
+
           await supabase
             .from("profiles")
             .update({ full_name: fullName.trim() })
@@ -90,7 +142,7 @@ export default function OnboardingPage() {
       }
 
       toast.success("Organization created successfully!");
-      
+
       // Await refetch before navigating so the fresh organization is ready in cache
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ["tenant-context"] }),
@@ -115,21 +167,37 @@ export default function OnboardingPage() {
         profile: null,
         organization: null,
         orgId: null,
-      })
-      await supabase.auth.signOut()
-      queryClient.clear()
-      router.push('/login')
+      });
+
+      await supabase.auth.signOut();
+      queryClient.clear();
+      router.push("/login");
     } catch {
-      router.push('/login')
+      router.push("/login");
     }
   }
 
   if (checking) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#07111f' }}>
-        <Loader2 style={{ width: 24, height: 24, color: '#2563eb', animation: 'spin 1s linear infinite' }} />
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#07111f",
+        }}
+      >
+        <Loader2
+          style={{
+            width: 24,
+            height: 24,
+            color: "#2563eb",
+            animation: "spin 1s linear infinite",
+          }}
+        />
       </div>
-    )
+    );
   }
 
   return (
@@ -339,24 +407,35 @@ export default function OnboardingPage() {
         <div className="onboarding-left">
           <div className="left-brand">
             <div className="left-icon">
-              <Zap style={{ width: 16, height: 16, color: '#fff' }} />
+              <Zap style={{ width: 16, height: 16, color: "#fff" }} />
             </div>
+
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#f1f5f9', letterSpacing: '0.01em', lineHeight: 1.2 }}>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#f1f5f9",
+                  letterSpacing: "0.01em",
+                  lineHeight: 1.2,
+                }}
+              >
                 Blue Box
               </div>
-              <div style={{ fontSize: 10, color: '#64748b', marginTop: 1 }}>
+
+              <div style={{ fontSize: 10, color: "#64748b", marginTop: 1 }}>
                 ERP System
               </div>
             </div>
           </div>
 
           <div className="left-copy">
-            <h2 className="left-tagline">
-              Welcome to Blue Box
-            </h2>
+            <h2 className="left-tagline">Welcome to Blue Box</h2>
+
             <p className="left-sub">
-              Let&apos;s set up your dedicated workspace. All your inventory, sales, and manufacturing data will stay strictly isolated inside your organization.
+              Let&apos;s set up your dedicated workspace. All your inventory,
+              sales, and manufacturing data will stay strictly isolated inside
+              your organization.
             </p>
           </div>
         </div>
@@ -364,23 +443,38 @@ export default function OnboardingPage() {
         {/* Right panel */}
         <div className="onboarding-right">
           <div className="onboarding-form-wrap">
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-              <Building2 style={{ width: 20, height: 20, color: '#60a5fa' }} />
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: "rgba(37,99,235,0.12)",
+                border: "1px solid rgba(37,99,235,0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: 20,
+              }}
+            >
+              <Building2 style={{ width: 20, height: 20, color: "#60a5fa" }} />
             </div>
 
             <h1 className="form-title">Create your organization</h1>
+
             <p className="form-subtitle">
-              Enter the legal or business name of your company. You will be assigned as the administrator.
+              Enter the legal or business name of your company. You will be
+              assigned as the administrator.
             </p>
 
             <form onSubmit={handleCreateOrg}>
               <div style={{ marginBottom: 16 }}>
                 <label className="field-label">Your Full Name</label>
+
                 <input
                   className="field-input"
                   type="text"
                   value={fullName}
-                  onChange={e => setFullName(e.target.value)}
+                  onChange={(e) => setFullName(e.target.value)}
                   placeholder="e.g. Piyush Joshi"
                   autoFocus
                 />
@@ -388,28 +482,105 @@ export default function OnboardingPage() {
 
               <div style={{ marginBottom: 16 }}>
                 <label className="field-label">Organization Name</label>
+
                 <input
                   className="field-input"
                   type="text"
                   value={orgName}
-                  onChange={e => setOrgName(e.target.value)}
+                  onChange={(e) => setOrgName(e.target.value)}
                   required
                   placeholder="e.g. Apex Electrical Industries"
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="submit-btn"
-              >
+              <div style={{ marginBottom: 20 }}>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    cursor: "pointer",
+                    color: "#cbd5e1",
+                    fontSize: 14,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={includeSapDefaults}
+                    onChange={(e) => setIncludeSapDefaults(e.target.checked)}
+                    style={{
+                      width: 16,
+                      height: 16,
+                      accentColor: "#2563eb",
+                    }}
+                  />
+                  Include SAP global defaults
+                </label>
+
+                <p
+                  style={{
+                    margin: "6px 0 0 26px",
+                    fontSize: 12,
+                    color: "#64748b",
+                  }}
+                >
+                  Add standard SAP material types and units to your
+                  organization.
+                </p>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="template"
+                  style={{
+                    display: "block",
+                    marginBottom: 8,
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: "#cbd5e1",
+                  }}
+                >
+                  Template <span style={{ color: "#64748b" }}>(optional)</span>
+                </label>
+
+                <select
+                  id="template"
+                  value={template}
+                  onChange={(e) => setTemplate(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "12px 14px",
+                    borderRadius: 8,
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: "#0f1b2d",
+                    color: "#e2e8f0",
+                    outline: "none",
+                  }}
+                >
+                  <option value="">No template</option>
+
+                  {templates.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button type="submit" disabled={loading} className="submit-btn">
                 {loading ? (
                   <>
-                    <Loader2 style={{ width: 15, height: 15, animation: 'spin 1s linear infinite' }} />
+                    <Loader2
+                      style={{
+                        width: 15,
+                        height: 15,
+                        animation: "spin 1s linear infinite",
+                      }}
+                    />
                     Creating workspace…
                   </>
                 ) : (
-                  'Create Organization'
+                  "Create Organization"
                 )}
               </button>
             </form>
@@ -424,5 +595,5 @@ export default function OnboardingPage() {
         </div>
       </div>
     </>
-  )
+  );
 }

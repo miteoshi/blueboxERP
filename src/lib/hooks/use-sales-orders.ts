@@ -66,7 +66,17 @@ export function useSalesOrder(id: string | null) {
           approver:profiles!sales_orders_approved_by_fkey ( id, full_name ),
           sales_order_lines (
             *,
-            item:items ( id, item_code, name, unit, hsn_code )
+            item:items (
+            id,
+            item_code,
+            name,
+            unit_id,
+            hsn_code,
+            unit:units (
+              id,
+              name
+            )
+          )
           ),
           production_orders ( id, po_number, status ),
           delivery_challans ( id, challan_no, challan_date, status, total_amount )

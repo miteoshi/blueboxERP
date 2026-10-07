@@ -18,16 +18,16 @@ import type { Enums } from '@/lib/types/database'
 type TransportMode = Enums<'transport_mode'>
 
 interface ChallanLine {
-  item_id:        string
-  item_name:      string
-  item_code:      string
-  so_line_id:     string
-  qty:            number
-  unit:           string
-  rate:           number
-  max_qty:        number
-  // ── NEW: the reservation id for this item on this SO ──────
-  reservation_id: string | null
+  item_id: string;
+  item_name: string;
+  item_code: string;
+  so_line_id: string;
+  qty: number;
+  unit_id: string;
+  unit: string;
+  rate: number;
+  max_qty: number;
+  reservation_id: string | null;
 }
 
 function useSalesOrdersForDispatch(orgId: string | null) {
@@ -44,14 +44,34 @@ function useSalesOrdersForDispatch(orgId: string | null) {
       const { data, error } = await supabase
         .from("sales_orders")
         .select(
-          `
-          id, so_number,
-          client:clients ( id, name ),
-          sales_order_lines (
-            id, qty, qty_dispatched, unit_rate, unit,
-            item:items ( id, item_code, name )
-          )
-        `
+                    `
+            id,
+            so_number,
+
+            client:clients (
+              id,
+              name
+            ),
+
+            sales_order_lines (
+              id,
+              qty,
+              qty_dispatched,
+              unit_rate,
+              unit_id,
+
+              unit:units (
+                id,
+                name
+              ),
+
+              item:items (
+                id,
+                item_code,
+                name
+              )
+            )
+            `
         )
         .in("status", ["confirmed", "in_production", "ready"])
         .order("so_number");
@@ -121,28 +141,28 @@ const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
   // Pre-fill lines from SO when selected
   // Now also attaches reservation_id per item from reservationMap
   useEffect(() => {
-    if (!selectedSoId || !salesOrders) return
-    const so = salesOrders.find(s => s.id === selectedSoId)
-    if (!so) return
+    if (!selectedSoId || !salesOrders) return;
+    const so = salesOrders.find((s) => s.id === selectedSoId);
+    if (!so) return;
 
-    const soLines = (so.sales_order_lines as any[]) ?? []
+    const soLines = (so.sales_order_lines as any[]) ?? [];
     const remaining = soLines
-      .filter(l => (l.qty - (l.qty_dispatched ?? 0)) > 0)
-      .map(l => ({
-        item_id:        l.item?.id        ?? '',
-        item_name:      l.item?.name      ?? '',
-        item_code:      l.item?.item_code ?? '',
-        so_line_id:     l.id,
-        qty:            l.qty - (l.qty_dispatched ?? 0),
-        unit:           l.unit,
-        rate:           l.unit_rate,
-        max_qty:        l.qty - (l.qty_dispatched ?? 0),
-        // reservation_id populated once reservationMap loads (see effect below)
+      .filter((l) => l.qty - (l.qty_dispatched ?? 0) > 0)
+      .map((l) => ({
+        item_id: l.item?.id ?? "",
+        item_name: l.item?.name ?? "",
+        item_code: l.item?.item_code ?? "",
+        so_line_id: l.id,
+        qty: l.qty - (l.qty_dispatched ?? 0),
+        unit_id: l.unit_id,
+        unit: l.unit?.name ?? "",
+        rate: l.unit_rate,
+        max_qty: l.qty - (l.qty_dispatched ?? 0),
         reservation_id: reservationMap?.get(l.item?.id) ?? null,
-      }))
+      }));
 
-    setLines(remaining)
-  }, [selectedSoId, salesOrders])
+    setLines(remaining);
+  }, [selectedSoId, salesOrders, reservationMap]);
 
   // ── Re-attach reservation_ids once reservationMap loads ───
   // The SO lines effect runs before reservationMap is ready on
@@ -250,17 +270,17 @@ const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
 
       // ── STEP 3: Insert challan lines (document record) ────
       const { error: linesErr } = await supabase
-        .from('delivery_challan_lines')
+        .from("delivery_challan_lines")
         .insert(
-          lines.map(l => ({
+          lines.map((l) => ({
             challan_id: challan.id,
-            item_id:    l.item_id,
-            so_line_id: l.so_line_id || null,
-            qty:        l.qty,
-            unit:       l.unit as any,
-            rate:       l.rate,
+            item_id: l.item_id,
+            so_line_id: l.so_line_id,
+            qty: l.qty,
+            unit_id: l.unit_id,
+            rate: l.rate,
           }))
-        )
+        );
 
       if (linesErr) throw linesErr
 

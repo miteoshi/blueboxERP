@@ -68,20 +68,24 @@ function useItemsWithPrices(search: string, orgId: string | null) {
       let query = supabase
         .from("items")
         .select(
-                      `
+          `
               id,
               item_code,
               name,
-              unit,
+              unit_id,
               category_id,
               item_category:item_categories (
                 id,
                 name
+              ),
+              unit:units (
+                id,
+                name
               )
             `
-                    )
-                    .eq("is_active", true)
-                    .order("category_id");
+        )
+        .eq("is_active", true)
+        .order("category_id");
 
       if (search) {
         query = query.or(`name.ilike.%${search}%,item_code.ilike.%${search}%`);
@@ -192,19 +196,25 @@ export default function SettingsPage() {
 
       // Insert new price row
       ///LATEST CHANGE
-      const currentPrice = items?.find(i => i.id === itemId)?.currentPrice
-      const { error } = await supabase
-        .from('item_prices')
-        .insert({
-          org_id:         orgId,
-          item_id:        itemId,
-          purchase_rate:  newPurchase ? Number(newPurchase) : null,
-          selling_rate:   newSelling  ? Number(newSelling)  : null,
-          gst_percent:    (currentPrice?.gst_percent ?? '18') as any,
-          rate_unit:      (currentPrice?.rate_unit   ?? 'No.') as any,
-          effective_from: today,
-          created_by:     user?.id ?? null,
-        })
+      const currentPrice = items?.find((i) => i.id === itemId)?.currentPrice;
+
+      const selectedItem = items?.find((i) => i.id === itemId);
+
+      if (!selectedItem?.unit_id) {
+        toast.error("Item has no unit assigned");
+        return;
+      }
+
+      const { error } = await supabase.from("item_prices").insert({
+        org_id: orgId,
+        item_id: itemId,
+        purchase_rate: newPurchase ? Number(newPurchase) : null,
+        selling_rate: newSelling ? Number(newSelling) : null,
+        gst_percent: (currentPrice?.gst_percent ?? "18") as any,
+        unit_id: selectedItem.unit_id,
+        effective_from: today,
+        created_by: user?.id ?? null,
+      });
 
       if (error) throw error
 
@@ -521,7 +531,7 @@ export default function SettingsPage() {
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-center font-mono text-xs text-slate-500">
-                          {item.unit}
+                          {item.unit?.name ?? "—"}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-slate-600">
                           {item.currentPrice?.purchase_rate ? (

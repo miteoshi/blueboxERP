@@ -44,10 +44,22 @@ function useTasks(
             id, po_number, status,
             start_date, target_date, completed_date, notes,
             created_at,
-            production_order_items (
-              id, qty_required, qty_produced, unit,
-              item:items ( id, item_code, name, unit )
-            ),
+              production_order_items (
+                id,
+                qty_required,
+                qty_produced,
+                unit_id,
+                unit:units (
+                  id,
+                  name
+                ),
+                item:items (
+                  id,
+                  item_code,
+                  name,
+                  unit_id
+                )
+              ),
             production_assignments (
               id,
               worker:workers ( id, name, skill )
@@ -95,10 +107,22 @@ function useTasks(
           id, po_number, status,
           start_date, target_date, completed_date, notes,
           created_at,
-          production_order_items (
-            id, qty_required, qty_produced, unit,
-            item:items ( id, item_code, name, unit )
-          ),
+            production_order_items (
+              id,
+              qty_required,
+              qty_produced,
+              unit_id,
+              unit:units (
+                id,
+                name
+              ),
+              item:items (
+                id,
+                item_code,
+                name,
+                unit_id
+              )
+            ),
           production_assignments (
             id,
             worker:workers ( id, name, skill )

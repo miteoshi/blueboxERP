@@ -275,9 +275,9 @@ const { data: workers = [] } = useWorkers(orgId);
                           className={`font-bold text-sm ${
                             isDone ? "text-green-600" : "text-slate-900"
                           }`}
-                        >
-                          {formatQty(item.qty_produced, item.unit)} /{" "}
-                          {formatQty(item.qty_required, item.unit)}
+                        > 
+                          {formatQty(item.qty_produced, item.unit?.name)} /{" "}
+                          {formatQty(item.qty_required, item.unit?.name)}
                         </div>
                         {isDone && (
                           <div className="text-xs text-green-600">
@@ -347,7 +347,16 @@ function ReservedMaterialsCard({
         .select(
           `
           id, qty_reserved, qty_consumed, qty_released, status,
-          item:items ( id, item_code, name, unit )
+          item:items (
+            id,
+            item_code,
+            name,
+            unit_id,
+            unit:units (
+              id,
+              name
+            )
+          )
         `
         )
         .eq("ref_type", "production_order")
@@ -418,7 +427,7 @@ function ReservedMaterialsCard({
                   </span>
                 </td>
                 <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-slate-900">
-                  {formatQty(r.qty_reserved, r.item?.unit)}
+                  {formatQty(r.qty_reserved, r.item?.unit?.name)}
                 </td>
                 <td className="px-4 py-2.5 text-right tabular-nums">
                   <span
@@ -428,7 +437,7 @@ function ReservedMaterialsCard({
                         : "text-slate-400"
                     }
                   >
-                    {formatQty(r.qty_consumed, r.item?.unit)}
+                    {formatQty(r.qty_consumed, r.item?.unit?.name)}
                   </span>
                 </td>
                 <td className="px-4 py-2.5 text-center">

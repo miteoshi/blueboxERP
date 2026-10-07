@@ -164,6 +164,14 @@ const NAV: (NavItem | NavGroup)[] = [
         icon: Layers,
         roles: ["admin", "manager", "store", "production", "viewer"],
       },
+
+      {
+        label: "Material Types",
+        href: "/items/material-types",
+        icon: Layers,
+        roles: ["admin", "manager", "store", "production", "viewer"],
+      },
+
       // Inventory — everyone except sales (they see pricing, not stock ops)
       {
         label: "Inventory",

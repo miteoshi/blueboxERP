@@ -51,18 +51,30 @@ function useChallan(id: string, orgId: string | null) {
           sales_order:sales_orders ( id, so_number, total_amount, balance_due ),
           creator:profiles!delivery_challans_created_by_fkey ( full_name ),
           delivery_challan_lines (
-            id, qty, unit, rate, line_total,
+            id,
+            qty,
+            unit_id,
+            rate,
+            line_total,
+            unit:units (
+              id,
+              name
+            ),
             item:items (
-                        id,
-                        item_code,
-                        name,
-                        unit,
-                        category_id,
-                        item_category:item_categories (
-                          id,
-                          name
-                        )
-                      ),
+              id,
+              item_code,
+              name,
+              unit_id,
+              category_id,
+              unit:units (
+                id,
+                name
+              ),
+              item_category:item_categories (
+                id,
+                name
+              )
+            ),
             so_line:sales_order_lines ( id, qty, qty_dispatched )
           )
         `
@@ -437,10 +449,10 @@ async function handleMarkDelivered() {
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
-                        {formatQty(line.qty, line.unit)}
+                        {formatQty(line.qty, line.unit?.name)}
                       </td>
                       <td className="px-4 py-3 text-center font-mono text-xs text-slate-500">
-                        {line.unit}
+                        {line.unit?.name ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums text-slate-600">
                         {line.rate ? formatCurrency(line.rate) : "—"}

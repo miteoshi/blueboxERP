@@ -1,2 +1,3 @@
-select count(*) as category_count
-from public.item_categories;
+select pg_get_functiondef(
+  'public.create_organization(text,text,jsonb,jsonb)'::regprocedure
+);

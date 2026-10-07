@@ -6,13 +6,15 @@ import * as XLSX from "xlsx";
 // "Item Code", "item-code", and "item_code" all map to the same key.
 export async function parseSpreadsheet(
     file: File,
+    sheetName?: string,
 ): Promise<Record<string, unknown>[]> {
     const buffer = await file.arrayBuffer();
     const workbook = XLSX.read(buffer, { type: "array" });
-    const firstSheetName = workbook.SheetNames[0];
-    if (!firstSheetName) return [];
+    const selectedSheetName = sheetName ?? workbook.SheetNames[0];
+    if (!selectedSheetName) return [];
 
-    const sheet = workbook.Sheets[firstSheetName];
+    const sheet = workbook.Sheets[selectedSheetName];
+    if (!sheet) return [];
     const rawRows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, {
         defval: "",
         raw: false, // keep values as strings so we control coercion ourselves

@@ -110,7 +110,7 @@ export default function QuotationDetailPage() {
         item_id: l.item_id,
         description: l.description,
         qty: l.qty,
-        unit: l.unit,
+        unit_id: l.unit_id,
         unit_rate: l.unit_rate,
         gst_percent: l.gst_percent,
         sort_order: idx,

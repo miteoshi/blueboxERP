@@ -95,14 +95,17 @@ export function useItem(id: string | null) {
         .select(`
           *,
           item_prices (
-            id, purchase_rate, selling_rate,
-            rate_unit, gst_percent,
+            id, purchase_rate, selling_rate, gst_percent,
             effective_from, effective_to, notes
           ),
+
           bom!bom_finished_item_id_fkey (
-            id, qty_per_unit, unit, notes, is_active,
+            id, qty_per_unit, unit_id, notes, is_active,
+            unit:units (
+              id, name
+            ),
             component:items!bom_component_id_fkey (
-              id, item_code, name, unit
+              id, item_code, name, unit_id
             )
           )
         `)

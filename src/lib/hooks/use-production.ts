@@ -26,9 +26,21 @@ export function useProductionOrders(filters?: {
           *,
           creator:profiles!production_orders_created_by_fkey ( full_name ),
           production_order_items (
-            id, qty_required, qty_produced, unit,
-            item:items ( id, item_code, name, unit )
-          ),
+                id,
+                qty_required,
+                qty_produced,
+                unit_id,
+                unit:units (
+                  id,
+                  name
+                ),
+                item:items (
+                  id,
+                  item_code,
+                  name,
+                  unit_id
+                )
+              ),
           production_assignments (
             id, hours_worked,
             worker:workers ( id, name )
@@ -63,10 +75,22 @@ export function useProductionOrder(id: string | null) {
         .select(`
           *,
           creator:profiles!production_orders_created_by_fkey ( id, full_name ),
-          production_order_items (
-            id, qty_required, qty_produced, unit,
-            item:items ( id, item_code, name, unit, is_manufactured )
-          ),
+            production_order_items (
+              id,
+              qty_required,
+              qty_produced,
+              unit_id,
+              unit:units (
+                id,
+                name
+              ),
+              item:items (
+                id,
+                item_code,
+                name,
+                unit_id
+              )
+            ),
           production_assignments (
             id, assigned_date, hours_worked, notes,
             worker:workers ( id, name, skill )
@@ -96,9 +120,21 @@ export function useBom(finishedItemId: string | null) {
       const { data, error } = await supabase
         .from('bom')
         .select(`
-          id, qty_per_unit, unit, notes,
+          id,
+          qty_per_unit,
+          unit_id,
+          notes,
+
+          unit:units (
+            id,
+            name
+          ),
+
           component:items!bom_component_id_fkey (
-            id, item_code, name, unit
+            id,
+            item_code,
+            name,
+            unit_id
           )
         `)
         .eq('finished_item_id', finishedItemId)
@@ -124,7 +160,16 @@ export function useManufacturedItems() {
 
       const { data, error } = await supabase
         .from('items')
-        .select('id, item_code, name, unit, category')
+        .select(`
+              id,
+              item_code,
+              name,
+              unit_id,
+              unit:units (
+                id,
+                name
+              )
+            `)
         .eq('is_manufactured', true)
         .eq('is_active', true)
         .order('name')
@@ -149,7 +194,16 @@ export function useRawMaterialItems() {
 
       const { data, error } = await supabase
         .from('items')
-        .select('id, item_code, name, unit, category')
+        .select(`
+              id,
+              item_code,
+              name,
+              unit_id,
+              unit:units (
+                id,
+                name
+              )
+            `)
         .eq('is_raw_material', true)
         .eq('is_active', true)
         .order('name')

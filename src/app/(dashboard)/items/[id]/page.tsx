@@ -22,19 +22,27 @@ export default async function ItemDetailPage({ params }: Props) {
     { data: stock },
     { data: recentMovements },
   ] = await Promise.all([
-      supabase
-        .from("items")
-        .select(
-          `
-      *,
-      item_category:item_categories (
-        id,
-        name
-      )
-    `
+    supabase
+      .from("items")
+      .select(
+        `
+        *,
+        item_category:item_categories (
+          id,
+          name
+        ),
+        material_type:material_types (
+          id,
+          name
+        ),
+        unit:units (
+          id,
+          name
         )
-        .eq("id", id)
-        .single(),
+        `
+      )
+      .eq("id", id)
+      .single(),
 
     supabase
       .from("item_prices")
@@ -47,8 +55,19 @@ export default async function ItemDetailPage({ params }: Props) {
       .from("bom")
       .select(
         `
-        id, qty_per_unit, unit, notes, is_active,
-        component:items!bom_component_id_fkey(id, item_code, name, unit)
+          id, qty_per_unit, unit_id, notes, is_active,
+
+          unit:units (
+            id,
+            name
+          ),
+
+          component:items!bom_component_id_fkey(
+            id,
+            item_code,
+            name,
+            unit_id
+          )
       `
       )
       .eq("finished_item_id", id)
@@ -74,7 +93,7 @@ export default async function ItemDetailPage({ params }: Props) {
         title={item.name}
         description={`${item.item_code} · ${
           item.item_category?.name ?? "—"
-        } · ${item.unit}`}
+        } · ${item.unit?.name ?? "—"}`}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -106,8 +125,8 @@ export default async function ItemDetailPage({ params }: Props) {
                 }
               />
               <Row label="Sub-Category" value={item.sub_category ?? "—"} />
-              <Row label="Material" value={item.material_type ?? "—"} />
-              <Row label="Unit" value={item.unit} />
+              <Row label="Material" value={item.material_type?.name ?? "—"} />
+              <Row label="Unit" value={item.unit?.name ?? "—"} />
               <Row label="HSN Code" value={item.hsn_code ?? "—"} />
               <Row label="Size / Spec" value={item.size_spec ?? "—"} />
               <Row
@@ -253,15 +272,15 @@ export default async function ItemDetailPage({ params }: Props) {
                           )}
                         </td>
                         <td className="px-4 py-2.5 text-right tabular-nums">
-                          {formatCurrency(price.purchase_rate)}
-                          <span className="text-xs text-slate-400 ml-1">
-                            /{price.rate_unit}
+                          {formatCurrency(price.selling_rate)}
+                          <span className="text-xs text-slate-400 font-normal ml-1">
+                            /{item.unit?.name ?? "—"}
                           </span>
                         </td>
                         <td className="px-4 py-2.5 text-right font-semibold tabular-nums">
                           {formatCurrency(price.selling_rate)}
                           <span className="text-xs text-slate-400 font-normal ml-1">
-                            /{price.rate_unit}
+                            /{item.unit?.name ?? "—"}
                           </span>
                         </td>
                         <td className="px-4 py-2.5 text-center text-slate-600">
@@ -334,7 +353,7 @@ export default async function ItemDetailPage({ params }: Props) {
                           </span>
                         </td>
                         <td className="px-4 py-2.5 text-right tabular-nums font-semibold">
-                          {formatQty(line.qty_per_unit, line.unit)}
+                          {formatQty(line.qty_per_unit, line.unit?.name)}
                         </td>
                         <td className="px-4 py-2.5 text-slate-500 text-xs">
                           {line.notes ?? "—"}
@@ -410,7 +429,7 @@ export default async function ItemDetailPage({ params }: Props) {
                             }
                           >
                             {isPositive ? "+" : "-"}
-                            {formatQty(m.qty, item.unit)}
+                            {formatQty(m.qty, item.unit?.name)}
                           </span>
                         </td>
                         <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">

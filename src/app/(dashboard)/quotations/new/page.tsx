@@ -17,21 +17,28 @@ import { useOrgId } from '@/lib/hooks/use-tenant'
 type GstRate = Enums<'gst_rate'>
 
 interface LineItem {
-  item_id: string
-  item_name: string
-  item_code: string
-  description: string
-  qty: number
-  unit: string
-  unit_rate: number
-  gst_percent: GstRate
+  item_id: string;
+  item_name: string;
+  item_code: string;
+  description: string;
+  qty: number;
+  unit_id: string | null;
+  unit: string;
+  unit_rate: number;
+  gst_percent: GstRate;
 }
 
 const EMPTY_LINE: LineItem = {
-  item_id: '', item_name: '', item_code: '',
-  description: '', qty: 1, unit: 'No.',
-  unit_rate: 0, gst_percent: '18',
-}
+  item_id: "",
+  item_name: "",
+  item_code: "",
+  description: "",
+  qty: 1,
+  unit_id: null,
+  unit: "",
+  unit_rate: 0,
+  gst_percent: "18",
+};
 
 // Fetch active clients
 function useClients() {
@@ -69,7 +76,20 @@ function useItemsForQuote() {
       if (!orgId) return [];
       const { data: items, error } = await supabase
         .from("items")
-        .select("id, item_code, name, unit, hsn_code, category_id")
+        .select(
+          `
+          id,
+          item_code,
+          name,
+          unit_id,
+          unit:units (
+            id,
+            name
+          ),
+          hsn_code,
+          category_id
+        `
+        )
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
@@ -141,21 +161,34 @@ export default function NewQuotationPage() {
       if (i !== lineIdx) return l
       return {
         ...l,
-        item_id:     item.id,
-        item_name:   item.name,
-        item_code:   item.item_code,
-        unit:        item.unit,
-        unit_rate:   item.price?.selling_rate ?? 0,
-        gst_percent: (item.price?.gst_percent ?? '18') as GstRate,
-      }
+        item_id: item.id,
+        item_name: item.name,
+        item_code: item.item_code,
+        unit_id: item.unit_id,
+        unit: item.unit?.name ?? "",
+        unit_rate: item.price?.selling_rate ?? 0,
+        gst_percent: (item.price?.gst_percent ?? "18") as GstRate,
+      };
     }))
   }
 
   // ── Save / Submit ─────────────────────────────────────────
   async function save(submit: boolean) {
     if (!clientId) { toast.error('Please select a client'); return }
-    if (lines.some(l => !l.item_id)) { toast.error('All lines must have an item selected'); return }
-    if (lines.some(l => l.qty <= 0)) { toast.error('All quantities must be greater than 0'); return }
+    if (lines.some((l) => !l.item_id)) {
+      toast.error("All lines must have an item selected");
+      return;
+    }
+
+    if (lines.some((l) => !l.unit_id)) {
+      toast.error("All items must have a unit");
+      return;
+    }
+
+    if (lines.some((l) => l.qty <= 0)) {
+      toast.error("All quantities must be greater than 0");
+      return;
+    }
     if (!orgId) {
       toast.error("Organization not loaded");
       return;
@@ -203,7 +236,7 @@ export default function NewQuotationPage() {
           item_id: l.item_id,
           description: l.description || null,
           qty: l.qty,
-          unit: l.unit as any,
+          unit_id: l.unit_id!,
           unit_rate: l.unit_rate,
           gst_percent: l.gst_percent,
           sort_order: idx,

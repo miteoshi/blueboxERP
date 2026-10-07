@@ -23,7 +23,14 @@ export default function RegisterPage() {
         data: { user },
       } = await supabase.auth.getUser();
 
+      // Must be authenticated
       if (!user) {
+        router.replace("/login?error=invite_required");
+        return;
+      }
+
+      // Must be an invited user
+      if (!user.invited_at) {
         router.replace("/login?error=invite_required");
         return;
       }
@@ -70,8 +77,7 @@ export default function RegisterPage() {
 
     toast.success("Account created");
 
-    router.push("/onboarding");
-    router.refresh();
+    router.replace("/onboarding");
   }
 
   if (checking) {
@@ -143,6 +149,7 @@ export default function RegisterPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={8}
+                autoComplete="new-password"
                 className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500"
                 placeholder="Minimum 8 characters"
               />
@@ -158,6 +165,7 @@ export default function RegisterPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
+                autoComplete="new-password"
                 className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500"
                 placeholder="Repeat your password"
               />

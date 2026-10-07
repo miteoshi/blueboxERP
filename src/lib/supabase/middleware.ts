@@ -37,6 +37,7 @@ export async function updateSession(request: NextRequest) {
     !user &&
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/auth') &&
+    !request.nextUrl.pathname.startsWith('/callback') &&
     !request.nextUrl.pathname.startsWith('/onboarding')
   ) {
     const url = request.nextUrl.clone()

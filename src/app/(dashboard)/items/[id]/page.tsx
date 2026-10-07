@@ -1,18 +1,19 @@
-import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
-import { PageHeader } from '@/components/layout/page-header'
-import { Card, CardBody, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { formatCurrency, formatDate, formatQty } from '@/lib/utils/format'
-import { Package, TrendingUp, Layers, History } from 'lucide-react'
+import { createClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/layout/page-header";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { formatCurrency, formatDate, formatQty } from "@/lib/utils/format";
+import { Package, TrendingUp, Layers, History } from "lucide-react";
+import ItemActions from "@/components/items/item-actions";
 
 interface Props {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
 export default async function ItemDetailPage({ params }: Props) {
-  const { id } = await params
-  const supabase = await createClient()
+  const { id } = await params;
+  const supabase = await createClient();
 
   // Fetch item + prices + BOM + stock in parallel
   const [
@@ -85,7 +86,7 @@ export default async function ItemDetailPage({ params }: Props) {
       .limit(10),
   ]);
 
-  if (!item) notFound()
+  if (!item) notFound();
 
   return (
     <div>
@@ -94,7 +95,9 @@ export default async function ItemDetailPage({ params }: Props) {
         description={`${item.item_code} · ${
           item.item_category?.name ?? "—"
         } · ${item.unit?.name ?? "—"}`}
-      />
+      >
+        <ItemActions item={item} stockQty={Number(stock?.qty_on_hand ?? 0)} />
+      </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ── Left column: Details + Stock ── */}
@@ -460,5 +463,5 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
       <span className="text-slate-500 flex-shrink-0">{label}</span>
       <span className="text-slate-900 text-right">{value}</span>
     </div>
-  )
+  );
 }

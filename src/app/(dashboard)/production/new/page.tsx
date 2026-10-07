@@ -313,7 +313,6 @@ const { data: rawItems } = useRawMaterialItems(orgId);
         .from("bom")
 
         .select(
-
           `
 
             id,
@@ -337,21 +336,14 @@ const { data: rawItems } = useRawMaterialItems(orgId);
             ),
 
 
-
-            component:items!bom_component_id_fkey (
-
-              id,
-
-              item_code,
-
-              name,
-
-              unit_id
-
-            )
+          component:items!bom_org_component_fk (
+            id,
+            item_code,
+            name,
+            unit_id
+          )
 
           `
-
         )
 
         .eq("finished_item_id", itemId)

@@ -1,15 +1,18 @@
-import { type RowResult, toNumber, toStringOrNull } from "./spreadsheet-import";
+import {
+    type RowResult,
+    toNumber,
+    toStringOrNull,
+} from "./spreadsheet-import";
 
 export interface BomImportRow {
     finished_item_id: string;
     component_id: string;
     qty_per_unit: number;
-    unit_id: string;
+    unit_id: string | null;
+    unit_name: string;
     notes: string | null;
 }
 
-// unitsByCode maps this organization's unit code → unit name.
-// Example: "NO" → "No", "MTR" → "Meter"
 export function validateBomRow(
     raw: Record<string, unknown>,
     rowNumber: number,
@@ -18,14 +21,25 @@ export function validateBomRow(
 ): RowResult<BomImportRow> {
     const errors: string[] = [];
 
-    const finishedCode = String(raw.finished_item_code ?? "").trim()
+    const finishedCode = String(
+        raw.finished_item_code ?? "",
+    )
+        .trim()
         .toUpperCase();
 
-    const componentCode = String(raw.component_item_code ?? "").trim()
+    const componentCode = String(
+        raw.component_item_code ?? "",
+    )
+        .trim()
         .toUpperCase();
 
-    if (!finishedCode) errors.push("finished_item_code is required");
-    if (!componentCode) errors.push("component_item_code is required");
+    if (!finishedCode) {
+        errors.push("finished_item_code is required");
+    }
+
+    if (!componentCode) {
+        errors.push("component_item_code is required");
+    }
 
     const finished_item_id = itemsByCode.get(finishedCode);
 
@@ -43,7 +57,11 @@ export function validateBomRow(
         );
     }
 
-    if (finishedCode && componentCode && finishedCode === componentCode) {
+    if (
+        finishedCode &&
+        componentCode &&
+        finishedCode === componentCode
+    ) {
         errors.push(
             "finished_item_code and component_item_code cannot be the same item",
         );
@@ -57,13 +75,24 @@ export function validateBomRow(
 
     const unitInput = String(raw.unit ?? "").trim();
 
-    const unit = unitsByName.get(unitInput.toLowerCase());
-
-    if (!unit) {
-        errors.push(`unit "${unitInput}" is not a valid unit`);
+    if (!unitInput) {
+        errors.push("unit is required");
     }
 
-    if (errors.length > 0 || !finished_item_id || !component_id || !unit) {
+    /*
+     * Existing unit:
+     * resolve it now.
+     *
+     * New unit:
+     * leave unit_id null and create it during import.
+     */
+    const unit_id = unitsByName.get(unitInput.toLowerCase());
+
+    if (
+        errors.length > 0 ||
+        !finished_item_id ||
+        !component_id
+    ) {
         return {
             rowNumber,
             raw,
@@ -73,15 +102,16 @@ export function validateBomRow(
     }
 
     return {
-    rowNumber,
-    raw,
-    errors: [],
-    data: {
-        finished_item_id,
-        component_id,
-        qty_per_unit,
-        unit_id: unit,
-        notes: toStringOrNull(raw.notes),
-    },
+        rowNumber,
+        raw,
+        errors: [],
+        data: {
+            finished_item_id,
+            component_id,
+            qty_per_unit,
+            unit_id: unit_id ?? null,
+            unit_name: unitInput,
+            notes: toStringOrNull(raw.notes),
+        },
     };
 }

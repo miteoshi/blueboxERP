@@ -294,14 +294,17 @@ export default function ImportItemsPage() {
 
       router.push("/items");
     } catch (err: unknown) {
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : typeof err === "object" && err !== null && "message" in err
-          ? String(err.message)
-          : "Import failed"
-      );
-    } finally {
+  console.error("ITEM IMPORT FAILED:", err)
+
+  const message =
+    err instanceof Error
+      ? err.message
+      : typeof err === "object" && err !== null && "message" in err
+        ? String((err as { message?: unknown }).message)
+        : String(err)
+
+  toast.error(`Import failed: ${message}`)
+}  finally {
       setSaving(false);
     }
   }

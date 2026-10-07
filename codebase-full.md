@@ -3195,6 +3195,10 @@ This is a binary file of the type: Excel Spreadsheet
 
 This is a binary file of the type: Excel Spreadsheet
 
+# public/templates/sap-global-defaults.xlsx
+
+This is a binary file of the type: Excel Spreadsheet
+
 # reset-debug.txt
 
 ```txt
@@ -10469,15 +10473,14 @@ export default function LoginPage() {
 # src/app/(auth)/onboarding/page.tsx
 
 ```tsx
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import { Loader2, Zap, Building2, LogOut } from 'lucide-react'
-
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Loader2, Zap, Building2, LogOut } from "lucide-react";
 
 type OrganizationTemplate = {
   id: string;
@@ -10485,32 +10488,35 @@ type OrganizationTemplate = {
 };
 
 export default function OnboardingPage() {
-  const router = useRouter()
-  const supabase = createClient()
-  const queryClient = useQueryClient()
+  const router = useRouter();
+  const supabase = createClient();
+  const queryClient = useQueryClient();
 
-  const [orgName, setOrgName] = useState('')
+  const [orgName, setOrgName] = useState("");
 
   const [template, setTemplate] = useState("");
   const [templates, setTemplates] = useState<OrganizationTemplate[]>([]);
 
-  const [fullName, setFullName] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [checking, setChecking] = useState(true)
+  const [fullName, setFullName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
 
-  
+  const [includeSapDefaults, setIncludeSapDefaults] = useState(false);
 
   // Verify auth state on mount
   useEffect(() => {
     async function checkAuth() {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
-        router.push('/login')
-        return
+        router.push("/login");
+        return;
       }
 
       if (user.user_metadata?.full_name) {
-        setFullName(user.user_metadata.full_name)
+        setFullName(user.user_metadata.full_name);
       }
 
       // Check if user already has an org_id
@@ -10535,13 +10541,11 @@ export default function OnboardingPage() {
         return;
       }
 
-      setChecking(false)
+      setChecking(false);
     }
 
-    checkAuth()
-  }, [router, supabase])
-
-
+    checkAuth();
+  }, [router, supabase]);
 
   useEffect(() => {
     async function loadTemplates() {
@@ -10563,15 +10567,19 @@ export default function OnboardingPage() {
   }, []);
 
   async function handleCreateOrg(e: React.FormEvent) {
-    e.preventDefault()
+    e.preventDefault();
+
     if (!orgName.trim()) {
-      toast.error('Organization name is required')
-      return
+      toast.error("Organization name is required");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
+
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       const response = await fetch("/api/organizations/create", {
         method: "POST",
@@ -10581,6 +10589,7 @@ export default function OnboardingPage() {
         body: JSON.stringify({
           orgName: orgName.trim(),
           template: template || null,
+          includeSapDefaults,
         }),
       });
 
@@ -10597,6 +10606,7 @@ export default function OnboardingPage() {
           await supabase.auth.updateUser({
             data: { full_name: fullName.trim() },
           });
+
           await supabase
             .from("profiles")
             .update({ full_name: fullName.trim() })
@@ -10607,7 +10617,7 @@ export default function OnboardingPage() {
       }
 
       toast.success("Organization created successfully!");
-      
+
       // Await refetch before navigating so the fresh organization is ready in cache
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ["tenant-context"] }),
@@ -10632,21 +10642,37 @@ export default function OnboardingPage() {
         profile: null,
         organization: null,
         orgId: null,
-      })
-      await supabase.auth.signOut()
-      queryClient.clear()
-      router.push('/login')
+      });
+
+      await supabase.auth.signOut();
+      queryClient.clear();
+      router.push("/login");
     } catch {
-      router.push('/login')
+      router.push("/login");
     }
   }
 
   if (checking) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#07111f' }}>
-        <Loader2 style={{ width: 24, height: 24, color: '#2563eb', animation: 'spin 1s linear infinite' }} />
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#07111f",
+        }}
+      >
+        <Loader2
+          style={{
+            width: 24,
+            height: 24,
+            color: "#2563eb",
+            animation: "spin 1s linear infinite",
+          }}
+        />
       </div>
-    )
+    );
   }
 
   return (
@@ -10858,6 +10884,7 @@ export default function OnboardingPage() {
             <div className="left-icon">
               <Zap style={{ width: 16, height: 16, color: "#fff" }} />
             </div>
+
             <div>
               <div
                 style={{
@@ -10870,6 +10897,7 @@ export default function OnboardingPage() {
               >
                 Blue Box
               </div>
+
               <div style={{ fontSize: 10, color: "#64748b", marginTop: 1 }}>
                 ERP System
               </div>
@@ -10878,6 +10906,7 @@ export default function OnboardingPage() {
 
           <div className="left-copy">
             <h2 className="left-tagline">Welcome to Blue Box</h2>
+
             <p className="left-sub">
               Let&apos;s set up your dedicated workspace. All your inventory,
               sales, and manufacturing data will stay strictly isolated inside
@@ -10906,6 +10935,7 @@ export default function OnboardingPage() {
             </div>
 
             <h1 className="form-title">Create your organization</h1>
+
             <p className="form-subtitle">
               Enter the legal or business name of your company. You will be
               assigned as the administrator.
@@ -10914,6 +10944,7 @@ export default function OnboardingPage() {
             <form onSubmit={handleCreateOrg}>
               <div style={{ marginBottom: 16 }}>
                 <label className="field-label">Your Full Name</label>
+
                 <input
                   className="field-input"
                   type="text"
@@ -10926,6 +10957,7 @@ export default function OnboardingPage() {
 
               <div style={{ marginBottom: 16 }}>
                 <label className="field-label">Organization Name</label>
+
                 <input
                   className="field-input"
                   type="text"
@@ -10934,6 +10966,42 @@ export default function OnboardingPage() {
                   required
                   placeholder="e.g. Apex Electrical Industries"
                 />
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    cursor: "pointer",
+                    color: "#cbd5e1",
+                    fontSize: 14,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={includeSapDefaults}
+                    onChange={(e) => setIncludeSapDefaults(e.target.checked)}
+                    style={{
+                      width: 16,
+                      height: 16,
+                      accentColor: "#2563eb",
+                    }}
+                  />
+                  Include SAP global defaults
+                </label>
+
+                <p
+                  style={{
+                    margin: "6px 0 0 26px",
+                    fontSize: 12,
+                    color: "#64748b",
+                  }}
+                >
+                  Add standard SAP material types and units to your
+                  organization.
+                </p>
               </div>
 
               <div>
@@ -11492,18 +11560,30 @@ function useChallan(id: string, orgId: string | null) {
           sales_order:sales_orders ( id, so_number, total_amount, balance_due ),
           creator:profiles!delivery_challans_created_by_fkey ( full_name ),
           delivery_challan_lines (
-            id, qty, unit, rate, line_total,
+            id,
+            qty,
+            unit_id,
+            rate,
+            line_total,
+            unit:units (
+              id,
+              name
+            ),
             item:items (
-                        id,
-                        item_code,
-                        name,
-                        unit,
-                        category_id,
-                        item_category:item_categories (
-                          id,
-                          name
-                        )
-                      ),
+              id,
+              item_code,
+              name,
+              unit_id,
+              category_id,
+              unit:units (
+                id,
+                name
+              ),
+              item_category:item_categories (
+                id,
+                name
+              )
+            ),
             so_line:sales_order_lines ( id, qty, qty_dispatched )
           )
         `
@@ -11878,10 +11958,10 @@ async function handleMarkDelivered() {
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
-                        {formatQty(line.qty, line.unit)}
+                        {formatQty(line.qty, line.unit?.name)}
                       </td>
                       <td className="px-4 py-3 text-center font-mono text-xs text-slate-500">
-                        {line.unit}
+                        {line.unit?.name ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums text-slate-600">
                         {line.rate ? formatCurrency(line.rate) : "—"}
@@ -12941,14 +13021,21 @@ export default async function GrnDetailPage({ params }: Props) {
         receiver:profiles!inbound_receipts_received_by_fkey ( full_name ),
         creator:profiles!inbound_receipts_created_by_fkey ( full_name ),
         inbound_receipt_lines (
-          id, qty_ordered, qty_received, unit,
+          id, qty_ordered, qty_received, unit_id,
+          unit:units (
+            id, name
+          ),
           rate, gst_percent, line_total, notes,
           item:items (
-                  id,
-                  item_code,
-                  name,
-                  unit,
-                  category_id,
+                      id,
+                      item_code,
+                      name,
+                      unit_id,
+                      category_id,
+                      unit:units (
+                        id,
+                        name
+                      ),
                   item_category:item_categories (
                     id,
                     name
@@ -13105,7 +13192,9 @@ export default async function GrnDetailPage({ params }: Props) {
                       : null
                     return (
                       <tr key={line.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 text-slate-400 text-xs">{i + 1}</td>
+                        <td className="px-4 py-3 text-slate-400 text-xs">
+                          {i + 1}
+                        </td>
                         <td className="px-4 py-3">
                           <Link href={`/items/${line.item?.id}`}>
                             <span className="font-mono text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded mr-2">
@@ -13116,32 +13205,45 @@ export default async function GrnDetailPage({ params }: Props) {
                             </span>
                           </Link>
                           {line.notes && (
-                            <div className="text-xs text-slate-400 mt-0.5">{line.notes}</div>
+                            <div className="text-xs text-slate-400 mt-0.5">
+                              {line.notes}
+                            </div>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-slate-500">
-                          {line.qty_ordered ? formatQty(line.qty_ordered, line.unit) : '—'}
+                          {line.qty_ordered
+                            ? formatQty(line.qty_ordered, line.unit?.name)
+                            : "—"}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">
                           <span className="font-semibold text-slate-900">
-                            {formatQty(line.qty_received, line.unit)}
+                            {formatQty(line.qty_received, line.unit?.name)}
                           </span>
                           {variance !== null && variance !== 0 && (
-                            <div className={`text-xs ${variance > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              {variance > 0 ? '+' : ''}{formatQty(variance, line.unit)}
+                            <div
+                              className={`text-xs ${
+                                variance > 0 ? "text-green-600" : "text-red-600"
+                              }`}
+                            >
+                              {variance > 0 ? "+" : ""}
+                              {formatQty(variance, line.unit?.name)}
                             </div>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-slate-600">
                           {formatCurrency(line.rate)}
-                          <div className="text-xs text-slate-400">/{line.unit}</div>
+                          <div className="text-xs text-slate-400">
+                            /{line.unit?.name ?? "—"}
+                          </div>
                         </td>
-                        <td className="px-4 py-3 text-center text-slate-500">{line.gst_percent}%</td>
+                        <td className="px-4 py-3 text-center text-slate-500">
+                          {line.gst_percent}%
+                        </td>
                         <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
                           {formatCurrency(line.line_total)}
                         </td>
                       </tr>
-                    )
+                    );
                   })}
                 </tbody>
                 <tfoot>
@@ -14589,21 +14691,22 @@ useEffect(() => {
 # src/app/(dashboard)/items/[id]/page.tsx
 
 ```tsx
-import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
-import { PageHeader } from '@/components/layout/page-header'
-import { Card, CardBody, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { formatCurrency, formatDate, formatQty } from '@/lib/utils/format'
-import { Package, TrendingUp, Layers, History } from 'lucide-react'
+import { createClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/layout/page-header";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { formatCurrency, formatDate, formatQty } from "@/lib/utils/format";
+import { Package, TrendingUp, Layers, History } from "lucide-react";
+import ItemActions from "@/components/items/item-actions";
 
 interface Props {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
 export default async function ItemDetailPage({ params }: Props) {
-  const { id } = await params
-  const supabase = await createClient()
+  const { id } = await params;
+  const supabase = await createClient();
 
   // Fetch item + prices + BOM + stock in parallel
   const [
@@ -14676,7 +14779,7 @@ export default async function ItemDetailPage({ params }: Props) {
       .limit(10),
   ]);
 
-  if (!item) notFound()
+  if (!item) notFound();
 
   return (
     <div>
@@ -14685,7 +14788,9 @@ export default async function ItemDetailPage({ params }: Props) {
         description={`${item.item_code} · ${
           item.item_category?.name ?? "—"
         } · ${item.unit?.name ?? "—"}`}
-      />
+      >
+        <ItemActions item={item} stockQty={Number(stock?.qty_on_hand ?? 0)} />
+      </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ── Left column: Details + Stock ── */}
@@ -15051,8 +15156,9 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
       <span className="text-slate-500 flex-shrink-0">{label}</span>
       <span className="text-slate-900 text-right">{value}</span>
     </div>
-  )
+  );
 }
+
 ```
 
 # src/app/(dashboard)/items/categories/page.tsx
@@ -15506,122 +15612,358 @@ export default function ItemCategoriesPage() {
 # src/app/(dashboard)/items/import-bom/page.tsx
 
 ```tsx
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { useOrgId } from '@/lib/hooks/use-tenant'
-import { PageHeader } from '@/components/layout/page-header'
-import { Button } from '@/components/ui/button'
-import { Card, CardBody, CardHeader } from '@/components/ui/card'
-import { parseSpreadsheet, type RowResult } from '@/lib/utils/spreadsheet-import'
-import { validateBomRow, type BomImportRow } from '@/lib/utils/bom-import'
-import { toast } from 'sonner'
-import { Upload, CheckCircle2, XCircle, Save } from 'lucide-react'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { useOrgId } from "@/lib/hooks/use-tenant";
+import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import {
+  parseSpreadsheet,
+  type RowResult,
+} from "@/lib/utils/spreadsheet-import";
+import { validateBomRow, type BomImportRow } from "@/lib/utils/bom-import";
+import { toast } from "sonner";
+import { Upload, CheckCircle2, XCircle, Save } from "lucide-react";
 
 export default function ImportBomPage() {
-  const router = useRouter()
-  const supabase = createClient()
-  const orgId = useOrgId()
+  const router = useRouter();
+  const supabase = createClient();
+  const orgId = useOrgId();
 
-  const [rows, setRows] = useState<RowResult<BomImportRow>[]>([])
-  const [fileName, setFileName] = useState<string | null>(null)
-  const [parsing, setParsing] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const [rows, setRows] = useState<RowResult<BomImportRow>[]>([]);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [parsing, setParsing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const validRows = rows.filter((r) => r.errors.length === 0)
-  const invalidRows = rows.filter((r) => r.errors.length > 0)
+  const validRows = rows.filter((r) => r.errors.length === 0);
+
+  const invalidRows = rows.filter((r) => r.errors.length > 0);
 
   async function handleFile(file: File) {
     if (!orgId) {
-      toast.error('Organization not loaded yet — try again in a moment')
-      return
+      toast.error("Organization not loaded yet — try again in a moment");
+      return;
     }
 
-    setParsing(true)
-    setFileName(file.name)
+    setParsing(true);
+    setFileName(file.name);
+
     try {
-      // Pull every item code for this org once, so codes in the sheet can be
-      // resolved to UUIDs without a round trip per row.
-      const { data: items, error } = await supabase
-        .from('items')
-        .select('id, item_code')
-      if (error) throw error
+      /*
+       * Load this organization's items.
+       */
+      const { data: items, error: itemsError } = await supabase
+        .from("items")
+        .select("id, item_code")
+        .eq("org_id", orgId);
+
+      if (itemsError) {
+        throw itemsError;
+      }
 
       const itemsByCode = new Map(
-        (items ?? []).map((i) => [i.item_code.toUpperCase(), i.id])
-      )
-
-
-      const { data: units, error: unitsError } = await supabase
-        .from("units")
-        .select("id, name")
-        .eq("is_active", true)
-        .order("name");
-
-      if (unitsError) throw unitsError;
-
-      const unitsByName = new Map(
-        (units ?? []).map((u) => [u.name.toLowerCase(), u.id])
+        (items ?? []).map((item) => [
+          item.item_code.trim().toUpperCase(),
+          item.id,
+        ])
       );
 
-      const parsed = await parseSpreadsheet(file)
-      if (parsed.length === 0) {
-        toast.error('No rows found in that file')
-        setRows([])
-        return
+      /*
+       * Load ALL units, including inactive ones.
+       *
+       * We do this because an imported BOM may reference an
+       * existing inactive unit. The import will reactivate it.
+       */
+      const { data: units, error: unitsError } = await supabase
+        .from("units")
+        .select("id, code, name, is_active")
+        .eq("org_id", orgId)
+        .order("name");
+
+      if (unitsError) {
+        throw unitsError;
       }
+
+      const unitsByName = new Map(
+        (units ?? []).map((unit) => [unit.name.trim().toLowerCase(), unit.id])
+      );
+
+      /*
+       * Excel template uses "BOM Import".
+       *
+       * CSV has no worksheet, so let the parser use its
+       * first/default sheet for CSV files.
+       */
+      const isCsv = file.name.toLowerCase().endsWith(".csv");
+
+      const parsed = await parseSpreadsheet(
+        file,
+        isCsv ? undefined : "BOM Import"
+      );
+
+      if (parsed.length === 0) {
+        toast.error(
+          "No rows found. Make sure the Excel file contains data on the 'BOM Import' sheet."
+        );
+        setRows([]);
+        return;
+      }
+
+      /*
+       * First validate each row.
+       */
       const results = parsed.map((raw, i) =>
         validateBomRow(raw, i + 2, itemsByCode, unitsByName)
       );
-      setRows(results)
+
+      /*
+       * Detect duplicate BOM pairs inside the same spreadsheet.
+       *
+       * PostgreSQL has a unique constraint on:
+       *
+       * finished_item_id + component_id
+       *
+       * Therefore two identical pairs in one import cannot both
+       * be inserted.
+       */
+      const seenPairs = new Map<string, number>();
+
+      for (const result of results) {
+        if (!result.data) {
+          continue;
+        }
+
+        const pairKey = `${result.data.finished_item_id}:${result.data.component_id}`;
+
+        const previousRow = seenPairs.get(pairKey);
+
+        if (previousRow !== undefined) {
+          result.errors.push(
+            `duplicate BOM pair — same finished item and component already appear on row ${previousRow}`
+          );
+          result.data = null;
+        } else {
+          seenPairs.set(pairKey, result.rowNumber);
+        }
+      }
+
+      setRows(results);
     } catch (err) {
-      toast.error('Could not read that file — is it a valid .xlsx or .csv?')
-      console.error(err)
+      console.error("BOM FILE PARSE FAILED:", err);
+
+      toast.error(
+        err instanceof Error ? err.message : "Could not read that file"
+      );
     } finally {
-      setParsing(false)
+      setParsing(false);
     }
   }
 
   async function handleImport() {
     if (!orgId) {
-      toast.error('Organization not loaded')
-      return
+      toast.error("Organization not loaded");
+      return;
     }
+
     if (validRows.length === 0) {
-      toast.error('No valid rows to import')
-      return
+      toast.error("No valid rows to import");
+      return;
     }
 
-    setSaving(true)
+    setSaving(true);
+
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    const payload = validRows.map((r) => ({
-      finished_item_id: r.data!.finished_item_id,
-      component_id: r.data!.component_id,
-      qty_per_unit: r.data!.qty_per_unit,
-      unit_id: r.data!.unit_id,
-      notes: r.data!.notes,
-      org_id: orgId,
-      created_by: user?.id ?? null,
-    }));
+      /*
+       * Load every unit again immediately before import.
+       *
+       * This prevents the preview from becoming stale if a unit
+       * was created/changed after the file was loaded.
+       */
+      const { data: existingUnits, error: unitsError } = await supabase
+        .from("units")
+        .select("id, code, name, is_active")
+        .eq("org_id", orgId);
 
-        const { error } = await supabase
-            .from('bom')
-            .upsert(payload, {
-            onConflict: 'finished_item_id,component_id',
+      if (unitsError) {
+        throw unitsError;
+      }
+
+      const unitsByName = new Map<
+        string,
+        {
+          id: string;
+          code: string;
+          name: string;
+          is_active: boolean;
+        }
+      >();
+
+      const unitsByCode = new Map<
+        string,
+        {
+          id: string;
+          code: string;
+          name: string;
+          is_active: boolean;
+        }
+      >();
+
+      for (const unit of existingUnits ?? []) {
+        unitsByName.set(unit.name.trim().toLowerCase(), unit);
+
+        unitsByCode.set(unit.code.trim().toLowerCase(), unit);
+      }
+
+      const payload = [];
+
+      for (const row of validRows) {
+        const data = row.data!;
+
+        const unitName = data.unit_name.trim();
+        const unitNameKey = unitName.toLowerCase();
+
+        let unit = unitsByName.get(unitNameKey);
+
+        /*
+         * Existing unit.
+         */
+        if (unit) {
+          /*
+           * If it was inactive, reactivate it because this BOM
+           * is actively using it.
+           */
+          if (!unit.is_active) {
+            const { data: reactivatedUnit, error: reactivateError } =
+              await supabase
+                .from("units")
+                .update({
+                  is_active: true,
+                })
+                .eq("org_id", orgId)
+                .eq("id", unit.id)
+                .select("id, code, name, is_active")
+                .single();
+
+            if (reactivateError) {
+              throw reactivateError;
+            }
+
+            unit = reactivatedUnit;
+
+            unitsByName.set(unitNameKey, unit);
+
+            unitsByCode.set(unit.code.trim().toLowerCase(), unit);
+          }
+        } else {
+          /*
+           * New unit.
+           *
+           * Generate an internal code from the unit name.
+           */
+          const baseCode =
+            unitName
+              .toUpperCase()
+              .replace(/\s+/g, "_")
+              .replace(/[^A-Z0-9_]/g, "") || "UNIT";
+
+          let unitCode = baseCode;
+          let suffix = 2;
+
+          while (unitsByCode.has(unitCode.toLowerCase())) {
+            unitCode = `${baseCode}_${suffix}`;
+            suffix++;
+          }
+
+          const { data: newUnit, error: createUnitError } = await supabase
+            .from("units")
+            .insert({
+              org_id: orgId,
+              code: unitCode,
+              name: unitName,
+              description: unitName,
+              is_active: true,
             })
+            .select("id, code, name, is_active")
+            .single();
 
-      if (error) throw error
+          if (createUnitError) {
+            throw createUnitError;
+          }
 
-      toast.success(`Imported ${validRows.length} BOM line${validRows.length !== 1 ? 's' : ''}`)
-      router.push('/items')
+          unit = newUnit;
+
+          unitsByName.set(unitNameKey, unit);
+
+          unitsByCode.set(unit.code.trim().toLowerCase(), unit);
+        }
+
+        payload.push({
+          finished_item_id: data.finished_item_id,
+
+          component_id: data.component_id,
+
+          qty_per_unit: data.qty_per_unit,
+
+          unit_id: unit.id,
+
+          notes: data.notes,
+
+          org_id: orgId,
+
+          created_by: user?.id ?? null,
+        });
+      }
+
+      /*
+       * Insert/update each BOM row.
+       *
+       * We intentionally do this one row at a time rather than
+       * sending duplicate conflict keys in one PostgreSQL upsert.
+       */
+      for (const bomRow of payload) {
+        const { error: bomError } = await supabase.from("bom").upsert(bomRow, {
+          onConflict: "finished_item_id,component_id",
+        });
+
+        if (bomError) {
+          throw bomError;
+        }
+      }
+
+      toast.success(
+        `Imported ${validRows.length} BOM line${
+          validRows.length !== 1 ? "s" : ""
+        }`
+      );
+
+      router.push("/items");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Import failed')
+      console.error("BOM IMPORT FAILED:", err);
+
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === "object" && err !== null && "message" in err
+          ? String(
+              (
+                err as {
+                  message?: unknown;
+                }
+              ).message
+            )
+          : String(err);
+
+      toast.error(`Import failed: ${message}`);
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
@@ -15638,13 +15980,16 @@ export default function ImportBomPage() {
         >
           Download Template
         </a>
+
         <Button variant="outline" size="sm" onClick={() => router.back()}>
           Cancel
         </Button>
+
         {validRows.length > 0 && (
           <Button size="sm" loading={saving} onClick={handleImport}>
             <Save className="w-4 h-4" />
-            Import {validRows.length} line{validRows.length !== 1 ? "s" : ""}
+            Import {validRows.length} line
+            {validRows.length !== 1 ? "s" : ""}
           </Button>
         )}
       </PageHeader>
@@ -15653,20 +15998,26 @@ export default function ImportBomPage() {
         <CardBody>
           <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-200 rounded-lg py-10 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-colors">
             <Upload className="w-6 h-6 text-slate-400" />
+
             <span className="text-sm text-slate-600">
               {fileName ?? "Click to choose a .xlsx, .xls, or .csv file"}
             </span>
+
             <span className="text-xs text-slate-400">
               Columns: finished_item_code, component_item_code, qty_per_unit,
               unit, notes — codes must already exist in Items
             </span>
+
             <input
               type="file"
               accept=".xlsx,.xls,.csv"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) handleFile(file);
+
+                if (file) {
+                  handleFile(file);
+                }
               }}
             />
           </label>
@@ -15684,16 +16035,19 @@ export default function ImportBomPage() {
           <CardHeader>
             <div className="flex items-center gap-4 text-sm">
               <span className="flex items-center gap-1.5 text-green-600 font-medium">
-                <CheckCircle2 className="w-4 h-4" /> {validRows.length} valid
+                <CheckCircle2 className="w-4 h-4" />
+                {validRows.length} valid
               </span>
+
               {invalidRows.length > 0 && (
                 <span className="flex items-center gap-1.5 text-red-600 font-medium">
-                  <XCircle className="w-4 h-4" /> {invalidRows.length} with
-                  errors
+                  <XCircle className="w-4 h-4" />
+                  {invalidRows.length} with errors
                 </span>
               )}
             </div>
           </CardHeader>
+
           <CardBody className="p-0">
             <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
               <table className="w-full text-xs">
@@ -15702,20 +16056,29 @@ export default function ImportBomPage() {
                     <th className="text-left px-3 py-2 font-semibold text-slate-500">
                       Row
                     </th>
+
                     <th className="text-left px-3 py-2 font-semibold text-slate-500">
                       Finished Item
                     </th>
+
                     <th className="text-left px-3 py-2 font-semibold text-slate-500">
                       Component
                     </th>
+
                     <th className="text-left px-3 py-2 font-semibold text-slate-500">
                       Qty/Unit
                     </th>
+
+                    <th className="text-left px-3 py-2 font-semibold text-slate-500">
+                      Unit
+                    </th>
+
                     <th className="text-left px-3 py-2 font-semibold text-slate-500">
                       Issues
                     </th>
                   </tr>
                 </thead>
+
                 <tbody className="divide-y divide-slate-50">
                   {rows.map((r) => (
                     <tr
@@ -15725,15 +16088,23 @@ export default function ImportBomPage() {
                       <td className="px-3 py-2 text-slate-400">
                         {r.rowNumber}
                       </td>
+
                       <td className="px-3 py-2 font-medium text-slate-700">
                         {String(r.raw.finished_item_code ?? "—")}
                       </td>
+
                       <td className="px-3 py-2 text-slate-600">
                         {String(r.raw.component_item_code ?? "—")}
                       </td>
+
                       <td className="px-3 py-2 text-slate-600">
                         {String(r.raw.qty_per_unit ?? "—")}
                       </td>
+
+                      <td className="px-3 py-2 text-slate-600">
+                        {String(r.raw.unit ?? "—")}
+                      </td>
+
                       <td className="px-3 py-2 text-red-600">
                         {r.errors.length > 0 ? (
                           r.errors.join("; ")
@@ -15752,6 +16123,7 @@ export default function ImportBomPage() {
     </div>
   );
 }
+
 ```
 
 # src/app/(dashboard)/items/import/page.tsx
@@ -15822,8 +16194,7 @@ export default function ImportItemsPage() {
 
       const { data, error } = await supabase
         .from("units")
-        .select("id, code, name")
-        .eq("is_active", true)
+        .select("id, code, name, is_active")
         .order("name");
 
       if (error) throw error;
@@ -15853,11 +16224,6 @@ export default function ImportItemsPage() {
 
     if (materialTypes.length === 0) {
       toast.error("No active material types found for this organization");
-      return;
-    }
-
-    if (units.length === 0) {
-      toast.error("No active units found for this organization");
       return;
     }
 
@@ -15904,19 +16270,152 @@ export default function ImportItemsPage() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      console.log("Import user:", user?.id);
+      /*
+       * Load every unit for this organization.
+       *
+       * We intentionally do NOT filter by is_active here because:
+       * - an imported unit may already exist but be inactive
+       * - in that case we can reactivate and reuse it
+       */
+      const { data: existingUnits, error: unitsError } = await supabase
+        .from("units")
+        .select("id, code, name, is_active")
+        .eq("org_id", orgId);
 
-      const payload = validRows.map((r) => ({
-        ...r.data!,
-        org_id: orgId,
-        created_by: user?.id ?? null,
-      }));
+      if (unitsError) throw unitsError;
 
-      // Upsert on (org_id, item_code) — re-importing the same code updates
-      // the existing row instead of erroring or duplicating.
-      const { error } = await supabase
-        .from("items")
-        .upsert(payload, { onConflict: "org_id,item_code" });
+      const unitsByName = new Map<
+        string,
+        {
+          id: string;
+          code: string;
+          name: string;
+          is_active: boolean;
+        }
+      >();
+
+      const unitsByCode = new Map<
+        string,
+        {
+          id: string;
+          code: string;
+          name: string;
+          is_active: boolean;
+        }
+      >();
+
+      for (const unit of existingUnits ?? []) {
+        unitsByName.set(unit.name.trim().toLowerCase(), unit);
+        unitsByCode.set(unit.code.trim().toLowerCase(), unit);
+      }
+
+      const resolvedRows = [];
+
+      for (const row of validRows) {
+        const data = row.data!;
+
+        const unitName = data.unit_name.trim();
+        const unitNameKey = unitName.toLowerCase();
+
+        let unit = unitsByName.get(unitNameKey);
+
+        /*
+         * Existing unit:
+         * reuse it.
+         *
+         * If it was inactive, reactivate it because the imported item
+         * is now actively using that unit.
+         */
+        if (unit) {
+          if (!unit.is_active) {
+            const { data: reactivatedUnit, error } = await supabase
+              .from("units")
+              .update({ is_active: true })
+              .eq("id", unit.id)
+              .eq("org_id", orgId)
+              .select("id, code, name, is_active")
+              .single();
+
+            if (error) throw error;
+
+            unit = reactivatedUnit;
+
+            unitsByName.set(unitNameKey, unit);
+            unitsByCode.set(unit.code.trim().toLowerCase(), unit);
+          }
+        } else {
+          /*
+           * New unit.
+           *
+           * Generate an internal code from the unit name.
+           * Example:
+           *   "Meter"      -> "METER"
+           *   "Square M"   -> "SQUARE_M"
+           *   "TO/MT"      -> "TO_MT"
+           */
+          const baseCode =
+            unitName
+              .toUpperCase()
+              .replace(/\s+/g, "_")
+              .replace(/[^A-Z0-9_]/g, "") || "UNIT";
+
+          let unitCode = baseCode;
+          let suffix = 2;
+
+          while (unitsByCode.has(unitCode.toLowerCase())) {
+            unitCode = `${baseCode}_${suffix}`;
+            suffix++;
+          }
+
+          const { data: newUnit, error: createUnitError } = await supabase
+            .from("units")
+            .insert({
+              org_id: orgId,
+              code: unitCode,
+              name: unitName,
+              description: unitName,
+              is_active: true,
+            })
+            .select("id, code, name, is_active")
+            .single();
+
+          if (createUnitError) throw createUnitError;
+
+          unit = newUnit;
+
+          unitsByName.set(unitNameKey, unit);
+          unitsByCode.set(unit.code.trim().toLowerCase(), unit);
+        }
+
+        resolvedRows.push({
+          item_code: data.item_code,
+          name: data.name,
+          category_id: data.category_id,
+          sub_category: data.sub_category,
+          material_type_id: data.material_type_id,
+          size_spec: data.size_spec,
+          unit_id: unit.id,
+          hsn_code: data.hsn_code,
+          is_traded: data.is_traded,
+          is_manufactured: data.is_manufactured,
+          is_raw_material: data.is_raw_material,
+          reorder_level: data.reorder_level,
+          reorder_qty: data.reorder_qty,
+          notes: data.notes,
+          org_id: orgId,
+          created_by: user?.id ?? null,
+        });
+      }
+
+      /*
+       * Upsert on (org_id, item_code).
+       *
+       * Re-importing the same item code updates the existing item
+       * instead of creating a duplicate.
+       */
+      const { error } = await supabase.from("items").upsert(resolvedRows, {
+        onConflict: "org_id,item_code",
+      });
 
       if (error) throw error;
 
@@ -15926,14 +16425,17 @@ export default function ImportItemsPage() {
 
       router.push("/items");
     } catch (err: unknown) {
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : typeof err === "object" && err !== null && "message" in err
-          ? String(err.message)
-          : "Import failed"
-      );
-    } finally {
+  console.error("ITEM IMPORT FAILED:", err)
+
+  const message =
+    err instanceof Error
+      ? err.message
+      : typeof err === "object" && err !== null && "message" in err
+        ? String((err as { message?: unknown }).message)
+        : String(err)
+
+  toast.error(`Import failed: ${message}`)
+}  finally {
       setSaving(false);
     }
   }
@@ -15986,7 +16488,10 @@ export default function ImportItemsPage() {
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) handleFile(file);
+
+                if (file) {
+                  handleFile(file);
+                }
               }}
             />
           </label>
@@ -17767,7 +18272,16 @@ function ReservedMaterialsCard({
         .select(
           `
           id, qty_reserved, qty_consumed, qty_released, status,
-          item:items ( id, item_code, name, unit )
+          item:items (
+            id,
+            item_code,
+            name,
+            unit_id,
+            unit:units (
+              id,
+              name
+            )
+          )
         `
         )
         .eq("ref_type", "production_order")
@@ -18184,7 +18698,6 @@ const { data: rawItems } = useRawMaterialItems(orgId);
         .from("bom")
 
         .select(
-
           `
 
             id,
@@ -18208,21 +18721,14 @@ const { data: rawItems } = useRawMaterialItems(orgId);
             ),
 
 
-
-            component:items!bom_component_id_fkey (
-
-              id,
-
-              item_code,
-
-              name,
-
-              unit_id
-
-            )
+          component:items!bom_org_component_fk (
+            id,
+            item_code,
+            name,
+            unit_id
+          )
 
           `
-
         )
 
         .eq("finished_item_id", itemId)
@@ -23876,6 +24382,12 @@ type TemplateMaterialType = {
   description: string;
 };
 
+type TemplateUnit = {
+  code: string;
+  name: string;
+  description: string;
+};
+
 export async function GET() {
   return NextResponse.json({
     templates: Object.entries(ORGANIZATION_TEMPLATES).map(
@@ -23891,8 +24403,10 @@ export async function POST(request: Request) {
   const supabase = await createClient();
 
   try {
-    const { data: { user }, error: userError } =
-      await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
     if (userError || !user) {
       return NextResponse.json(
@@ -23904,9 +24418,12 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     const orgName = String(body.orgName ?? "").trim();
+
     const template = body.template
       ? String(body.template).trim()
       : null;
+
+    const includeSapDefaults = body.includeSapDefaults === true;
 
     if (!orgName) {
       return NextResponse.json(
@@ -23917,7 +24434,64 @@ export async function POST(request: Request) {
 
     let categories: TemplateCategory[] = [];
     let materialTypes: TemplateMaterialType[] = [];
+    let units: TemplateUnit[] = [];
 
+    /*
+     * Load SAP global defaults first.
+     *
+     * These are independent of the selected organization template.
+     */
+    if (includeSapDefaults) {
+      const sapPath = path.join(
+        process.cwd(),
+        "public",
+        "templates",
+        "sap-global-defaults.xlsx"
+      );
+
+      const fileBuffer = await fs.readFile(sapPath);
+
+      const workbook = XLSX.read(fileBuffer, {
+        type: "buffer",
+      });
+
+      const categoriesSheet = workbook.Sheets["Categories"];
+      const materialTypesSheet = workbook.Sheets["Material Types"];
+      const unitsSheet = workbook.Sheets["Units"];
+
+      if (!materialTypesSheet || !unitsSheet) {
+        return NextResponse.json(
+          { error: "Invalid SAP global defaults template" },
+          { status: 400 }
+        );
+      }
+
+      if (categoriesSheet) {
+        categories = XLSX.utils.sheet_to_json<TemplateCategory>(
+          categoriesSheet,
+          {
+            defval: "",
+          }
+        );
+      }
+
+      materialTypes = XLSX.utils.sheet_to_json<TemplateMaterialType>(
+        materialTypesSheet,
+        {
+          defval: "",
+        }
+      );
+
+      units = XLSX.utils.sheet_to_json<TemplateUnit>(unitsSheet, {
+        defval: "",
+      });
+    }
+
+    /*
+     * Load the selected organization template.
+     *
+     * Template data is added on top of SAP defaults.
+     */
     if (template) {
       const templateConfig =
         ORGANIZATION_TEMPLATES[
@@ -23954,19 +24528,31 @@ export async function POST(request: Request) {
         );
       }
 
-      categories = XLSX.utils.sheet_to_json<TemplateCategory>(
-        categoriesSheet,
-        {
-          defval: "",
-        }
-      );
+      const templateCategories =
+        XLSX.utils.sheet_to_json<TemplateCategory>(
+          categoriesSheet,
+          {
+            defval: "",
+          }
+        );
 
-      materialTypes = XLSX.utils.sheet_to_json<TemplateMaterialType>(
-        materialTypesSheet,
-        {
-          defval: "",
-        }
-      );
+      const templateMaterialTypes =
+        XLSX.utils.sheet_to_json<TemplateMaterialType>(
+          materialTypesSheet,
+          {
+            defval: "",
+          }
+        );
+
+      categories = [
+        ...categories,
+        ...templateCategories,
+      ];
+
+      materialTypes = [
+        ...materialTypes,
+        ...templateMaterialTypes,
+      ];
     }
 
     const { data: orgId, error } = await supabase.rpc(
@@ -23976,6 +24562,8 @@ export async function POST(request: Request) {
         p_template: template ?? undefined,
         p_categories: categories,
         p_material_types: materialTypes,
+        p_units: units,
+        p_include_sap_defaults: includeSapDefaults,
       }
     );
 
@@ -24000,6 +24588,7 @@ export async function POST(request: Request) {
     );
   }
 }
+
 ```
 
 # src/app/api/pdf/route.ts
@@ -24020,7 +24609,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const type = searchParams.get('type')
-  const id   = searchParams.get('id')
+  const id = searchParams.get('id')
 
   if (!type || !id) {
     return NextResponse.json({ error: 'type and id are required' }, { status: 400 })
@@ -24028,43 +24617,71 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-const { data: profile, error: profileError } = await supabase
-  .from("profiles")
-  .select("org_id, organizations:org_id ( name )")
-  .eq("id", user.id)
-  .single()
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select(`
+      org_id,
+      organizations:org_id (
+        name,
+        address,
+        city,
+        state,
+        pincode,
+        phone,
+        email,
+        gst_number
+      )
+    `)
+    .eq("id", user.id)
+    .single()
 
-if (profileError || !profile?.org_id) {
-  return NextResponse.json(
-    { error: "User is not associated with an organization" },
-    { status: 403 }
-  )
-}
+  if (profileError || !profile?.org_id) {
+    return NextResponse.json(
+      { error: "User is not associated with an organization" },
+      { status: 403 }
+    )
+  }
 
-const orgName =
-  (profile.organizations as { name?: string } | null)?.name ?? 'Blue Box ERP'
+  const org = profile.organizations as {
+    name?: string
+    address?: string
+    city?: string
+    state?: string
+    pincode?: string
+    phone?: string
+    email?: string
+    gst_number?: string
+  } | null
 
   try {
     switch (type) {
-      case 'quotation': return generateQuotationHTML(supabase, id, orgName)
-      case 'challan':   return generateChallanHTML(supabase, id, orgName)
-      case 'grn':       return generateGrnHTML(supabase, id, orgName)
+      case 'quotation':
+        return generateQuotationHTML(supabase, id, org)
+
+      case 'challan':
+        return generateChallanHTML(supabase, id, org)
+
+      case 'grn':
+        return generateGrnHTML(supabase, id, org)
+
       default:
         return NextResponse.json({ error: 'Unknown document type' }, { status: 400 })
     }
   } catch (err: unknown) {
-  return NextResponse.json(
-    { error: err instanceof Error ? err.message : 'Internal server error' },
-    { status: 500 }
-  )
-}
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Internal server error' },
+      { status: 500 }
+    )
+  }
 }
 
 // ── Shared print CSS ──────────────────────────────────────────
+
 const CSS = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: Arial, sans-serif; font-size: 12px; color: #111; background: #fff; }
@@ -24104,21 +24721,79 @@ const CSS = `
 
 const inr = (n: number | null | undefined) =>
   n != null
-    ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(n)
+    ? new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR'
+      }).format(n)
     : '—'
 
 const dt = (d: string | null | undefined) =>
-  d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+  d
+    ? new Date(d).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      })
+    : '—'
+
+type Organization = {
+  name?: string
+  address?: string
+  city?: string
+  state?: string
+  pincode?: string
+  phone?: string
+  email?: string
+  gst_number?: string
+}
+
+// ── Organization Header ───────────────────────────────────────
+
+function organizationHeader(org: Organization | null) {
+  const address = [
+    org?.address,
+    org?.city,
+    org?.state,
+    org?.pincode
+  ].filter(Boolean).join(', ')
+
+  const contact = [
+    org?.phone,
+    org?.email
+  ].filter(Boolean).join(' | ')
+
+  return `
+    <div class="company-name">${org?.name ?? 'Blue Box ERP'}</div>
+    ${address ? `<div class="company-sub">${address}</div>` : ''}
+    ${contact ? `<div class="company-sub">${contact}</div>` : ''}
+    ${org?.gst_number ? `<div class="company-sub">GST: ${org.gst_number}</div>` : ''}
+  `
+}
 
 // ── Quotation ─────────────────────────────────────────────────
-async function generateQuotationHTML(supabase: any, id: string, orgName: string) {
+
+async function generateQuotationHTML(
+  supabase: any,
+  id: string,
+  org: Organization | null
+) {
   const { data: qt, error } = await supabase
     .from('quotations')
     .select(`
       *,
       client:clients ( name, phone, gst_number, address, city ),
       quotation_lines (
-        *, item:items ( item_code, name, unit, hsn_code )
+        *,
+        item:items (
+          item_code,
+          name,
+          unit_id,
+          hsn_code,
+          unit:units (
+            id,
+            name
+          )
+        )
       )
     `)
     .eq('id', id)
@@ -24126,7 +24801,8 @@ async function generateQuotationHTML(supabase: any, id: string, orgName: string)
 
   if (error || !qt) throw new Error('Quotation not found')
 
-  const lines = (qt.quotation_lines ?? []).sort((a: any, b: any) => a.sort_order - b.sort_order)
+  const lines = (qt.quotation_lines ?? [])
+    .sort((a: any, b: any) => a.sort_order - b.sort_order)
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <title>${qt.quotation_no}</title><style>${CSS}</style></head>
@@ -24134,11 +24810,9 @@ async function generateQuotationHTML(supabase: any, id: string, orgName: string)
 
   <div class="header">
     <div>
-      <div class="company-name">${orgName}</div>
-      <div class="company-sub">Electrical Hardware Supply &amp; Manufacturing</div>
-      <div class="company-sub">Panvel, Maharashtra &nbsp;|&nbsp; GST: 27XXXXX1234X1ZX</div>
-      <div class="company-sub">+91 98765 43210 &nbsp;|&nbsp; info@highpowerelectricals.in</div>
+      ${organizationHeader(org)}
     </div>
+
     <div>
       <div class="doc-title">QUOTATION</div>
       <div class="doc-no">${qt.quotation_no}</div>
@@ -24155,6 +24829,7 @@ async function generateQuotationHTML(supabase: any, id: string, orgName: string)
         ${qt.client?.address ? qt.client.address + ', ' + (qt.client.city ?? '') : ''}
       </div>
     </div>
+
     <div class="meta-box">
       <div class="meta-label">Quotation Details</div>
       <div class="meta-value">
@@ -24179,10 +24854,12 @@ async function generateQuotationHTML(supabase: any, id: string, orgName: string)
         <th class="r" style="width:95px">Amount (₹)</th>
       </tr>
     </thead>
+
     <tbody>
       ${lines.map((l: any, i: number) => {
         const sub = l.qty * l.unit_rate
         const gst = sub * Number(l.gst_percent) / 100
+
         return `<tr>
           <td class="c">${i + 1}</td>
           <td>
@@ -24191,7 +24868,7 @@ async function generateQuotationHTML(supabase: any, id: string, orgName: string)
           </td>
           <td class="c">${l.item?.hsn_code ?? '—'}</td>
           <td class="r">${l.qty}</td>
-          <td class="c">${l.unit}</td>
+          <td class="c">${l.unit?.name ?? '—'}</td>
           <td class="r">${inr(l.unit_rate)}</td>
           <td class="c">${l.gst_percent}%</td>
           <td class="r">${inr(sub + gst)}</td>
@@ -24201,9 +24878,20 @@ async function generateQuotationHTML(supabase: any, id: string, orgName: string)
   </table>
 
   <div class="totals">
-    <div class="totals-row"><span>Subtotal</span><span>${inr(qt.subtotal)}</span></div>
-    <div class="totals-row"><span>GST</span><span>${inr(qt.gst_amount)}</span></div>
-    <div class="totals-row bold"><span>Total Amount</span><span>${inr(qt.total_amount)}</span></div>
+    <div class="totals-row">
+      <span>Subtotal</span>
+      <span>${inr(qt.subtotal)}</span>
+    </div>
+
+    <div class="totals-row">
+      <span>GST</span>
+      <span>${inr(qt.gst_amount)}</span>
+    </div>
+
+    <div class="totals-row bold">
+      <span>Total Amount</span>
+      <span>${inr(qt.total_amount)}</span>
+    </div>
   </div>
 
   ${qt.notes ? '<div class="terms"><strong>Notes:</strong> ' + qt.notes + '</div>' : ''}
@@ -24225,21 +24913,30 @@ async function generateQuotationHTML(supabase: any, id: string, orgName: string)
       <div class="sign-line"></div>
       <div class="sign-label">Client Signature &amp; Stamp</div>
     </div>
+
     <div class="sign-box">
       <div class="sign-line"></div>
-      <div class="sign-label">For ${orgName}</div>
+      <div class="sign-label">For ${org?.name ?? 'Blue Box ERP'}</div>
     </div>
   </div>
 
 </div>
+
 <script>window.onload = () => window.print()</script>
 </body></html>`
 
-  return new NextResponse(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+  return new NextResponse(html, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8' }
+  })
 }
 
 // ── Delivery Challan ──────────────────────────────────────────
-async function generateChallanHTML(supabase: any, id: string, orgName: string) {
+
+async function generateChallanHTML(
+  supabase: any,
+  id: string,
+  org: Organization | null
+) {
   const { data: dc, error } = await supabase
     .from('delivery_challans')
     .select(`
@@ -24247,7 +24944,16 @@ async function generateChallanHTML(supabase: any, id: string, orgName: string) {
       client:clients ( name, phone, gst_number, address, city ),
       sales_order:sales_orders ( so_number ),
       delivery_challan_lines (
-        *, item:items ( item_code, name, unit )
+        *,
+        item:items (
+          item_code,
+          name,
+          unit_id,
+          unit:units (
+            id,
+            name
+          )
+        )
       )
     `)
     .eq('id', id)
@@ -24255,12 +24961,15 @@ async function generateChallanHTML(supabase: any, id: string, orgName: string) {
 
   if (error || !dc) throw new Error('Challan not found')
 
-  const lines    = dc.delivery_challan_lines ?? []
+  const lines = dc.delivery_challan_lines ?? []
   const totalQty = lines.reduce((s: number, l: any) => s + l.qty, 0)
 
   const transportLabel: Record<string, string> = {
-    own_truck: 'Own Truck', client_truck: 'Client Truck',
-    supplier_truck: 'Supplier Truck', courier: 'Courier', hand_delivery: 'Hand Delivery',
+    own_truck: 'Own Truck',
+    client_truck: 'Client Truck',
+    supplier_truck: 'Supplier Truck',
+    courier: 'Courier',
+    hand_delivery: 'Hand Delivery',
   }
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -24269,10 +24978,9 @@ async function generateChallanHTML(supabase: any, id: string, orgName: string) {
 
   <div class="header">
     <div>
-      <div class="company-name">${orgName}</div>
-      <div class="company-sub">Electrical Hardware Supply &amp; Manufacturing</div>
-      <div class="company-sub">Panvel, Maharashtra</div>
+      ${organizationHeader(org)}
     </div>
+
     <div>
       <div class="doc-title">DELIVERY CHALLAN</div>
       <div class="doc-no">${dc.challan_no}</div>
@@ -24289,14 +24997,15 @@ async function generateChallanHTML(supabase: any, id: string, orgName: string) {
         ${dc.client?.address ? dc.client.address + ', ' + (dc.client.city ?? '') : ''}
       </div>
     </div>
+
     <div class="meta-box">
       <div class="meta-label">Dispatch Details</div>
       <div class="meta-value">
         <strong>Challan Date:</strong> ${dt(dc.challan_date)}<br>
         ${dc.sales_order ? '<strong>Against SO:</strong> ' + dc.sales_order.so_number + '<br>' : ''}
         <strong>Transport:</strong> ${transportLabel[dc.transport_mode] ?? dc.transport_mode}<br>
-        ${dc.vehicle_no  ? '<strong>Vehicle No.:</strong> ' + dc.vehicle_no  + '<br>' : ''}
-        ${dc.driver_name ? '<strong>Driver:</strong> '      + dc.driver_name + '<br>' : ''}
+        ${dc.vehicle_no ? '<strong>Vehicle No.:</strong> ' + dc.vehicle_no + '<br>' : ''}
+        ${dc.driver_name ? '<strong>Driver:</strong> ' + dc.driver_name + '<br>' : ''}
         <strong>Status:</strong> ${dc.status?.toUpperCase()}
       </div>
     </div>
@@ -24314,13 +25023,14 @@ async function generateChallanHTML(supabase: any, id: string, orgName: string) {
         <th class="r" style="width:95px">Value (₹)</th>
       </tr>
     </thead>
+
     <tbody>
       ${lines.map((l: any, i: number) => `<tr>
         <td class="c">${i + 1}</td>
         <td><strong>${l.item?.name ?? '—'}</strong></td>
         <td class="c"><span class="mono">${l.item?.item_code ?? ''}</span></td>
         <td class="r"><strong>${l.qty}</strong></td>
-        <td class="c">${l.unit}</td>
+        <td class="c">${l.unit?.name ?? '—'}</td>
         <td class="r">${l.rate ? inr(l.rate) : '—'}</td>
         <td class="r">${l.line_total ? inr(l.line_total) : '—'}</td>
       </tr>`).join('')}
@@ -24328,8 +25038,15 @@ async function generateChallanHTML(supabase: any, id: string, orgName: string) {
   </table>
 
   <div class="totals">
-    <div class="totals-row"><span>Total Qty</span><span>${totalQty}</span></div>
-    <div class="totals-row bold"><span>Challan Value</span><span>${inr(dc.total_amount)}</span></div>
+    <div class="totals-row">
+      <span>Total Qty</span>
+      <span>${totalQty}</span>
+    </div>
+
+    <div class="totals-row bold">
+      <span>Challan Value</span>
+      <span>${inr(dc.total_amount)}</span>
+    </div>
   </div>
 
   <div class="terms">
@@ -24343,28 +25060,46 @@ async function generateChallanHTML(supabase: any, id: string, orgName: string) {
       <div class="sign-line"></div>
       <div class="sign-label">Receiver's Signature &amp; Stamp</div>
     </div>
+
     <div class="sign-box">
       <div class="sign-line"></div>
-      <div class="sign-label">For ${orgName}</div>
+      <div class="sign-label">For ${org?.name ?? 'Blue Box ERP'}</div>
     </div>
   </div>
 
 </div>
+
 <script>window.onload = () => window.print()</script>
 </body></html>`
 
-  return new NextResponse(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+  return new NextResponse(html, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8' }
+  })
 }
 
 // ── GRN ───────────────────────────────────────────────────────
-async function generateGrnHTML(supabase: any, id: string, orgName: string) {
+
+async function generateGrnHTML(
+  supabase: any,
+  id: string,
+  org: Organization | null
+) {
   const { data: grn, error } = await supabase
     .from('inbound_receipts')
     .select(`
       *,
       supplier:suppliers ( name, phone, gst_number, city ),
       inbound_receipt_lines (
-        *, item:items ( item_code, name, unit )
+        *,
+        item:items (
+          item_code,
+          name,
+          unit_id,
+          unit:units (
+            id,
+            name
+          )
+        )
       )
     `)
     .eq('id', id)
@@ -24372,7 +25107,7 @@ async function generateGrnHTML(supabase: any, id: string, orgName: string) {
 
   if (error || !grn) throw new Error('GRN not found')
 
-  const lines     = grn.inbound_receipt_lines ?? []
+  const lines = grn.inbound_receipt_lines ?? []
   const grandTotal = (grn.total_amount ?? 0) + (grn.gst_amount ?? 0)
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -24381,10 +25116,9 @@ async function generateGrnHTML(supabase: any, id: string, orgName: string) {
 
   <div class="header">
     <div>
-      <div class="company-name">${orgName}</div>
-      <div class="company-sub">Electrical Hardware Supply &amp; Manufacturing</div>
-      <div class="company-sub">Panvel, Maharashtra</div>
+      ${organizationHeader(org)}
     </div>
+
     <div>
       <div class="doc-title">GOODS RECEIVED NOTE</div>
       <div class="doc-no">${grn.receipt_no}</div>
@@ -24401,15 +25135,16 @@ async function generateGrnHTML(supabase: any, id: string, orgName: string) {
         ${grn.supplier?.city ?? ''}
       </div>
     </div>
+
     <div class="meta-box">
       <div class="meta-label">Receipt Details</div>
       <div class="meta-value">
         <strong>GRN No.:</strong> ${grn.receipt_no}<br>
         <strong>Date:</strong> ${dt(grn.receipt_date)}<br>
         <strong>Transport:</strong> ${grn.transport_mode?.replace('_', ' ') ?? '—'}<br>
-        ${grn.vehicle_no  ? '<strong>Vehicle:</strong> '   + grn.vehicle_no  + '<br>' : ''}
-        ${grn.challan_no  ? '<strong>Sup. Challan:</strong> ' + grn.challan_no + '<br>' : ''}
-        ${grn.invoice_no  ? '<strong>Invoice No.:</strong> '  + grn.invoice_no : ''}
+        ${grn.vehicle_no ? '<strong>Vehicle:</strong> ' + grn.vehicle_no + '<br>' : ''}
+        ${grn.challan_no ? '<strong>Sup. Challan:</strong> ' + grn.challan_no + '<br>' : ''}
+        ${grn.invoice_no ? '<strong>Invoice No.:</strong> ' + grn.invoice_no : ''}
       </div>
     </div>
   </div>
@@ -24427,6 +25162,7 @@ async function generateGrnHTML(supabase: any, id: string, orgName: string) {
         <th class="r" style="width:95px">Amount (₹)</th>
       </tr>
     </thead>
+
     <tbody>
       ${lines.map((l: any, i: number) => `<tr>
         <td class="c">${i + 1}</td>
@@ -24436,7 +25172,7 @@ async function generateGrnHTML(supabase: any, id: string, orgName: string) {
         </td>
         <td class="r">${l.qty_ordered ?? '—'}</td>
         <td class="r"><strong>${l.qty_received}</strong></td>
-        <td class="c">${l.unit}</td>
+        <td class="c">${l.unit?.name ?? '—'}</td>
         <td class="r">${inr(l.rate)}</td>
         <td class="c">${l.gst_percent}%</td>
         <td class="r">${inr(l.line_total)}</td>
@@ -24445,9 +25181,20 @@ async function generateGrnHTML(supabase: any, id: string, orgName: string) {
   </table>
 
   <div class="totals">
-    <div class="totals-row"><span>Subtotal</span><span>${inr(grn.total_amount)}</span></div>
-    <div class="totals-row"><span>GST</span><span>${inr(grn.gst_amount)}</span></div>
-    <div class="totals-row bold"><span>Total</span><span>${inr(grandTotal)}</span></div>
+    <div class="totals-row">
+      <span>Subtotal</span>
+      <span>${inr(grn.total_amount)}</span>
+    </div>
+
+    <div class="totals-row">
+      <span>GST</span>
+      <span>${inr(grn.gst_amount)}</span>
+    </div>
+
+    <div class="totals-row bold">
+      <span>Total</span>
+      <span>${inr(grandTotal)}</span>
+    </div>
   </div>
 
   ${grn.notes ? '<div class="terms"><strong>Notes:</strong> ' + grn.notes + '</div>' : ''}
@@ -24457,10 +25204,12 @@ async function generateGrnHTML(supabase: any, id: string, orgName: string) {
       <div class="sign-line"></div>
       <div class="sign-label">Received By</div>
     </div>
+
     <div class="sign-box">
       <div class="sign-line"></div>
       <div class="sign-label">Store Keeper</div>
     </div>
+
     <div class="sign-box">
       <div class="sign-line"></div>
       <div class="sign-label">Authorised Signatory</div>
@@ -24468,10 +25217,13 @@ async function generateGrnHTML(supabase: any, id: string, orgName: string) {
   </div>
 
 </div>
+
 <script>window.onload = () => window.print()</script>
 </body></html>`
 
-  return new NextResponse(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+  return new NextResponse(html, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8' }
+  })
 }
 ```
 
@@ -24634,6 +25386,723 @@ export default function SuspendedPage() {
     </div>
   )
 }
+```
+
+# src/components/items/item-actions.tsx
+
+```tsx
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { Pencil, Trash2 } from "lucide-react";
+
+interface ItemActionsProps {
+  item: any;
+  stockQty: number;
+}
+
+interface Option {
+  id: string;
+  name: string;
+}
+
+type FormState = {
+  item_code: string;
+  name: string;
+  category_id: string;
+  sub_category: string;
+  material_type_id: string;
+  size_spec: string;
+  unit_id: string;
+  hsn_code: string;
+  is_traded: boolean;
+  is_manufactured: boolean;
+  is_raw_material: boolean;
+  reorder_level: string;
+  reorder_qty: string;
+  notes: string;
+};
+
+type ReferenceColumn = "component_id" | "finished_item_id" | "item_id";
+
+type ReferenceCheck = {
+  table:
+    | "bom"
+    | "item_prices"
+    | "inventory_balance"
+    | "inventory_ops_log"
+    | "stock_movements"
+    | "stock_reservations"
+    | "inbound_receipt_lines"
+    | "delivery_challan_lines"
+    | "quotation_lines"
+    | "sales_order_lines"
+    | "production_order_items";
+  label: string;
+  column: ReferenceColumn;
+};
+
+const inputClass =
+  "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:bg-slate-100";
+
+function errorMessage(error: any, fallback: string) {
+  const message = String(error?.message ?? "");
+  const code = error?.code;
+
+  if (code === "23505") {
+    return "Cannot save item: this item code already exists in your organization.";
+  }
+
+  if (code === "23503") {
+    return `Cannot save item: ${message}`;
+  }
+
+  return message || fallback;
+}
+
+function deleteErrorMessage(error: any) {
+  const message = String(error?.message ?? "");
+  const detail = String(error?.details ?? "");
+  const combined = `${message} ${detail}`.toLowerCase();
+
+  if (error?.code === "23503" || combined.includes("foreign key")) {
+    if (combined.includes("bom")) {
+      return "Cannot delete item: it is referenced by a BOM.";
+    }
+
+    if (combined.includes("item_prices")) {
+      return "Cannot delete item: it has price history records.";
+    }
+
+    if (combined.includes("inventory_balance")) {
+      return "Cannot delete item: it has an inventory balance record.";
+    }
+
+    if (combined.includes("inventory_ops_log")) {
+      return "Cannot delete item: it has inventory operation records.";
+    }
+
+    if (combined.includes("stock_movements")) {
+      return "Cannot delete item: it has stock movement history.";
+    }
+
+    if (combined.includes("stock_reservations")) {
+      return "Cannot delete item: it has stock reservation records.";
+    }
+
+    if (combined.includes("inbound_receipt_lines")) {
+      return "Cannot delete item: it is referenced by inbound receipt lines.";
+    }
+
+    if (combined.includes("delivery_challan_lines")) {
+      return "Cannot delete item: it is referenced by delivery challan lines.";
+    }
+
+    if (combined.includes("quotation_lines")) {
+      return "Cannot delete item: it is referenced by quotation lines.";
+    }
+
+    if (combined.includes("sales_order_lines")) {
+      return "Cannot delete item: it is referenced by sales order lines.";
+    }
+
+    if (combined.includes("production_order_items")) {
+      return "Cannot delete item: it is referenced by production order items.";
+    }
+
+    return `Cannot delete item because another record references it. Database error: ${message}`;
+  }
+
+  return message || "Cannot delete item.";
+}
+
+export default function ItemActions({ item, stockQty }: ItemActionsProps) {
+  const supabase = createClient();
+  const router = useRouter();
+
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const [categories, setCategories] = useState<Option[]>([]);
+  const [materialTypes, setMaterialTypes] = useState<Option[]>([]);
+  const [units, setUnits] = useState<Option[]>([]);
+
+  const [form, setForm] = useState<FormState>({
+    item_code: item.item_code ?? "",
+    name: item.name ?? "",
+    category_id: item.category_id ?? "",
+    sub_category: item.sub_category ?? "",
+    material_type_id: item.material_type_id ?? "",
+    size_spec: item.size_spec ?? "",
+    unit_id: item.unit_id ?? "",
+    hsn_code: item.hsn_code ?? "",
+    is_traded: !!item.is_traded,
+    is_manufactured: !!item.is_manufactured,
+    is_raw_material: !!item.is_raw_material,
+    reorder_level: item.reorder_level == null ? "" : String(item.reorder_level),
+    reorder_qty: item.reorder_qty == null ? "" : String(item.reorder_qty),
+    notes: item.notes ?? "",
+  });
+
+  useEffect(() => {
+    if (!editing) return;
+
+    async function loadOptions() {
+      const [categoryResult, materialResult, unitResult] = await Promise.all([
+        supabase
+          .from("item_categories")
+          .select("id, name")
+          .eq("is_active", true)
+          .order("name"),
+
+        supabase
+          .from("material_types")
+          .select("id, name")
+          .eq("is_active", true)
+          .order("name"),
+
+        supabase
+          .from("units")
+          .select("id, name")
+          .eq("is_active", true)
+          .order("name"),
+      ]);
+
+      if (categoryResult.error) {
+        return toast.error(
+          `Could not load categories: ${categoryResult.error.message}`
+        );
+      }
+
+      if (materialResult.error) {
+        return toast.error(
+          `Could not load material types: ${materialResult.error.message}`
+        );
+      }
+
+      if (unitResult.error) {
+        return toast.error(`Could not load units: ${unitResult.error.message}`);
+      }
+
+      setCategories(categoryResult.data ?? []);
+      setMaterialTypes(materialResult.data ?? []);
+      setUnits(unitResult.data ?? []);
+    }
+
+    loadOptions();
+  }, [editing]);
+
+  function setField<K extends keyof FormState>(field: K, value: FormState[K]) {
+    setForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  }
+
+  function openEdit() {
+    setForm({
+      item_code: item.item_code ?? "",
+      name: item.name ?? "",
+      category_id: item.category_id ?? "",
+      sub_category: item.sub_category ?? "",
+      material_type_id: item.material_type_id ?? "",
+      size_spec: item.size_spec ?? "",
+      unit_id: item.unit_id ?? "",
+      hsn_code: item.hsn_code ?? "",
+      is_traded: !!item.is_traded,
+      is_manufactured: !!item.is_manufactured,
+      is_raw_material: !!item.is_raw_material,
+      reorder_level:
+        item.reorder_level == null ? "" : String(item.reorder_level),
+      reorder_qty: item.reorder_qty == null ? "" : String(item.reorder_qty),
+      notes: item.notes ?? "",
+    });
+
+    setEditing(true);
+  }
+
+  async function handleSave() {
+    const itemCode = form.item_code.trim();
+
+    if (!itemCode) {
+      return toast.error("Item code is required.");
+    }
+
+    if (!form.name.trim()) {
+      return toast.error("Item name is required.");
+    }
+
+    if (!form.category_id) {
+      return toast.error("Category is required.");
+    }
+
+    if (!form.material_type_id) {
+      return toast.error("Material type is required.");
+    }
+
+    if (!form.unit_id) {
+      return toast.error("Unit is required.");
+    }
+
+    if (!form.is_traded && !form.is_manufactured && !form.is_raw_material) {
+      return toast.error("Select at least one item type.");
+    }
+
+    setSaving(true);
+
+    try {
+      /*
+       * Check whether another item in this organization already
+       * uses the new item code.
+       */
+      const { data: duplicateItem, error: duplicateError } = await supabase
+        .from("items")
+        .select("id")
+        .eq("item_code", itemCode)
+        .neq("id", item.id)
+        .maybeSingle();
+
+      if (duplicateError) {
+        throw duplicateError;
+      }
+
+      if (duplicateItem) {
+        toast.error(
+          `Cannot save item: item code "${itemCode}" already exists.`
+        );
+        return;
+      }
+
+      const { error } = await supabase
+        .from("items")
+        .update({
+          item_code: itemCode,
+          name: form.name.trim(),
+          category_id: form.category_id,
+          sub_category: form.sub_category.trim() || null,
+          material_type_id: form.material_type_id,
+          size_spec: form.size_spec.trim() || null,
+          unit_id: form.unit_id,
+          hsn_code: form.hsn_code.trim() || null,
+          is_traded: form.is_traded,
+          is_manufactured: form.is_manufactured,
+          is_raw_material: form.is_raw_material,
+          reorder_level:
+            form.reorder_level === "" ? null : Number(form.reorder_level),
+          reorder_qty:
+            form.reorder_qty === "" ? null : Number(form.reorder_qty),
+          notes: form.notes.trim() || null,
+        })
+        .eq("id", item.id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success("Item updated successfully.");
+      setEditing(false);
+      router.refresh();
+    } catch (error) {
+      toast.error(errorMessage(error, "Could not update item."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (stockQty !== 0) {
+      toast.error(
+        `Cannot delete item: current on-hand quantity is ${stockQty}. Quantity must be 0.`
+      );
+      return;
+    }
+
+    const checks: ReferenceCheck[] = [
+      {
+        table: "bom",
+        label: "BOM records",
+        column: "finished_item_id",
+      },
+      {
+        table: "bom",
+        label: "BOM component references",
+        column: "component_id",
+      },
+      {
+        table: "item_prices",
+        label: "price history records",
+        column: "item_id",
+      },
+      {
+        table: "inventory_balance",
+        label: "inventory balance records",
+        column: "item_id",
+      },
+      {
+        table: "inventory_ops_log",
+        label: "inventory operation records",
+        column: "item_id",
+      },
+      {
+        table: "stock_movements",
+        label: "stock movement records",
+        column: "item_id",
+      },
+      {
+        table: "stock_reservations",
+        label: "stock reservation records",
+        column: "item_id",
+      },
+      {
+        table: "inbound_receipt_lines",
+        label: "inbound receipt lines",
+        column: "item_id",
+      },
+      {
+        table: "delivery_challan_lines",
+        label: "delivery challan lines",
+        column: "item_id",
+      },
+      {
+        table: "quotation_lines",
+        label: "quotation lines",
+        column: "item_id",
+      },
+      {
+        table: "sales_order_lines",
+        label: "sales order lines",
+        column: "item_id",
+      },
+      {
+        table: "production_order_items",
+        label: "production order items",
+        column: "item_id",
+      },
+    ];
+
+    if (
+      !window.confirm(
+        `Delete item ${item.item_code} — ${item.name}? This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    setDeleting(true);
+
+    try {
+      const results = await Promise.all(
+        checks.map(async (check) => ({
+          ...check,
+          result: await supabase
+            .from(check.table)
+            .select("id", {
+              count: "exact",
+              head: true,
+            })
+            .eq(check.column as any, item.id),
+        }))
+      );
+
+      const failedCheck = results.find(({ result }) => result.error);
+
+      if (failedCheck) {
+        throw new Error(
+          `Could not verify ${failedCheck.label}: ${failedCheck.result.error?.message}`
+        );
+      }
+
+      const references = results
+        .filter(({ result }) => (result.count ?? 0) > 0)
+        .map(({ label, result }) => `${result.count} ${label}`);
+
+      if (references.length > 0) {
+        toast.error(
+          `Cannot delete item: ${references.join(", ")} reference this item.`
+        );
+        return;
+      }
+
+      const { error } = await supabase.from("items").delete().eq("id", item.id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success("Item deleted successfully.");
+      router.push("/items");
+      router.refresh();
+    } catch (error) {
+      toast.error(deleteErrorMessage(error));
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={openEdit}>
+          <Pencil className="w-4 h-4 mr-1" />
+          Edit Item
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDelete}
+          disabled={deleting}
+          className="text-red-600 border-red-200 hover:bg-red-50"
+        >
+          <Trash2 className="w-4 h-4 mr-1" />
+          {deleting ? "Deleting..." : "Delete Item"}
+        </Button>
+      </div>
+
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl bg-white shadow-xl">
+            <div className="border-b border-slate-200 px-6 py-4">
+              <h2 className="text-lg font-semibold text-slate-900">
+                Edit Item
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                All item properties can be changed. Item code cannot be changed.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-6 py-5">
+              {/* <Field label="Item Code">
+                <input
+                  value={form.item_code}
+                  onChange={(e) => setField("item_code", e.target.value)}
+                  disabled={saving}
+                  className={inputClass}
+                />
+              </Field> */}
+
+              <Field label="Name">
+                <input
+                  value={form.name}
+                  onChange={(e) => setField("name", e.target.value)}
+                  disabled={saving}
+                  className={inputClass}
+                />
+              </Field>
+
+              <Field label="Category">
+                <select
+                  value={form.category_id}
+                  onChange={(e) => setField("category_id", e.target.value)}
+                  disabled={saving}
+                  className={inputClass}
+                >
+                  <option value="">Select category</option>
+
+                  {categories.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Material Type">
+                <select
+                  value={form.material_type_id}
+                  onChange={(e) => setField("material_type_id", e.target.value)}
+                  disabled={saving}
+                  className={inputClass}
+                >
+                  <option value="">Select material type</option>
+
+                  {materialTypes.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Sub-Category">
+                <input
+                  value={form.sub_category}
+                  onChange={(e) => setField("sub_category", e.target.value)}
+                  disabled={saving}
+                  className={inputClass}
+                />
+              </Field>
+
+              <Field label="Size / Spec">
+                <input
+                  value={form.size_spec}
+                  onChange={(e) => setField("size_spec", e.target.value)}
+                  disabled={saving}
+                  className={inputClass}
+                />
+              </Field>
+
+              <Field label="Unit">
+                <select
+                  value={form.unit_id}
+                  onChange={(e) => setField("unit_id", e.target.value)}
+                  disabled={saving}
+                  className={inputClass}
+                >
+                  <option value="">Select unit</option>
+
+                  {units.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="HSN Code">
+                <input
+                  value={form.hsn_code}
+                  onChange={(e) => setField("hsn_code", e.target.value)}
+                  disabled={saving}
+                  className={inputClass}
+                />
+              </Field>
+
+              <Field label="Reorder Level">
+                <input
+                  type="number"
+                  step="any"
+                  value={form.reorder_level}
+                  onChange={(e) => setField("reorder_level", e.target.value)}
+                  disabled={saving}
+                  className={inputClass}
+                />
+              </Field>
+
+              <Field label="Reorder Quantity">
+                <input
+                  type="number"
+                  step="any"
+                  value={form.reorder_qty}
+                  onChange={(e) => setField("reorder_qty", e.target.value)}
+                  disabled={saving}
+                  className={inputClass}
+                />
+              </Field>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Type
+                </label>
+
+                <div className="flex flex-wrap gap-4">
+                  <Check
+                    label="Traded"
+                    checked={form.is_traded}
+                    onChange={(v) => setField("is_traded", v)}
+                    disabled={saving}
+                  />
+
+                  <Check
+                    label="Manufactured"
+                    checked={form.is_manufactured}
+                    onChange={(v) => setField("is_manufactured", v)}
+                    disabled={saving}
+                  />
+
+                  <Check
+                    label="Raw Material"
+                    checked={form.is_raw_material}
+                    onChange={(v) => setField("is_raw_material", v)}
+                    disabled={saving}
+                  />
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Notes
+                </label>
+
+                <textarea
+                  rows={4}
+                  value={form.notes}
+                  onChange={(e) => setField("notes", e.target.value)}
+                  disabled={saving}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+              <Button
+                variant="outline"
+                onClick={() => setEditing(false)}
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+        {label}
+      </label>
+
+      {children}
+    </div>
+  );
+}
+
+function Check({
+  label,
+  checked,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  disabled: boolean;
+}) {
+  return (
+    <label className="flex items-center gap-2 text-sm text-slate-700">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        disabled={disabled}
+      />
+
+      {label}
+    </label>
+  );
+}
+
 ```
 
 # src/components/layout/header.tsx
@@ -26701,7 +28170,17 @@ export function useQuotation(id: string | null) {
           approver:profiles!quotations_approved_by_fkey ( id, full_name ),
           quotation_lines (
             *,
-            item:items ( id, item_code, name, unit, hsn_code )
+            item:items (
+            id,
+            item_code,
+            name,
+            unit_id,
+            hsn_code,
+            unit:units (
+              id,
+              name
+            )
+          )
           )
         `)
         .eq('id', id)
@@ -26867,7 +28346,17 @@ export function useSalesOrder(id: string | null) {
           approver:profiles!sales_orders_approved_by_fkey ( id, full_name ),
           sales_order_lines (
             *,
-            item:items ( id, item_code, name, unit, hsn_code )
+            item:items (
+            id,
+            item_code,
+            name,
+            unit_id,
+            hsn_code,
+            unit:units (
+              id,
+              name
+            )
+          )
           ),
           production_orders ( id, po_number, status ),
           delivery_challans ( id, challan_no, challan_date, status, total_amount )
@@ -27374,27 +28863,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "bom_component_id_fkey"
-            columns: ["component_id"]
-            isOneToOne: false
-            referencedRelation: "items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "bom_component_id_fkey"
-            columns: ["component_id"]
-            isOneToOne: false
-            referencedRelation: "v_reorder_alerts"
-            referencedColumns: ["item_id"]
-          },
-          {
-            foreignKeyName: "bom_component_id_fkey"
-            columns: ["component_id"]
-            isOneToOne: false
-            referencedRelation: "v_stock_levels"
-            referencedColumns: ["item_id"]
-          },
-          {
             foreignKeyName: "bom_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -27402,25 +28870,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "bom_finished_item_id_fkey"
-            columns: ["finished_item_id"]
+            foreignKeyName: "bom_org_component_fk"
+            columns: ["org_id", "component_id"]
             isOneToOne: false
             referencedRelation: "items"
-            referencedColumns: ["id"]
+            referencedColumns: ["org_id", "id"]
           },
           {
-            foreignKeyName: "bom_finished_item_id_fkey"
-            columns: ["finished_item_id"]
+            foreignKeyName: "bom_org_finished_item_fk"
+            columns: ["org_id", "finished_item_id"]
             isOneToOne: false
-            referencedRelation: "v_reorder_alerts"
-            referencedColumns: ["item_id"]
-          },
-          {
-            foreignKeyName: "bom_finished_item_id_fkey"
-            columns: ["finished_item_id"]
-            isOneToOne: false
-            referencedRelation: "v_stock_levels"
-            referencedColumns: ["item_id"]
+            referencedRelation: "items"
+            referencedColumns: ["org_id", "id"]
           },
           {
             foreignKeyName: "bom_org_id_fkey"
@@ -27860,32 +29321,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "inventory_balance_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: true
-            referencedRelation: "items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_balance_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: true
-            referencedRelation: "v_reorder_alerts"
-            referencedColumns: ["item_id"]
-          },
-          {
-            foreignKeyName: "inventory_balance_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: true
-            referencedRelation: "v_stock_levels"
-            referencedColumns: ["item_id"]
-          },
-          {
             foreignKeyName: "inventory_balance_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_balance_org_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["org_id", "id"]
           },
         ]
       }
@@ -27938,32 +29385,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "inventory_ops_log_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_ops_log_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "v_reorder_alerts"
-            referencedColumns: ["item_id"]
-          },
-          {
-            foreignKeyName: "inventory_ops_log_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "v_stock_levels"
-            referencedColumns: ["item_id"]
-          },
-          {
             foreignKeyName: "inventory_ops_log_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_ops_log_org_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["org_id", "id"]
           },
         ]
       }
@@ -28063,27 +29496,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "item_prices_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "item_prices_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "v_reorder_alerts"
-            referencedColumns: ["item_id"]
-          },
-          {
-            foreignKeyName: "item_prices_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "v_stock_levels"
-            referencedColumns: ["item_id"]
-          },
-          {
             foreignKeyName: "item_prices_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
@@ -28091,17 +29503,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "item_prices_org_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "item_prices_org_unit_fk"
+            columns: ["org_id", "unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
             foreignKeyName: "item_prices_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "item_prices_unit_fk"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
@@ -28281,33 +29700,54 @@ export type Database = {
       organizations: {
         Row: {
           access_status: string
+          address: string | null
+          city: string | null
           created_at: string
+          email: string | null
+          gst_number: string | null
           id: string
           is_active: boolean
           name: string
+          phone: string | null
+          pincode: string | null
           slug: string | null
+          state: string | null
           suspended_at: string | null
           suspended_reason: string | null
           updated_at: string
         }
         Insert: {
           access_status?: string
+          address?: string | null
+          city?: string | null
           created_at?: string
+          email?: string | null
+          gst_number?: string | null
           id?: string
           is_active?: boolean
           name: string
+          phone?: string | null
+          pincode?: string | null
           slug?: string | null
+          state?: string | null
           suspended_at?: string | null
           suspended_reason?: string | null
           updated_at?: string
         }
         Update: {
           access_status?: string
+          address?: string | null
+          city?: string | null
           created_at?: string
+          email?: string | null
+          gst_number?: string | null
           id?: string
           is_active?: boolean
           name?: string
+          phone?: string | null
+          pincode?: string | null
           slug?: string | null
+          state?: string | null
           suspended_at?: string | null
           suspended_reason?: string | null
           updated_at?: string
@@ -28955,32 +30395,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "stock_movements_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_movements_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "v_reorder_alerts"
-            referencedColumns: ["item_id"]
-          },
-          {
-            foreignKeyName: "stock_movements_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "v_stock_levels"
-            referencedColumns: ["item_id"]
-          },
-          {
             foreignKeyName: "stock_movements_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_org_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["org_id", "id"]
           },
         ]
       }
@@ -29042,32 +30468,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "stock_reservations_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_reservations_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "v_reorder_alerts"
-            referencedColumns: ["item_id"]
-          },
-          {
-            foreignKeyName: "stock_reservations_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "v_stock_levels"
-            referencedColumns: ["item_id"]
-          },
-          {
             foreignKeyName: "stock_reservations_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_org_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["org_id", "id"]
           },
         ]
       }
@@ -29229,29 +30641,7 @@ export type Database = {
           rate_unit: string | null
           selling_rate: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "item_prices_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "item_prices_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "v_reorder_alerts"
-            referencedColumns: ["item_id"]
-          },
-          {
-            foreignKeyName: "item_prices_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "v_stock_levels"
-            referencedColumns: ["item_id"]
-          },
-        ]
+        Relationships: []
       }
       v_reorder_alerts: {
         Row: {
@@ -29338,9 +30728,11 @@ export type Database = {
       create_organization: {
         Args: {
           p_categories?: Json
+          p_include_sap_defaults?: boolean
           p_material_types?: Json
           p_name: string
           p_template?: string
+          p_units?: Json
         }
         Returns: string
       }
@@ -29694,18 +31086,21 @@ export const Constants = {
 # src/lib/utils/bom-import.ts
 
 ```ts
-import { type RowResult, toNumber, toStringOrNull } from "./spreadsheet-import";
+import {
+    type RowResult,
+    toNumber,
+    toStringOrNull,
+} from "./spreadsheet-import";
 
 export interface BomImportRow {
     finished_item_id: string;
     component_id: string;
     qty_per_unit: number;
-    unit_id: string;
+    unit_id: string | null;
+    unit_name: string;
     notes: string | null;
 }
 
-// unitsByCode maps this organization's unit code → unit name.
-// Example: "NO" → "No", "MTR" → "Meter"
 export function validateBomRow(
     raw: Record<string, unknown>,
     rowNumber: number,
@@ -29714,14 +31109,25 @@ export function validateBomRow(
 ): RowResult<BomImportRow> {
     const errors: string[] = [];
 
-    const finishedCode = String(raw.finished_item_code ?? "").trim()
+    const finishedCode = String(
+        raw.finished_item_code ?? "",
+    )
+        .trim()
         .toUpperCase();
 
-    const componentCode = String(raw.component_item_code ?? "").trim()
+    const componentCode = String(
+        raw.component_item_code ?? "",
+    )
+        .trim()
         .toUpperCase();
 
-    if (!finishedCode) errors.push("finished_item_code is required");
-    if (!componentCode) errors.push("component_item_code is required");
+    if (!finishedCode) {
+        errors.push("finished_item_code is required");
+    }
+
+    if (!componentCode) {
+        errors.push("component_item_code is required");
+    }
 
     const finished_item_id = itemsByCode.get(finishedCode);
 
@@ -29739,7 +31145,11 @@ export function validateBomRow(
         );
     }
 
-    if (finishedCode && componentCode && finishedCode === componentCode) {
+    if (
+        finishedCode &&
+        componentCode &&
+        finishedCode === componentCode
+    ) {
         errors.push(
             "finished_item_code and component_item_code cannot be the same item",
         );
@@ -29753,13 +31163,24 @@ export function validateBomRow(
 
     const unitInput = String(raw.unit ?? "").trim();
 
-    const unit = unitsByName.get(unitInput.toLowerCase());
-
-    if (!unit) {
-        errors.push(`unit "${unitInput}" is not a valid unit`);
+    if (!unitInput) {
+        errors.push("unit is required");
     }
 
-    if (errors.length > 0 || !finished_item_id || !component_id || !unit) {
+    /*
+     * Existing unit:
+     * resolve it now.
+     *
+     * New unit:
+     * leave unit_id null and create it during import.
+     */
+    const unit_id = unitsByName.get(unitInput.toLowerCase());
+
+    if (
+        errors.length > 0 ||
+        !finished_item_id ||
+        !component_id
+    ) {
         return {
             rowNumber,
             raw,
@@ -29769,16 +31190,17 @@ export function validateBomRow(
     }
 
     return {
-    rowNumber,
-    raw,
-    errors: [],
-    data: {
-        finished_item_id,
-        component_id,
-        qty_per_unit,
-        unit_id: unit,
-        notes: toStringOrNull(raw.notes),
-    },
+        rowNumber,
+        raw,
+        errors: [],
+        data: {
+            finished_item_id,
+            component_id,
+            qty_per_unit,
+            unit_id: unit_id ?? null,
+            unit_name: unitInput,
+            notes: toStringOrNull(raw.notes),
+        },
     };
 }
 ```
@@ -30091,15 +31513,12 @@ export async function checkBomAvailability(productionOrderId: string) {
 # src/lib/utils/item-import.ts
 
 ```ts
-
 import {
     type RowResult,
     toBoolean,
     toNumber,
     toStringOrNull,
 } from "./spreadsheet-import";
-
-
 
 export interface ItemImportRow {
     item_code: string;
@@ -30108,7 +31527,8 @@ export interface ItemImportRow {
     sub_category: string | null;
     material_type_id: string;
     size_spec: string | null;
-    unit_id: string;
+    unit_id: string | null;
+    unit_name: string;
     hsn_code: string | null;
     is_traded: boolean;
     is_manufactured: boolean;
@@ -30118,10 +31538,11 @@ export interface ItemImportRow {
     notes: string | null;
 }
 
-// Expected columns (case/spacing-insensitive after normalization):
+// Expected columns:
 // item_code, name, category, sub_category, material_type, size_spec, unit,
 // hsn_code, is_traded, is_manufactured, is_raw_material, reorder_level,
 // reorder_qty, notes
+
 export function validateItemRow(
     raw: Record<string, unknown>,
     rowNumber: number,
@@ -30132,10 +31553,16 @@ export function validateItemRow(
     const errors: string[] = [];
 
     const item_code = String(raw.item_code ?? "").trim();
-    if (!item_code) errors.push("item_code is required");
+
+    if (!item_code) {
+        errors.push("item_code is required");
+    }
 
     const name = String(raw.name ?? "").trim();
-    if (!name) errors.push("name is required");
+
+    if (!name) {
+        errors.push("name is required");
+    }
 
     const categoryInput = String(raw.category ?? "").trim();
 
@@ -30145,7 +31572,7 @@ export function validateItemRow(
 
     if (!category) {
         errors.push(
-            `category must be one of: ${categories.map((c) => c.name).join(", ")}`
+            `category must be one of: ${categories.map((c) => c.name).join(", ")}`,
         );
     }
 
@@ -30159,32 +31586,39 @@ export function validateItemRow(
         errors.push(
             `material_type must be one of: ${materialTypes
                 .map((m) => m.name)
-                .join(", ")}`
+                .join(", ")}`,
         );
     }
+
     const unitInput = String(raw.unit ?? "").trim();
 
+    if (!unitInput) {
+        errors.push("unit is required");
+    }
+
+    // Existing units are resolved here.
+    // New units are allowed and will be created during import.
     const unit = units.find(
         (u) => u.name.toLowerCase() === unitInput.toLowerCase(),
     );
 
-    if (!unit) {
-        errors.push(
-            `unit must be one of: ${units.map((u) => u.name).join(", ")}`
-        );
-    }
-
     const is_traded = toBoolean(raw.is_traded);
     const is_manufactured = toBoolean(raw.is_manufactured);
     const is_raw_material = toBoolean(raw.is_raw_material);
+
     if (!is_traded && !is_manufactured && !is_raw_material) {
         errors.push(
             "at least one of is_traded / is_manufactured / is_raw_material must be true",
         );
     }
 
-   if (errors.length > 0 || !category || !materialType || !unit) {
-        return { rowNumber, raw, data: null, errors };
+    if (errors.length > 0 || !category || !materialType) {
+        return {
+            rowNumber,
+            raw,
+            data: null,
+            errors,
+        };
     }
 
     return {
@@ -30198,7 +31632,12 @@ export function validateItemRow(
             sub_category: toStringOrNull(raw.sub_category),
             material_type_id: materialType.id,
             size_spec: toStringOrNull(raw.size_spec),
-            unit_id: unit.id,
+
+            // Existing unit -> ID.
+            // New unit -> null; created during import.
+            unit_id: unit?.id ?? null,
+            unit_name: unitInput,
+
             hsn_code: toStringOrNull(raw.hsn_code),
             is_traded,
             is_manufactured,
@@ -30209,7 +31648,6 @@ export function validateItemRow(
         },
     };
 }
-
 ```
 
 # src/lib/utils/spreadsheet-import.ts
@@ -41273,6 +42711,866 @@ drop type if exists public.unit_of_measure;
 commit;
 ```
 
+# supabase/migrations/20261007000000_seed_template_units.sql
+
+```sql
+begin;
+
+create or replace function public.create_organization(
+    p_name text,
+    p_template text default null,
+    p_categories jsonb default '[]'::jsonb,
+    p_material_types jsonb default '[]'::jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $function$
+declare
+    v_org_id uuid;
+    v_existing uuid;
+begin
+    select org_id
+    into v_existing
+    from public.profiles
+    where id = auth.uid();
+
+    if v_existing is not null then
+        raise exception 'User already belongs to an organization'
+            using errcode = 'P0006';
+    end if;
+
+    insert into public.organizations (name)
+    values (p_name)
+    returning id into v_org_id;
+
+    update public.profiles
+    set org_id = v_org_id,
+        role = 'admin'
+    where id = auth.uid();
+
+    if p_template is not null then
+
+        insert into public.item_categories (
+            org_id,
+            code,
+            name,
+            description
+        )
+        select
+            v_org_id,
+            category->>'code',
+            category->>'name',
+            category->>'description'
+        from jsonb_array_elements(p_categories) as category;
+
+        insert into public.material_types (
+            org_id,
+            code,
+            name,
+            description
+        )
+        select
+            v_org_id,
+            material_type->>'code',
+            material_type->>'name',
+            material_type->>'description'
+        from jsonb_array_elements(p_material_types) as material_type;
+
+        insert into public.units (
+            org_id,
+            code,
+            name,
+            description
+        )
+        select
+            v_org_id,
+            unit->>'code',
+            unit->>'name',
+            unit->>'description'
+        from jsonb_array_elements(
+            '[
+                {"code":"NO","name":"No","description":"Number"},
+                {"code":"SET","name":"Set","description":"Set"},
+                {"code":"MTR","name":"Meter","description":"Meter"},
+                {"code":"KG","name":"Kilogram","description":"Kilogram"},
+                {"code":"MM","name":"Millimeter","description":"Millimeter"},
+                {"code":"CM","name":"Centimeter","description":"Centimeter"},
+                {"code":"L","name":"Liter","description":"Liter"},
+                {"code":"BOX","name":"Box","description":"Box"},
+                {"code":"PAIR","name":"Pair","description":"Pair"},
+                {"code":"ROLL","name":"Roll","description":"Roll"}
+            ]'::jsonb
+        ) as unit;
+
+    end if;
+
+    return v_org_id;
+end;
+$function$;
+
+revoke all on function public.create_organization(
+    text,
+    text,
+    jsonb,
+    jsonb
+) from public;
+
+grant execute on function public.create_organization(
+    text,
+    text,
+    jsonb,
+    jsonb
+) to authenticated;
+
+commit;
+```
+
+# supabase/migrations/20261007010000_fix_check_bom_availability.sql
+
+```sql
+begin;
+
+create or replace function public.check_bom_availability(
+    p_production_order_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_result jsonb := '[]'::jsonb;
+begin
+    perform 1
+    from public.production_orders
+    where id = p_production_order_id
+      and org_id = public.my_org();
+
+    if not found then
+        raise exception 'Production order not found or access denied';
+    end if;
+
+    select coalesce(
+        jsonb_agg(
+            jsonb_build_object(
+                'item_id', poi.item_id,
+                'item_code', i.item_code,
+                'item_name', i.name,
+                'unit', u.name,
+                'qty_required', poi.qty_required,
+                'qty_available', coalesce(ib.available_qty, 0),
+                'shortage',
+                    greatest(
+                        0,
+                        poi.qty_required - coalesce(ib.available_qty, 0)
+                    ),
+                'sufficient',
+                    coalesce(ib.available_qty, 0) >= poi.qty_required
+            )
+        ),
+        '[]'::jsonb
+    )
+    into v_result
+    from public.production_order_items poi
+    join public.items i
+        on i.id = poi.item_id
+       and i.org_id = public.my_org()
+    left join public.units u
+        on u.id = poi.unit_id
+       and u.org_id = public.my_org()
+    left join public.inventory_balance ib
+        on ib.item_id = poi.item_id
+       and ib.org_id = public.my_org()
+    where poi.production_order_id = p_production_order_id;
+
+    return jsonb_build_object(
+        'production_order_id', p_production_order_id,
+        'checked_at', now(),
+        'can_produce',
+            not exists (
+                select 1
+                from jsonb_array_elements(v_result) r
+                where (r->>'sufficient')::boolean = false
+            ),
+        'materials', v_result
+    );
+end;
+$$;
+
+revoke all on function public.check_bom_availability(uuid) from public;
+
+grant execute on function public.check_bom_availability(uuid) to authenticated;
+
+commit;
+```
+
+# supabase/migrations/20261007020000_fix_unit_tenant_integrity.sql
+
+```sql
+begin;
+
+alter table public.item_prices
+    drop constraint if exists item_prices_unit_fk;
+
+alter table public.item_prices
+    add constraint item_prices_org_unit_fk
+    foreign key (org_id, unit_id)
+    references public.units (org_id, id);
+
+create or replace function public.validate_line_unit_org()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $function$
+declare
+    v_org_id uuid;
+    v_unit_org_id uuid;
+begin
+    if tg_table_name = 'inbound_receipt_lines' then
+        select org_id into v_org_id
+        from public.inbound_receipts
+        where id = new.receipt_id;
+    elsif tg_table_name = 'delivery_challan_lines' then
+        select org_id into v_org_id
+        from public.delivery_challans
+        where id = new.challan_id;
+    elsif tg_table_name = 'quotation_lines' then
+        select org_id into v_org_id
+        from public.quotations
+        where id = new.quotation_id;
+    elsif tg_table_name = 'sales_order_lines' then
+        select org_id into v_org_id
+        from public.sales_orders
+        where id = new.so_id;
+    elsif tg_table_name = 'production_order_items' then
+        select org_id into v_org_id
+        from public.production_orders
+        where id = new.production_order_id;
+    else
+        raise exception 'Unsupported table for unit organization validation: %', tg_table_name;
+    end if;
+
+    if v_org_id is null then
+        raise exception 'Parent document not found or has no organization';
+    end if;
+
+    select org_id into v_unit_org_id
+    from public.units
+    where id = new.unit_id;
+
+    if v_unit_org_id is null then
+        raise exception 'Unit not found';
+    end if;
+
+    if v_unit_org_id <> v_org_id then
+        raise exception 'Unit does not belong to the same organization as the parent document';
+    end if;
+
+    return new;
+end;
+$function$;
+
+drop trigger if exists trg_validate_inbound_receipt_line_unit
+    on public.inbound_receipt_lines;
+create trigger trg_validate_inbound_receipt_line_unit
+before insert or update of unit_id, receipt_id
+on public.inbound_receipt_lines
+for each row
+execute function public.validate_line_unit_org();
+
+drop trigger if exists trg_validate_delivery_challan_line_unit
+    on public.delivery_challan_lines;
+create trigger trg_validate_delivery_challan_line_unit
+before insert or update of unit_id, challan_id
+on public.delivery_challan_lines
+for each row
+execute function public.validate_line_unit_org();
+
+drop trigger if exists trg_validate_quotation_line_unit
+    on public.quotation_lines;
+create trigger trg_validate_quotation_line_unit
+before insert or update of unit_id, quotation_id
+on public.quotation_lines
+for each row
+execute function public.validate_line_unit_org();
+
+drop trigger if exists trg_validate_sales_order_line_unit
+    on public.sales_order_lines;
+create trigger trg_validate_sales_order_line_unit
+before insert or update of unit_id, so_id
+on public.sales_order_lines
+for each row
+execute function public.validate_line_unit_org();
+
+drop trigger if exists trg_validate_production_order_item_unit
+    on public.production_order_items;
+create trigger trg_validate_production_order_item_unit
+before insert or update of unit_id, production_order_id
+on public.production_order_items
+for each row
+when (new.unit_id is not null)
+execute function public.validate_line_unit_org();
+
+revoke all on function public.validate_line_unit_org() from public;
+
+commit;
+
+```
+
+# supabase/migrations/20261007021000_fix_item_tenant_integrity.sql
+
+```sql
+begin;
+
+-- Required so (org_id, item_id) can reference items safely.
+alter table public.items
+    add constraint items_org_id_id_key
+    unique (org_id, id);
+
+
+
+-- Org-owned tables
+alter table public.bom
+    drop constraint if exists bom_component_id_fkey,
+    drop constraint if exists bom_finished_item_id_fkey;
+
+alter table public.bom
+    add constraint bom_org_component_fk
+    foreign key (org_id, component_id)
+    references public.items (org_id, id);
+
+alter table public.bom
+    add constraint bom_org_finished_item_fk
+    foreign key (org_id, finished_item_id)
+    references public.items (org_id, id);
+
+alter table public.item_prices
+    drop constraint if exists item_prices_item_id_fkey;
+
+alter table public.item_prices
+    add constraint item_prices_org_item_fk
+    foreign key (org_id, item_id)
+    references public.items (org_id, id);
+
+alter table public.inventory_balance
+    drop constraint if exists inventory_balance_item_id_fkey;
+
+alter table public.inventory_balance
+    add constraint inventory_balance_org_item_fk
+    foreign key (org_id, item_id)
+    references public.items (org_id, id);
+
+alter table public.inventory_ops_log
+    drop constraint if exists inventory_ops_log_item_id_fkey;
+
+alter table public.inventory_ops_log
+    add constraint inventory_ops_log_org_item_fk
+    foreign key (org_id, item_id)
+    references public.items (org_id, id);
+
+alter table public.stock_movements
+    drop constraint if exists stock_movements_item_id_fkey;
+
+alter table public.stock_movements
+    add constraint stock_movements_org_item_fk
+    foreign key (org_id, item_id)
+    references public.items (org_id, id);
+
+alter table public.stock_reservations
+    drop constraint if exists stock_reservations_item_id_fkey;
+
+alter table public.stock_reservations
+    add constraint stock_reservations_org_item_fk
+    foreign key (org_id, item_id)
+    references public.items (org_id, id);
+
+
+-- Child tables inherit tenancy from their parent.
+create or replace function public.validate_line_item_org()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $function$
+declare
+    v_org_id uuid;
+    v_item_org_id uuid;
+begin
+    if tg_table_name = 'inbound_receipt_lines' then
+        select org_id into v_org_id
+        from public.inbound_receipts
+        where id = new.receipt_id;
+
+    elsif tg_table_name = 'delivery_challan_lines' then
+        select org_id into v_org_id
+        from public.delivery_challans
+        where id = new.challan_id;
+
+    elsif tg_table_name = 'quotation_lines' then
+        select org_id into v_org_id
+        from public.quotations
+        where id = new.quotation_id;
+
+    elsif tg_table_name = 'sales_order_lines' then
+        select org_id into v_org_id
+        from public.sales_orders
+        where id = new.so_id;
+
+    elsif tg_table_name = 'production_order_items' then
+        select org_id into v_org_id
+        from public.production_orders
+        where id = new.production_order_id;
+
+    else
+        raise exception
+            'Unsupported table for item organization validation: %',
+            tg_table_name;
+    end if;
+
+    if v_org_id is null then
+        raise exception
+            'Parent document not found or has no organization';
+    end if;
+
+    select org_id into v_item_org_id
+    from public.items
+    where id = new.item_id;
+
+    if v_item_org_id is null then
+        raise exception 'Item not found';
+    end if;
+
+    if v_item_org_id <> v_org_id then
+        raise exception
+            'Item does not belong to the same organization as the parent document';
+    end if;
+
+    return new;
+end;
+$function$;
+
+
+drop trigger if exists trg_validate_inbound_receipt_line_item
+    on public.inbound_receipt_lines;
+
+create trigger trg_validate_inbound_receipt_line_item
+before insert or update of item_id, receipt_id
+on public.inbound_receipt_lines
+for each row
+execute function public.validate_line_item_org();
+
+
+drop trigger if exists trg_validate_delivery_challan_line_item
+    on public.delivery_challan_lines;
+
+create trigger trg_validate_delivery_challan_line_item
+before insert or update of item_id, challan_id
+on public.delivery_challan_lines
+for each row
+execute function public.validate_line_item_org();
+
+
+drop trigger if exists trg_validate_quotation_line_item
+    on public.quotation_lines;
+
+create trigger trg_validate_quotation_line_item
+before insert or update of item_id, quotation_id
+on public.quotation_lines
+for each row
+execute function public.validate_line_item_org();
+
+
+drop trigger if exists trg_validate_sales_order_line_item
+    on public.sales_order_lines;
+
+create trigger trg_validate_sales_order_line_item
+before insert or update of item_id, so_id
+on public.sales_order_lines
+for each row
+execute function public.validate_line_item_org();
+
+
+drop trigger if exists trg_validate_production_order_item_item
+    on public.production_order_items;
+
+create trigger trg_validate_production_order_item_item
+before insert or update of item_id, production_order_id
+on public.production_order_items
+for each row
+execute function public.validate_line_item_org();
+
+
+revoke all on function public.validate_line_item_org() from public;
+
+commit;
+```
+
+# supabase/migrations/20261007022000_fix_document_tenant_integrity.sql
+
+```sql
+begin;
+
+create or replace function public.validate_challan_so_line_org()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $function$
+declare
+    v_challan_org_id uuid;
+    v_so_org_id uuid;
+begin
+    select org_id
+    into v_challan_org_id
+    from public.delivery_challans
+    where id = new.challan_id;
+
+    if v_challan_org_id is null then
+        raise exception 'Challan not found or has no organization';
+    end if;
+
+    if new.so_line_id is null then
+        return new;
+    end if;
+
+    select so.org_id
+    into v_so_org_id
+    from public.sales_order_lines sol
+    join public.sales_orders so
+        on so.id = sol.so_id
+    where sol.id = new.so_line_id;
+
+    if v_so_org_id is null then
+        raise exception 'Sales order line not found';
+    end if;
+
+    if v_so_org_id <> v_challan_org_id then
+        raise exception
+            'Sales order line does not belong to the same organization as the challan';
+    end if;
+
+    return new;
+end;
+$function$;
+
+drop trigger if exists trg_validate_challan_so_line_org
+    on public.delivery_challan_lines;
+
+create trigger trg_validate_challan_so_line_org
+before insert or update of so_line_id, challan_id
+on public.delivery_challan_lines
+for each row
+execute function public.validate_challan_so_line_org();
+
+revoke all on function public.validate_challan_so_line_org() from public;
+
+commit;
+```
+
+# supabase/migrations/20261007023000_fix_challan_so_tenant_integrity.sql
+
+```sql
+
+```
+
+# supabase/migrations/20261007024000_add_organization_company_info.sql
+
+```sql
+begin;
+
+alter table public.organizations
+    add column address text,
+    add column city text,
+    add column state text,
+    add column pincode text,
+    add column phone text,
+    add column email text,
+    add column gst_number text;
+
+commit;
+```
+
+# supabase/migrations/20261007180000_support_sap_defaults.sql
+
+```sql
+begin;
+
+create or replace function public.create_organization(
+    p_name text,
+    p_template text default null,
+    p_categories jsonb default '[]'::jsonb,
+    p_material_types jsonb default '[]'::jsonb,
+    p_include_sap_defaults boolean default false
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $function$
+declare
+    v_org_id uuid;
+    v_existing uuid;
+begin
+    select org_id
+    into v_existing
+    from public.profiles
+    where id = auth.uid();
+
+    if v_existing is not null then
+        raise exception 'User already belongs to an organization'
+            using errcode = 'P0006';
+    end if;
+
+    insert into public.organizations (name)
+    values (p_name)
+    returning id into v_org_id;
+
+    update public.profiles
+    set org_id = v_org_id,
+        role = 'admin'
+    where id = auth.uid();
+
+    /*
+     * Seed categories/material types whenever either:
+     * - a template was selected
+     * - SAP global defaults were selected
+     */
+    if p_template is not null or p_include_sap_defaults then
+
+        insert into public.item_categories (
+            org_id,
+            code,
+            name,
+            description
+        )
+        select
+            v_org_id,
+            category->>'code',
+            category->>'name',
+            category->>'description'
+        from jsonb_array_elements(p_categories) as category;
+
+        insert into public.material_types (
+            org_id,
+            code,
+            name,
+            description
+        )
+        select
+            v_org_id,
+            material_type->>'code',
+            material_type->>'name',
+            material_type->>'description'
+        from jsonb_array_elements(p_material_types) as material_type;
+
+        /*
+         * Keep the existing template units for now.
+         *
+         * These will be replaced with the SAP global unit list
+         * when the SAP defaults Excel is wired into the API.
+         */
+        insert into public.units (
+            org_id,
+            code,
+            name,
+            description
+        )
+        select
+            v_org_id,
+            unit->>'code',
+            unit->>'name',
+            unit->>'description'
+        from jsonb_array_elements(
+            '[
+                {"code":"NO","name":"No","description":"Number"},
+                {"code":"SET","name":"Set","description":"Set"},
+                {"code":"MTR","name":"Meter","description":"Meter"},
+                {"code":"KG","name":"Kilogram","description":"Kilogram"},
+                {"code":"MM","name":"Millimeter","description":"Millimeter"},
+                {"code":"CM","name":"Centimeter","description":"Centimeter"},
+                {"code":"L","name":"Liter","description":"Liter"},
+                {"code":"BOX","name":"Box","description":"Box"},
+                {"code":"PAIR","name":"Pair","description":"Pair"},
+                {"code":"ROLL","name":"Roll","description":"Roll"}
+            ]'::jsonb
+        ) as unit;
+
+    end if;
+
+    return v_org_id;
+end;
+$function$;
+
+revoke all on function public.create_organization(
+    text,
+    text,
+    jsonb,
+    jsonb,
+    boolean
+) from public;
+
+grant execute on function public.create_organization(
+    text,
+    text,
+    jsonb,
+    jsonb,
+    boolean
+) to authenticated;
+
+commit;
+```
+
+# supabase/migrations/20261007200000_fix_create_organization_defaults.sql
+
+```sql
+begin;
+
+-- Remove the older overloaded versions.
+drop function if exists public.create_organization(
+    text,
+    text,
+    jsonb,
+    jsonb
+);
+
+drop function if exists public.create_organization(
+    text,
+    text,
+    jsonb,
+    jsonb,
+    boolean
+);
+
+create function public.create_organization(
+    p_name text,
+    p_template text default null,
+    p_categories jsonb default '[]'::jsonb,
+    p_material_types jsonb default '[]'::jsonb,
+    p_units jsonb default '[]'::jsonb,
+    p_include_sap_defaults boolean default false
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $function$
+declare
+    v_org_id uuid;
+    v_existing uuid;
+begin
+    select org_id
+    into v_existing
+    from public.profiles
+    where id = auth.uid();
+
+    if v_existing is not null then
+        raise exception 'User already belongs to an organization'
+            using errcode = 'P0006';
+    end if;
+
+    insert into public.organizations (name)
+    values (p_name)
+    returning id into v_org_id;
+
+    update public.profiles
+    set org_id = v_org_id,
+        role = 'admin'
+    where id = auth.uid();
+
+    -- Categories supplied by the selected template / SAP defaults
+    if jsonb_array_length(p_categories) > 0 then
+        insert into public.item_categories (
+            org_id,
+            code,
+            name,
+            description
+        )
+        select
+            v_org_id,
+            nullif(trim(x->>'code'), ''),
+            nullif(trim(x->>'name'), ''),
+            nullif(trim(x->>'description'), '')
+        from jsonb_array_elements(p_categories) x
+        where nullif(trim(x->>'code'), '') is not null
+          and nullif(trim(x->>'name'), '') is not null
+        on conflict (org_id, code) do nothing;
+    end if;
+
+    -- Material types supplied by the selected template / SAP defaults
+    if jsonb_array_length(p_material_types) > 0 then
+        insert into public.material_types (
+            org_id,
+            code,
+            name,
+            description
+        )
+        select
+            v_org_id,
+            nullif(trim(x->>'code'), ''),
+            nullif(trim(x->>'name'), ''),
+            nullif(trim(x->>'description'), '')
+        from jsonb_array_elements(p_material_types) x
+        where nullif(trim(x->>'code'), '') is not null
+          and nullif(trim(x->>'name'), '') is not null
+        on conflict (org_id, code) do nothing;
+    end if;
+
+    -- Units supplied by SAP global defaults
+    if jsonb_array_length(p_units) > 0 then
+        insert into public.units (
+            org_id,
+            code,
+            name,
+            description
+        )
+        select
+            v_org_id,
+            nullif(trim(x->>'code'), ''),
+            nullif(trim(x->>'name'), ''),
+            nullif(trim(x->>'description'), '')
+        from jsonb_array_elements(p_units) x
+        where nullif(trim(x->>'code'), '') is not null
+          and nullif(trim(x->>'name'), '') is not null
+        on conflict (org_id, code) do nothing;
+    end if;
+
+    return v_org_id;
+end;
+$function$;
+
+alter function public.create_organization(
+    text,
+    text,
+    jsonb,
+    jsonb,
+    jsonb,
+    boolean
+) owner to postgres;
+
+revoke all on function public.create_organization(
+    text,
+    text,
+    jsonb,
+    jsonb,
+    jsonb,
+    boolean
+) from public;
+
+grant execute on function public.create_organization(
+    text,
+    text,
+    jsonb,
+    jsonb,
+    jsonb,
+    boolean
+) to authenticated;
+
+commit;
+```
+
 # supabase/seed.sql
 
 ```sql
@@ -42726,14 +45024,9 @@ order by policyname;
 # supabase/snippets/Untitled query 294.sql
 
 ```sql
-select
-    table_name,
-    column_name,
-    udt_name
-from information_schema.columns
-where table_schema = 'public'
-  and udt_name = 'unit_of_measure'
-order by table_name, column_name;
+select pg_get_functiondef(
+  'public.create_organization(text,text,jsonb,jsonb)'::regprocedure
+);
 ```
 
 # supabase/snippets/Untitled query 514.sql

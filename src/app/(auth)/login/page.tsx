@@ -258,20 +258,26 @@ export default function LoginPage() {
       `}</style>
 
       <div className="login-root">
-
         {/* ── Left panel ── */}
         <div className="login-left">
-
           {/* Brand */}
           <div className="left-brand">
             <div className="left-icon">
-              <Zap style={{ width: 16, height: 16, color: '#fff' }} />
+              <Zap style={{ width: 16, height: 16, color: "#fff" }} />
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#f1f5f9', letterSpacing: '0.01em', lineHeight: 1.2 }}>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#f1f5f9",
+                  letterSpacing: "0.01em",
+                  lineHeight: 1.2,
+                }}
+              >
                 Blue Box
               </div>
-              <div style={{ fontSize: 10, color: '#1e3a5f', marginTop: 1 }}>
+              <div style={{ fontSize: 10, color: "#1e3a5f", marginTop: 1 }}>
                 ERP System
               </div>
             </div>
@@ -279,9 +285,7 @@ export default function LoginPage() {
 
           {/* Copy */}
           <div className="left-copy">
-            <h2 className="left-tagline">
-              Blue Box ERP
-            </h2>
+            <h2 className="left-tagline">Blue Box ERP</h2>
             <p className="left-sub">
               Get your personal, ERP system, which is not clumsy like SAP
             </p>
@@ -292,25 +296,22 @@ export default function LoginPage() {
               <span className="left-pill">Easy to learn</span>
             </div>
           </div>
-
         </div>
 
         {/* ── Right panel ── */}
         <div className="login-right">
           <div className="login-form-wrap">
-
             <h1 className="form-title">Sign in</h1>
             <p className="form-subtitle">Internal access only</p>
 
             <form onSubmit={handleLogin}>
-
               <div style={{ marginBottom: 16 }}>
                 <label className="field-label">Email address</label>
                 <input
                   className="field-input"
                   type="email"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                   autoComplete="email"
                   placeholder="you@company.com"
@@ -323,39 +324,39 @@ export default function LoginPage() {
                   className="field-input"
                   type="password"
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
                   placeholder="••••••••"
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="submit-btn"
-              >
+              <button type="submit" disabled={loading} className="submit-btn">
                 {loading ? (
                   <>
-                    <Loader2 style={{ width: 15, height: 15, animation: 'spin 1s linear infinite' }} />
+                    <Loader2
+                      style={{
+                        width: 15,
+                        height: 15,
+                        animation: "spin 1s linear infinite",
+                      }}
+                    />
                     Signing in…
                   </>
                 ) : (
-                  'Sign in'
+                  "Sign in"
                 )}
               </button>
-
             </form>
 
             <div className="form-footer">
-              <span className="footer-note">Contact your administrator for access</span>
-              <span className="env-badge">LIVE</span>
+              <span className="footer-note">
+                Beta access is invitation only
+              </span>
             </div>
-
           </div>
         </div>
-
       </div>
     </>
-  )
+  );
 }

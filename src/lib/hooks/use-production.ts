@@ -25,6 +25,7 @@ export function useProductionOrders(filters?: {
         .select(`
           *,
           creator:profiles!production_orders_created_by_fkey ( full_name ),
+          so:sales_orders ( id, so_number, client:clients ( name ) ),
           production_order_items (
                 id,
                 qty_required,
@@ -130,7 +131,7 @@ export function useBom(finishedItemId: string | null) {
             name
           ),
 
-          component:items!bom_component_id_fkey (
+          component:items!bom_org_component_fk (
             id,
             item_code,
             name,

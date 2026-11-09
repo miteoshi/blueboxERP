@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import { toast } from 'sonner'
 import type { Tables} from '@/lib/types/database'
+import { ilikeAny } from '@/lib/utils/search'
 
 type Item = Tables<'items'>
 
@@ -67,9 +68,7 @@ export function useItems(filters?: {
       }
 
       if (filters?.search) {
-        query = query.or(
-          `name.ilike.%${filters.search}%,item_code.ilike.%${filters.search}%,sub_category.ilike.%${filters.search}%`
-        )
+        query = query.or(ilikeAny(['name', 'item_code', 'sub_category'], filters.search))
       }
 
       const { data, error } = await query
@@ -99,12 +98,12 @@ export function useItem(id: string | null) {
             effective_from, effective_to, notes
           ),
 
-          bom!bom_finished_item_id_fkey (
+          bom!bom_org_finished_item_fk (
             id, qty_per_unit, unit_id, notes, is_active,
             unit:units (
               id, name
             ),
-            component:items!bom_component_id_fkey (
+            component:items!bom_org_component_fk (
               id, item_code, name, unit_id
             )
           )

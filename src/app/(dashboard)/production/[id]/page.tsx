@@ -16,7 +16,7 @@ import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge, ProductionStatusBadge } from '@/components/ui/badge'
 import { PageLoader } from '@/components/ui/spinner'
-import { formatDate, formatQty } from '@/lib/utils/format'
+import { formatDate, formatQty, isPastDate } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { ArrowLeft, Users, Package, Plus, Info, XCircle, AlertTriangle } from 'lucide-react'
 
@@ -58,9 +58,9 @@ const { data: workers = [] } = useWorkers(orgId);
   if (isLoading) return <PageLoader />
   if (!order)    return <div className="text-slate-500 text-sm p-6">Production order not found</div>
 
-  const items       = (order.production_order_items as any[]) ?? []
-  const assignments = (order.production_assignments as any[]) ?? []
-  const creator     = order.creator as any
+  const items       = order.production_order_items ?? []
+  const assignments = order.production_assignments ?? []
+  const creator     = order.creator
 
   const isPending    = order.status === 'pending'
   const isInProgress = order.status === 'in_progress'
@@ -71,7 +71,7 @@ const { data: workers = [] } = useWorkers(orgId);
   // Workers can be assigned as long as order isn't completed
   const canAssign    = isPending || isInProgress
 
-  const assignedWorkerIds = assignments.map((a: any) => a.worker?.id)
+  const assignedWorkerIds = assignments.map((a) => a.worker?.id)
 
   // ── Cancel — releases reserved raw materials (one DB transaction) ──
   async function handleCancel() {
@@ -201,7 +201,7 @@ const { data: workers = [] } = useWorkers(orgId);
                   <span className="text-slate-500">Target</span>
                   <span
                     className={
-                      !isCompleted && new Date(order.target_date) < new Date()
+                      !isCompleted && isPastDate(order.target_date)
                         ? "text-red-500 font-medium"
                         : "text-slate-700"
                     }
@@ -250,7 +250,7 @@ const { data: workers = [] } = useWorkers(orgId);
                   No workers assigned yet
                 </p>
               )}
-              {assignments.map((a: any) => (
+              {assignments.map((a) => (
                 <div key={a.id} className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium text-slate-900">
@@ -320,7 +320,7 @@ const { data: workers = [] } = useWorkers(orgId);
               </h3>
             </CardHeader>
             <div className="divide-y divide-slate-50">
-              {items.map((item: any) => {
+              {items.map((item) => {
                 const pct =
                   item.qty_required > 0
                     ? Math.min(
@@ -444,7 +444,7 @@ function ReservedMaterialsCard({
 
   if (!reservations || reservations.length === 0) return null;
 
-  const statusColors: Record<string, any> = {
+  const statusColors: Record<string, React.ComponentProps<typeof Badge>["variant"]> = {
     active: "warning",
     consumed: "success",
     partially_consumed: "info",
@@ -489,7 +489,7 @@ function ReservedMaterialsCard({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {reservations.map((r: any) => (
+            {reservations.map((r) => (
               <tr key={r.id}>
                 <td className="px-4 py-2.5">
                   <span className="font-mono text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded mr-2">

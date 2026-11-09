@@ -12,7 +12,6 @@ interface BadgeProps {
 type DocumentStatus = Enums<'document_status'>
 type OrderStatus = Enums<'order_status'>
 type ProductionStatus = Enums<'production_status'>
-type ReservationStatus = Enums<'reservation_status'>
 
 export function Badge({ children, variant = 'default', className }: BadgeProps) {
   const variants = {
@@ -37,7 +36,19 @@ export function Badge({ children, variant = 'default', className }: BadgeProps) 
 }
 
 // ── Status badge helpers ──────────────────────────────────────
-export function DocumentStatusBadge({ status }: { status: DocumentStatus }) {
+// Unknown or missing statuses (e.g. a nullable view column, or a value
+// added to the enum later) render as a neutral badge instead of crashing.
+function StatusBadge({
+  entry,
+  status,
+}: {
+  entry: { label: string; variant: BadgeProps['variant'] } | undefined
+  status: string | null | undefined
+}) {
+  if (entry) return <Badge variant={entry.variant}>{entry.label}</Badge>
+  return <Badge>{status ? status.replace(/_/g, ' ') : '—'}</Badge>
+}
+export function DocumentStatusBadge({ status }: { status: DocumentStatus | string | null | undefined }) {
   const map: Record<DocumentStatus, { label: string; variant: BadgeProps['variant'] }> = {
     draft:            { label: 'Draft',            variant: 'default' },
     pending_approval: { label: 'Pending Approval', variant: 'warning' },
@@ -46,11 +57,10 @@ export function DocumentStatusBadge({ status }: { status: DocumentStatus }) {
     cancelled:        { label: 'Cancelled',        variant: 'danger' },
     converted: { label: 'Converted',  variant: 'teal' },
   }
-  const { label, variant } = map[status]
-  return <Badge variant={variant}>{label}</Badge>
+  return <StatusBadge entry={status ? map[status as keyof typeof map] : undefined} status={status} />
 }
 
-export function OrderStatusBadge({ status }: { status: OrderStatus }) {
+export function OrderStatusBadge({ status }: { status: OrderStatus | string | null | undefined }) {
   const map: Record<OrderStatus, { label: string; variant: BadgeProps['variant'] }> = {
     draft:        { label: 'Draft',        variant: 'default' },
     confirmed:    { label: 'Confirmed',    variant: 'info' },
@@ -60,11 +70,10 @@ export function OrderStatusBadge({ status }: { status: OrderStatus }) {
     delivered:    { label: 'Delivered',    variant: 'success' },
     cancelled:    { label: 'Cancelled',    variant: 'danger' },
   }
-  const { label, variant } = map[status]
-  return <Badge variant={variant}>{label}</Badge>
+  return <StatusBadge entry={status ? map[status as keyof typeof map] : undefined} status={status} />
 }
 
-export function ProductionStatusBadge({ status }: { status: ProductionStatus }) {
+export function ProductionStatusBadge({ status }: { status: ProductionStatus | string | null | undefined }) {
   const map: Record<ProductionStatus, { label: string; variant: BadgeProps['variant'] }> = {
     pending:    { label: 'Pending',     variant: 'default' },
     in_progress:{ label: 'In Progress', variant: 'info' },
@@ -72,6 +81,5 @@ export function ProductionStatusBadge({ status }: { status: ProductionStatus }) 
     on_hold:    { label: 'On Hold',     variant: 'warning' },
     cancelled:  { label: 'Cancelled',   variant: 'danger' },
   }
-  const { label, variant } = map[status]
-  return <Badge variant={variant}>{label}</Badge>
+  return <StatusBadge entry={status ? map[status as keyof typeof map] : undefined} status={status} />
 }

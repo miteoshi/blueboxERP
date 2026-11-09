@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { TableLoader } from '@/components/ui/spinner'
 import { formatCurrency, formatDate } from '@/lib/utils/format'
-import { Plus, Search, Eye, Truck } from 'lucide-react'
+import { Plus, Search, Eye } from 'lucide-react'
 import Link from 'next/link'
 import { Route } from 'next'
 
@@ -181,7 +181,7 @@ export default function InboundPage() {
                     </td>
                   </tr>
                 )}
-                {receipts?.map((r: any) => (
+                {receipts?.map((r) => (
                   <tr
                     key={r.id}
                     className="hover:bg-slate-50 transition-colors"
@@ -220,7 +220,7 @@ export default function InboundPage() {
                       <div className="font-semibold text-slate-900">
                         {formatCurrency(r.total_amount)}
                       </div>
-                      {r.gst_amount > 0 && (
+                      {(r.gst_amount ?? 0) > 0 && (
                         <div className="text-xs text-slate-400">
                           +{formatCurrency(r.gst_amount)} GST
                         </div>

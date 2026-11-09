@@ -1,5 +1,7 @@
 'use client'
 
+import type { Tables } from '@/lib/types/database'
+
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
@@ -11,6 +13,7 @@ import { TableLoader } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 import { Plus, Search, X } from 'lucide-react'
 import { useOrgId } from '@/lib/hooks/use-tenant'
+import { ilikeAny } from '@/lib/utils/search'
 
 function useSuppliers(search: string, orgId: string | null) {
   const supabase = createClient();
@@ -20,7 +23,7 @@ function useSuppliers(search: string, orgId: string | null) {
       if (!orgId) return [];
       let query = supabase.from("suppliers").select("*").order("name");
       if (search) {
-        query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`);
+        query = query.or(ilikeAny(['name', 'phone'], search));
       }
       const { data, error } = await query;
       if (error) throw error;
@@ -67,7 +70,7 @@ export default function SuppliersPage() {
     setForm(prev => ({ ...prev, [field]: e.target.value }))
 
   function openNew() { setForm(EMPTY); setEditId(null); setShowForm(true) }
-  function openEdit(s: any) {
+  function openEdit(s: Tables<'suppliers'>) {
     setForm({
       name:           s.name           ?? '',
       contact_person: s.contact_person ?? '',
@@ -217,7 +220,7 @@ export default function SuppliersPage() {
                 {suppliers?.length === 0 && (
                   <tr><td colSpan={7} className="text-center py-12 text-slate-400 text-sm">No suppliers found</td></tr>
                 )}
-                {suppliers?.map((s: any) => (
+                {suppliers?.map((s) => (
                   <tr key={s.id} className={`hover:bg-slate-50 transition-colors ${!s.is_active ? 'opacity-50' : ''}`}>
                     <td className="px-4 py-3">
                       <div className="font-semibold text-slate-900">{s.name}</div>

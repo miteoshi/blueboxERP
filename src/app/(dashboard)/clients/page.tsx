@@ -1,18 +1,20 @@
 'use client'
 
+import type { Tables } from '@/lib/types/database'
+
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardBody } from '@/components/ui/card'
 import { Input, Textarea } from '@/components/ui/input'
 import { TableLoader } from '@/components/ui/spinner'
 import { formatCurrency } from '@/lib/utils/format'
 import { toast } from 'sonner'
-import { Plus, Search, X, Users } from 'lucide-react'
+import { Plus, Search, X } from 'lucide-react'
 import { useOrgId } from '@/lib/hooks/use-tenant'
+import { ilikeAny } from '@/lib/utils/search'
 
 function useClients(search: string, orgId: string | null) {
   const supabase = createClient();
@@ -47,9 +49,7 @@ function useClients(search: string, orgId: string | null) {
         .order("name");
 
       if (search) {
-        query = query.or(
-          `name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`
-        );
+        query = query.or(ilikeAny(['name', 'email', 'phone'], search));
       }
 
       const { data, error } = await query;
@@ -109,7 +109,7 @@ export default function ClientsPage() {
     setShowForm(true)
   }
 
-  function openEdit(client: any) {
+  function openEdit(client: Omit<Tables<'clients'>, 'org_id' | 'created_at' | 'updated_at'>) {
     setForm({
       name:           client.name           ?? '',
       contact_person: client.contact_person ?? '',
@@ -353,7 +353,7 @@ async function handleSave() {
                 {clients?.length === 0 && (
                   <tr><td colSpan={8} className="text-center py-12 text-slate-400 text-sm">No clients found</td></tr>
                 )}
-                {clients?.map((client: any) => (
+                {clients?.map((client) => (
                   <tr key={client.id} className={`hover:bg-slate-50 transition-colors ${!client.is_active ? 'opacity-50' : ''}`}>
                     <td className="px-4 py-3">
                       <div className="font-semibold text-slate-900">{client.name}</div>
@@ -377,13 +377,13 @@ async function handleSave() {
                       }
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">
-                      {client.credit_limit > 0
+                      {(client.credit_limit ?? 0) > 0
                         ? <span className="font-medium text-slate-900">{formatCurrency(client.credit_limit)}</span>
                         : <span className="text-slate-300 text-xs">No credit</span>
                       }
                     </td>
                     <td className="px-4 py-3 text-center text-slate-600">
-                      {client.credit_days > 0
+                      {(client.credit_days ?? 0) > 0
                         ? `${client.credit_days} days`
                         : <span className="text-slate-300 text-xs">Advance</span>
                       }

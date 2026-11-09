@@ -10,14 +10,11 @@ import { convertQuotationToSalesOrder } from '@/lib/utils/inventory'
 import { PageHeader } from '@/components/layout/page-header'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge, DocumentStatusBadge } from '@/components/ui/badge'
+import { DocumentStatusBadge } from '@/components/ui/badge'
 import { PageLoader } from '@/components/ui/spinner'
-import { formatCurrency, formatDate, formatQty } from '@/lib/utils/format'
+import { formatCurrency, formatDate, formatQty, isPastDate } from '@/lib/utils/format'
 import { toast } from 'sonner'
-import {
-  CheckCircle, XCircle, ShoppingCart,
-  Printer, ArrowLeft, Clock, User, Calendar
-} from 'lucide-react'
+import { CheckCircle, XCircle, ShoppingCart, ArrowLeft, Clock, User, Calendar, Printer } from 'lucide-react'
 
 export default function QuotationDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -38,10 +35,10 @@ export default function QuotationDetailPage() {
   if (isLoading) return <PageLoader />
   if (!qt) return <div className="text-slate-500 text-sm">Quotation not found</div>
 
-  const client  = qt.client  as any
-  const creator = qt.creator as any
-  const approver = qt.approver as any
-  const lines   = qt.quotation_lines as any[] ?? []
+  const client  = qt.client
+  const creator = qt.creator
+  const approver = qt.approver
+  const lines   = qt.quotation_lines ?? []
 
   const isPendingApproval = qt.status === 'pending_approval'
   const isDraft    = qt.status === 'draft'
@@ -102,6 +99,16 @@ export default function QuotationDetailPage() {
           <ArrowLeft className="w-4 h-4" />
           Back
         </Button>
+
+        <a
+          href={`/api/pdf?type=quotation&id=${qt.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 transition-colors"
+        >
+          <Printer className="w-4 h-4" />
+          Print
+        </a>
 
         {/* Submit for approval (draft only, sales role) */}
         {isDraft && canSell && (
@@ -196,7 +203,7 @@ export default function QuotationDetailPage() {
             <CardBody className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-500">Status</span>
-                {(qt.status as any) === 'converted' ? (
+                {qt.status === 'converted' ? (
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', gap: 4,
                     fontSize: 11, fontWeight: 600, padding: '2px 8px',
@@ -220,7 +227,7 @@ export default function QuotationDetailPage() {
               {qt.valid_until && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-500">Valid Until</span>
-                  <span className={new Date(qt.valid_until) < new Date() ? 'text-red-500' : 'text-slate-700'}>
+                  <span className={isPastDate(qt.valid_until) ? 'text-red-500' : 'text-slate-700'}>
                     {formatDate(qt.valid_until)}
                   </span>
                 </div>
@@ -340,7 +347,7 @@ export default function QuotationDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {lines.map((line: any, i: number) => {
+                  {lines.map((line, i) => {
                     const lineSubtotal = line.qty * line.unit_rate
                     const lineGst = lineSubtotal * Number(line.gst_percent) / 100
                     const lineTotal = lineSubtotal + lineGst
@@ -363,11 +370,11 @@ export default function QuotationDetailPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">
-                          {formatQty(line.qty, line.unit)}
+                          {formatQty(line.qty, line.unit?.name)}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">
                           {formatCurrency(line.unit_rate)}
-                          <div className="text-xs text-slate-400">/{line.unit}</div>
+                          <div className="text-xs text-slate-400">/{line.unit?.name}</div>
                         </td>
                         <td className="px-4 py-3 text-center text-slate-600">
                           {line.gst_percent}%

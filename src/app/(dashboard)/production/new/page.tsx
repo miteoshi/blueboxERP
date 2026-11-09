@@ -2,7 +2,7 @@
 
 
 
-import { useState, useEffect } from 'react'
+import { useState, useRef } from 'react'
 
 import { useRouter } from 'next/navigation'
 
@@ -238,7 +238,8 @@ const { data: rawItems } = useRawMaterialItems(orgId);
 
 
 
-  const [rawMaterials, setRawMaterials] = useState<RawMaterialLine[]>([])
+  const [materialLines, setMaterialLines] = useState<RawMaterialLine[]>([])
+  const bomRequestRef = useRef(0)
 
   const [loadingBom,   setLoadingBom]   = useState(false)
 
@@ -248,63 +249,29 @@ const { data: rawItems } = useRawMaterialItems(orgId);
 
 
 
+  // Required qty is derived from the current finish qty on every render,
+  // so changing the quantity never leaves a stale "sufficient" flag.
+  const rawMaterials = materialLines.map(r => {
+    const qtyNeeded = r.qty_per_unit * finishQty
+    return { ...r, qty_needed: qtyNeeded, sufficient: qtyNeeded > 0 && r.qty_available >= qtyNeeded }
+  })
+
   const canCreate    = rawMaterials.length > 0 && rawMaterials.every(r => r.sufficient)
 
   const hasShortage  = rawMaterials.some(r => !r.sufficient)
 
 
 
-  // ── Re-fetch BOM when item changes ───────────────────────
-
-  useEffect(() => {
-
-    if (!finishedItem || finishQty <= 0) return
-
-    fetchBomAndStock(finishedItem.item_id, finishQty)
-
-  }, [finishedItem?.item_id])
-
-
-
-  // ── Re-multiply ALL lines when finishQty changes ─────────
-
-  // Both BOM and manual lines store qty_per_unit.
-
-  // qty_needed is always qty_per_unit × finishQty.
-
-  useEffect(() => {
-
-    if (rawMaterials.length === 0 || finishQty <= 0) return
-
-
-
-    setRawMaterials(prev => prev.map(r => {
-
-      const qtyNeeded = r.qty_per_unit * finishQty
-
-      return {
-
-        ...r,
-
-        qty_needed: qtyNeeded,
-
-        sufficient: r.qty_available >= qtyNeeded,
-
-      }
-
-    }))
-
-  }, [finishQty])
-
-
-
   async function fetchBomAndStock(itemId: string, qty: number) {
+    // Ignore responses for an item the user has already switched away from
+    const requestId = ++bomRequestRef.current
+    const isStale = () => requestId !== bomRequestRef.current
 
     setLoadingBom(true)
 
     setBomExists(null)
 
-    setRawMaterials([])
+    setMaterialLines([])
 
 
 
@@ -355,95 +322,40 @@ const { data: rawItems } = useRawMaterialItems(orgId);
 
 
       if (bomErr) throw bomErr
-
-
+      if (isStale()) return
 
       if (!bom || bom.length === 0) {
-
         setBomExists(false)
-
-        setLoadingBom(false)
-
         return
-
       }
 
-
-
-      setBomExists(true)
-
-
-
-      const componentIds = bom.map(b => (b.component as any).id)
-
-
-
-      const { data: stock } = await supabase
-
+      const components = bom.flatMap(b => (b.component ? [{ ...b, component: b.component }] : []))
+      const { data: stock, error: stockErr } = await supabase
         .from('inventory_balance')
-
         .select('item_id, available_qty')
-
-        .in('item_id', componentIds)
-
-
+        .in('item_id', components.map(b => b.component.id))
+      if (stockErr) throw stockErr
+      if (isStale()) return
 
       const stockMap = new Map(stock?.map(s => [s.item_id, s.available_qty ?? 0]) ?? [])
 
-
-
-      // ── KEY FIX: store qty_per_unit separately so qty changes
-
-      //    can re-multiply without a round trip to Supabase ────
-
-      const lines: RawMaterialLine[] = bom.map(b => { 
-
-        const component    = b.component as any
-
-        const qtyPerUnit   = b.qty_per_unit               // e.g. 2 screws per unit
-
-        const qtyNeeded    = qtyPerUnit * qty              // e.g. 2 × 5 = 10 screws
-
-        const qtyAvailable = stockMap.get(component.id) ?? 0
-
-
-
-        return {
-
-          item_id:       component.id,
-
-          item_name:     component.name,
-
-          item_code:     component.item_code,
-
-          unit:          b.unit?.name ?? "",
-
-          qty_per_unit:  qtyPerUnit,
-
-          qty_needed:    qtyNeeded,
-
-          qty_available: qtyAvailable,
-
-          sufficient:    qtyAvailable >= qtyNeeded,
-
-          source:        'bom' as const,
-
-        }
-
-      })
-
-
-
-      setRawMaterials(lines)
-
-    } catch (err: any) {
-
-      toast.error(`BOM fetch failed: ${err.message}`)
-
+      // qty_needed / sufficient are derived from finishQty at render time
+      setBomExists(true)
+      setMaterialLines(components.map(b => ({
+        item_id:       b.component.id,
+        item_name:     b.component.name,
+        item_code:     b.component.item_code,
+        unit:          b.unit?.name ?? '',
+        qty_per_unit:  b.qty_per_unit,
+        qty_needed:    b.qty_per_unit * qty,
+        qty_available: stockMap.get(b.component.id) ?? 0,
+        sufficient:    false,
+        source:        'bom' as const,
+      })))
+    } catch (err: unknown) {
+      if (!isStale()) toast.error(`BOM fetch failed: ${err instanceof Error ? err.message : 'unknown error'}`)
     } finally {
-
-      setLoadingBom(false)
-
+      if (!isStale()) setLoadingBom(false)
     }
 
   }
@@ -471,8 +383,7 @@ const { data: rawItems } = useRawMaterialItems(orgId);
       .select('available_qty')
 
       .eq('item_id', itemId)
-
-      .single()
+      .maybeSingle()
 
 
 
@@ -480,7 +391,7 @@ const { data: rawItems } = useRawMaterialItems(orgId);
 
 
 
-    setRawMaterials(prev => [...prev, {
+    setMaterialLines(prev => [...prev, {
 
       item_id:       item.id,
 
@@ -511,34 +422,14 @@ const { data: rawItems } = useRawMaterialItems(orgId);
   // qty_needed = qty_per_unit × finishQty
 
   function updateManualQty(itemId: string, qtyPerUnit: number) {
-
-    setRawMaterials(prev => prev.map(r => {
-
-      if (r.item_id !== itemId) return r
-
-      const qtyNeeded = qtyPerUnit * finishQty
-
-      return {
-
-        ...r,
-
-        qty_per_unit: qtyPerUnit,
-
-        qty_needed:   qtyNeeded,
-
-        sufficient:   r.qty_available >= qtyNeeded,
-
-      }
-
-    }))
-
+    setMaterialLines(prev => prev.map(r => (r.item_id === itemId ? { ...r, qty_per_unit: qtyPerUnit } : r)))
   }
 
 
 
   function removeManualLine(itemId: string) {
 
-    setRawMaterials(prev => prev.filter(r => r.item_id !== itemId))
+    setMaterialLines(prev => prev.filter(r => r.item_id !== itemId))
 
   }
 
@@ -688,8 +579,10 @@ const { data: rawItems } = useRawMaterialItems(orgId);
                     const item = mfgItems?.find(i => i.id === e.target.value)
 
                     if (!item) {
+                      bomRequestRef.current++; // drop any in-flight BOM response
                       setFinishedItem(null);
-                      setRawMaterials([]);
+                      setMaterialLines([]);
+                      setLoadingBom(false);
                       setBomExists(null);
                       return;
                     }
@@ -706,6 +599,7 @@ const { data: rawItems } = useRawMaterialItems(orgId);
                       unit_id: item.unit_id,
                       unit: item.unit?.name ?? "",
                     });
+                    fetchBomAndStock(item.id, finishQty)
 
                   }
                 }
@@ -728,7 +622,7 @@ const { data: rawItems } = useRawMaterialItems(orgId);
 
                 </select>
 
-                <p className="text-xs text-slate-400 mt-1">Only items marked as "Manufactured" appear here</p>
+                <p className="text-xs text-slate-400 mt-1">Only items marked as &ldquo;Manufactured&rdquo; appear here</p>
 
               </div>
 

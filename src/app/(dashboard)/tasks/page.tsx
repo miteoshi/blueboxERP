@@ -10,14 +10,11 @@ import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge, ProductionStatusBadge } from '@/components/ui/badge'
 import { PageLoader, TableLoader } from '@/components/ui/spinner'
-import { formatDate, formatQty } from '@/lib/utils/format'
+import { formatDate, formatQty, isPastDate } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { useOrgId } from "@/lib/hooks/use-tenant";
 
-import {
-  Play, CheckCircle, ClipboardList,
-  Package, HardHat, Calendar, AlertTriangle
-} from 'lucide-react'
+import { Play, CheckCircle, ClipboardList, HardHat, Calendar, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 
 // ── Fetch tasks assigned to the current user's worker profile ─
@@ -248,14 +245,14 @@ export default function TasksPage() {
           )}
 
           <div className="space-y-4">
-            {tasks?.map((task: any) => {
+            {tasks?.map((task) => {
               const items       = task.production_order_items ?? []
               const assignments = task.production_assignments ?? []
               const isPending    = task.status === 'pending'
               const isInProgress = task.status === 'in_progress'
               const isOnHold     = task.status === 'on_hold'
               const isOverdue    = task.target_date &&
-                new Date(task.target_date) < new Date()
+                isPastDate(task.target_date)
 
               return (
                 <Card
@@ -300,7 +297,7 @@ export default function TasksPage() {
                             {assignments.length > 0 && (
                               <span className="flex items-center gap-1">
                                 <HardHat className="w-3 h-3" />
-                                {assignments.map((a: any) => a.worker?.name).join(', ')}
+                                {assignments.map((a) => a.worker?.name).join(', ')}
                               </span>
                             )}
                           </div>
@@ -351,7 +348,7 @@ export default function TasksPage() {
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
                         Items to Produce
                       </p>
-                      {items.map((item: any) => {
+                      {items.map((item) => {
                         const pct = item.qty_required > 0
                           ? Math.round((item.qty_produced / item.qty_required) * 100)
                           : 0
@@ -367,7 +364,7 @@ export default function TasksPage() {
                                   {item.item?.name}
                                 </div>
                                 <div className="text-xs text-slate-500 tabular-nums">
-                                  {formatQty(item.qty_produced, item.unit)} / {formatQty(item.qty_required, item.unit)}
+                                  {formatQty(item.qty_produced, item.unit?.name)} / {formatQty(item.qty_required, item.unit?.name)}
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">

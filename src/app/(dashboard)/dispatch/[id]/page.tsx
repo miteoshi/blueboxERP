@@ -137,12 +137,12 @@ export default function ChallanDetailPage() {
   if (!dc)
     return <div className="text-slate-500 text-sm p-6">Challan not found</div>;
 
-  const client = dc.client as any;
-  const so = dc.sales_order as any;
-  const creator = dc.creator as any;
-  const lines = (dc.delivery_challan_lines as any[]) ?? [];
+  const client = dc.client;
+  const so = dc.sales_order;
+  const creator = dc.creator;
+  const lines = dc.delivery_challan_lines ?? [];
 
-  const totalQty = lines.reduce((s: number, l: any) => s + l.qty, 0);
+  const totalQty = lines.reduce((s, l) => s + l.qty, 0);
   const totalValue = dc.total_amount ?? 0;
 
   // ── Mark as delivered ─────────────────────────────────────
@@ -306,7 +306,7 @@ async function handleMarkDelivered() {
                     {formatCurrency(so.total_amount)}
                   </span>
                 </div>
-                {so.balance_due > 0 && (
+                {(so.balance_due ?? 0) > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500">Balance Due</span>
                     <span className="text-amber-600 font-medium">
@@ -407,7 +407,7 @@ async function handleMarkDelivered() {
                       </td>
                     </tr>
                   )}
-                  {lines.map((line: any, i: number) => (
+                  {lines.map((line, i) => (
                     <tr key={line.id} className="hover:bg-slate-50">
                       <td className="px-4 py-3 text-slate-400 text-xs">
                         {i + 1}
@@ -500,7 +500,7 @@ async function handleMarkDelivered() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {movements.map((m: any) => (
+                    {movements.map((m) => (
                       <tr key={m.id}>
                         <td className="px-4 py-2.5">
                           <Badge variant="danger">{m.movement_type}</Badge>

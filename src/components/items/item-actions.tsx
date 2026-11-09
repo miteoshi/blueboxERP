@@ -1,5 +1,7 @@
 "use client";
 
+import type { Tables } from "@/lib/types/database";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -8,9 +10,10 @@ import { toast } from "sonner";
 import { Pencil, Trash2 } from "lucide-react";
 
 interface ItemActionsProps {
-  item: any;
-  stockQty: number;
+  item: Tables<"items">;
 }
+
+type DbError = { message?: string; code?: string; details?: string; hint?: string } | null | undefined;
 
 interface Option {
   id: string;
@@ -56,7 +59,8 @@ type ReferenceCheck = {
 const inputClass =
   "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:bg-slate-100";
 
-function errorMessage(error: any, fallback: string) {
+function errorMessage(err: unknown, fallback: string) {
+  const error = err as DbError;
   const message = String(error?.message ?? "");
   const code = error?.code;
 
@@ -71,7 +75,8 @@ function errorMessage(error: any, fallback: string) {
   return message || fallback;
 }
 
-function deleteErrorMessage(error: any) {
+function deleteErrorMessage(err: unknown) {
+  const error = err as DbError;
   const message = String(error?.message ?? "");
   const detail = String(error?.details ?? "");
   const hint = String(error?.hint ?? "");
@@ -128,7 +133,7 @@ function deleteErrorMessage(error: any) {
   return message || "Cannot delete item.";
 }
 
-export default function ItemActions({ item, stockQty }: ItemActionsProps) {
+export default function ItemActions({ item }: ItemActionsProps) {
   const supabase = createClient();
   const router = useRouter();
 
@@ -213,7 +218,7 @@ export default function ItemActions({ item, stockQty }: ItemActionsProps) {
     return () => {
       cancelled = true;
     };
-  }, [editing]);
+  }, [editing, supabase]);
 
   function setField<K extends keyof FormState>(field: K, value: FormState[K]) {
     setForm((prev) => ({
@@ -461,7 +466,7 @@ export default function ItemActions({ item, stockQty }: ItemActionsProps) {
               count: "exact",
               head: true,
             })
-            .eq(check.column as any, item.id),
+            .filter(check.column, "eq", item.id),
         }))
       );
 

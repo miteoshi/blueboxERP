@@ -26,7 +26,7 @@ export default async function DashboardLayout({
     .maybeSingle()
 
   if (profile && !profile.org_id) {
-    redirect('/onboarding' as any)
+    redirect('/onboarding')
   }
 
   // Manual access switch — flip organizations.access_status in Supabase to
@@ -34,7 +34,7 @@ export default async function DashboardLayout({
   const { data: isActive } = await supabase.rpc('org_is_active')
 
   if (isActive === false) {
-    redirect('/suspended' as any)
+    redirect('/suspend')
   }
 
   return (

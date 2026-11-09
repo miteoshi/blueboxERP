@@ -25,7 +25,7 @@ export function formatCurrencyShort(amount: number | null | undefined): string {
 // ── Quantity ──────────────────────────────────────────────────
 export function formatQty(
   qty: number | null | undefined,
-  unit?: string
+  unit?: string | null
 ): string {
   if (qty === null || qty === undefined) return '—'
   const formatted = new Intl.NumberFormat('en-IN', {
@@ -46,6 +46,21 @@ export function formatDate(
   } catch {
     return '—'
   }
+}
+
+// Today's date (YYYY-MM-DD) in the user's local time zone.
+// toISOString() is UTC, which in IST is still "yesterday" until 05:30.
+export function todayISO(): string {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+// True when a YYYY-MM-DD date is strictly before today (local time).
+// A document due today is not overdue yet.
+export function isPastDate(date: string | null | undefined): boolean {
+  if (!date) return false
+  return date.slice(0, 10) < todayISO()
 }
 
 export function formatDateTime(date: string | null | undefined): string {

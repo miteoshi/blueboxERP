@@ -1,3 +1,4 @@
+import { isPastDate } from '@/lib/utils/format'
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
@@ -63,7 +64,7 @@ export default async function ItemDetailPage({ params }: Props) {
             name
           ),
 
-          component:items!bom_component_id_fkey(
+          component:items!bom_org_component_fk(
             id,
             item_code,
             name,
@@ -96,7 +97,7 @@ export default async function ItemDetailPage({ params }: Props) {
           item.item_category?.name ?? "—"
         } · ${item.unit?.name ?? "—"}`}
       >
-        <ItemActions item={item} stockQty={Number(stock?.qty_on_hand ?? 0)} />
+        <ItemActions item={item} />
       </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -263,14 +264,14 @@ export default async function ItemDetailPage({ params }: Props) {
                   {prices?.map((price) => {
                     const isActive =
                       !price.effective_to ||
-                      new Date(price.effective_to) >= new Date();
+                      !isPastDate(price.effective_to);
                     return (
                       <tr
                         key={price.id}
                         className={isActive ? "bg-green-50/40" : ""}
                       >
                         <td className="px-4 py-2.5 text-slate-600">
-                          {(price.supplier as any)?.name ?? (
+                          {price.supplier?.name ?? (
                             <span className="text-slate-400">General</span>
                           )}
                         </td>
@@ -349,10 +350,10 @@ export default async function ItemDetailPage({ params }: Props) {
                       <tr key={line.id}>
                         <td className="px-4 py-2.5">
                           <span className="font-mono text-xs text-slate-400 mr-2">
-                            {(line.component as any)?.item_code}
+                            {line.component?.item_code}
                           </span>
                           <span className="font-medium text-slate-900">
-                            {(line.component as any)?.name}
+                            {line.component?.name}
                           </span>
                         </td>
                         <td className="px-4 py-2.5 text-right tabular-nums font-semibold">

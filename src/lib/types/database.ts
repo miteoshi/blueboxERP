@@ -2217,6 +2217,16 @@ export type Database = {
         Args: { p_expiry_hours?: number; p_so_id: string }
         Returns: Json
       }
+      set_item_price: {
+        Args: {
+          p_gst_percent?: Database["public"]["Enums"]["gst_rate"]
+          p_item_id: string
+          p_notes?: string
+          p_purchase_rate?: number
+          p_selling_rate?: number
+        }
+        Returns: Json
+      }
       set_quotation_status: {
         Args: {
           p_comments?: string

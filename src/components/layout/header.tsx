@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { useReorderAlerts } from '@/lib/hooks/use-stock'
-import { AlertTriangle, Bell } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 
 // Maps route to a readable page title
@@ -42,7 +42,7 @@ export function Header() {
     ">
       {/* Page title */}
       <h1 className="text-lg font-semibold text-slate-900">
-       
+        {getTitle(pathname)}
       </h1>
 
       {/* Right side actions */}

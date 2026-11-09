@@ -24,7 +24,7 @@ export default function NotFoundPage() {
           Page not found
         </h1>
         <p className="text-slate-500 text-sm mb-8 leading-relaxed">
-          The page you're looking for doesn't exist, was moved,
+          The page you&apos;re looking for doesn&apos;t exist, was moved,
           or you may not have permission to view it.
         </p>
 

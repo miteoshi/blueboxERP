@@ -2018,6 +2018,11 @@ export type Database = {
         Returns: Json
       }
       assert_item_in_my_org: { Args: { p_item_id: string }; Returns: undefined }
+      cancel_production_order: {
+        Args: { p_production_order_id: string }
+        Returns: Json
+      }
+      cancel_sales_order: { Args: { p_so_id: string }; Returns: Json }
       check_bom_availability: {
         Args: { p_production_order_id: string }
         Returns: Json
@@ -2034,6 +2039,40 @@ export type Database = {
         }
         Returns: Json
       }
+      convert_quotation_to_sales_order: {
+        Args: { p_quotation_id: string }
+        Returns: Json
+      }
+      create_delivery_challan: {
+        Args: {
+          p_challan_date?: string
+          p_driver_name?: string
+          p_lines: Json
+          p_notes?: string
+          p_so_id: string
+          p_transport_mode?: Database["public"]["Enums"]["transport_mode"]
+          p_vehicle_no?: string
+        }
+        Returns: Json
+      }
+      create_inbound_receipt: {
+        Args: {
+          p_challan_no?: string
+          p_driver_name?: string
+          p_invoice_no?: string
+          p_lines: Json
+          p_notes?: string
+          p_receipt_date?: string
+          p_supplier_id: string
+          p_transport_mode?: Database["public"]["Enums"]["transport_mode"]
+          p_vehicle_no?: string
+        }
+        Returns: Json
+      }
+      complete_production_order: {
+        Args: { p_production_order_id: string }
+        Returns: Json
+      }
       create_organization: {
         Args: {
           p_categories?: Json
@@ -2044,6 +2083,30 @@ export type Database = {
           p_units?: Json
         }
         Returns: string
+      }
+      create_quotation: {
+        Args: {
+          p_client_id: string
+          p_delivery_days?: number
+          p_lines: Json
+          p_notes?: string
+          p_payment_terms?: string
+          p_submit?: boolean
+          p_transport_note?: string
+          p_valid_until?: string
+        }
+        Returns: Json
+      }
+      create_production_order: {
+        Args: {
+          p_expiry_hours?: number
+          p_finished_item_id: string
+          p_materials: Json
+          p_notes?: string
+          p_qty: number
+          p_target_date?: string
+        }
+        Returns: Json
       }
       dispatch_inventory: {
         Args: {
@@ -2076,6 +2139,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      mark_challan_delivered: { Args: { p_challan_id: string }; Returns: Json }
       my_org: { Args: never; Returns: string }
       my_role: {
         Args: never
@@ -2143,6 +2207,26 @@ export type Database = {
           p_ref_id: string
           p_ref_type: string
         }
+        Returns: Json
+      }
+      record_so_payment: {
+        Args: { p_amount: number; p_so_id: string }
+        Returns: Json
+      }
+      reserve_sales_order: {
+        Args: { p_expiry_hours?: number; p_so_id: string }
+        Returns: Json
+      }
+      set_quotation_status: {
+        Args: {
+          p_comments?: string
+          p_quotation_id: string
+          p_status: Database["public"]["Enums"]["document_status"]
+        }
+        Returns: Json
+      }
+      start_production_order: {
+        Args: { p_production_order_id: string }
         Returns: Json
       }
       validate_stock_sufficiency: {

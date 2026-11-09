@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import type { Enums } from '@/lib/types/database'
 
 type OrderStatus = Enums<'order_status'>
+
 // ── All sales orders ──────────────────────────────────────────
 export function useSalesOrders(filters?: {
   status?: OrderStatus
@@ -88,33 +89,6 @@ export function useSalesOrder(id: string | null) {
     },
     enabled: !!id && !!orgId,
     staleTime: 30 * 1000,
-  })
-}
-
-// ── Update SO status ──────────────────────────────────────────
-export function useUpdateSOStatus() {
-  const supabase = createClient()
-  const qc = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({
-      id,
-      status,
-    }: {
-      id: string
-      status: OrderStatus
-    }) => {
-      const { error } = await supabase
-        .from('sales_orders')
-        .update({ status })
-        .eq('id', id)
-      if (error) throw error
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['sales-orders'] })
-      toast.success('Order status updated')
-    },
-    onError: (err: Error) => toast.error(err.message),
   })
 }
 

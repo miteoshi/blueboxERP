@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import { toast } from 'sonner'
-import type { Enums, TablesUpdate } from '@/lib/types/database'
+import type { Enums } from '@/lib/types/database'
 
 type ProductionStatus = Enums<'production_status'>
 
@@ -216,42 +216,6 @@ export function useRawMaterialItems() {
   })
 }
 
-// ── Update production status ──────────────────────────────────
-export function useUpdateProductionStatus() {
-  const supabase = createClient()
-  const qc = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({
-      id,
-      status,
-    }: {
-      id: string
-      status: ProductionStatus
-    }) => {
-      const updates: TablesUpdate<'production_orders'> = { status }
-      if (status === 'in_progress') {
-        updates.start_date = new Date().toISOString().split('T')[0]
-      }
-      if (status === 'completed') {
-        updates.completed_date = new Date().toISOString().split('T')[0]
-      }
-
-      const { error } = await supabase
-        .from('production_orders')
-        .update(updates)
-        .eq('id', id)
-
-      if (error) throw error
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['production-orders'] })
-      toast.success('Production status updated')
-    },
-    onError: (err: Error) => toast.error(err.message),
-  })
-}
-
 // ── Assign worker ─────────────────────────────────────────────
 export function useAssignWorker() {
   const supabase = createClient()
@@ -283,31 +247,6 @@ export function useAssignWorker() {
       qc.invalidateQueries({ queryKey: ['production-orders'] })
       toast.success('Worker assigned')
     },
-    onError: (err: Error) => toast.error(err.message),
-  })
-}
-
-// ── Update qty produced ───────────────────────────────────────
-export function useUpdateQtyProduced() {
-  const supabase = createClient()
-  const qc = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({
-      lineId,
-      qtyProduced,
-    }: {
-      lineId: string
-      qtyProduced: number
-    }) => {
-      const { error } = await supabase
-        .from('production_order_items')
-        .update({ qty_produced: qtyProduced })
-        .eq('id', lineId)
-
-      if (error) throw error
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['production-orders'] }),
     onError: (err: Error) => toast.error(err.message),
   })
 }

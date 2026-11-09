@@ -1,5 +1,7 @@
 'use client'
 
+import { GST_RATE_OPTIONS, type GstRate } from '@/lib/gst'
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -11,10 +13,8 @@ import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { Plus, Trash2, Save, Send } from 'lucide-react'
-import type { Enums } from '@/lib/types/database'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 
-type GstRate = Enums<'gst_rate'>
 
 interface LineItem {
   item_id: string;
@@ -444,8 +444,8 @@ export default function NewQuotationPage() {
                             onChange={e => updateLine(i, 'gst_percent', e.target.value as GstRate)}
                             className="w-full px-1.5 py-1.5 text-xs rounded border border-slate-200 text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
                           >
-                            {['0','5','12','18','28'].map(r => (
-                              <option key={r} value={r}>{r}%</option>
+                            {GST_RATE_OPTIONS.map((r) => (
+                              <option key={r.value} value={r.value}>{r.label}</option>
                             ))}
                           </select>
                         </td>

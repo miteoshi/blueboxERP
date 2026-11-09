@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { markChallanDelivered } from '@/lib/utils/inventory'
-import { useCanDispatch } from '@/lib/hooks/use-profile'
+import { useCanBill, useCanDispatch } from '@/lib/hooks/use-profile'
 import { PageHeader } from '@/components/layout/page-header'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,11 +13,9 @@ import { Badge } from '@/components/ui/badge'
 import { PageLoader } from '@/components/ui/spinner'
 import { formatCurrency, formatDate, formatQty } from '@/lib/utils/format'
 import { toast } from 'sonner'
-import {
-  Truck, FileText, User, ShoppingCart,
-  CheckCircle, ArrowLeft
-} from 'lucide-react'
+import { Truck, FileText, User, ShoppingCart, CheckCircle, ArrowLeft, Receipt } from 'lucide-react'
 import Link from 'next/link'
+import type { Route } from 'next'
 
 const STATUS_COLORS: Record<string, 'warning' | 'success' | 'danger' | 'default'> = {
   dispatched: 'warning',
@@ -51,6 +49,7 @@ function useChallan(id: string, orgId: string | null) {
           *,
           client:clients ( id, name, phone, gst_number, address, city ),
           sales_order:sales_orders ( id, so_number, total_amount, balance_due ),
+          invoice:sales_invoices ( id, invoice_no, status ),
           creator:profiles!delivery_challans_created_by_fkey ( full_name ),
           delivery_challan_lines (
             id,
@@ -127,6 +126,7 @@ export default function ChallanDetailPage() {
   const qc = useQueryClient();
   const orgId = useOrgId();
   const canDispatch = useCanDispatch();
+  const canBill = useCanBill();
 
   const { data: dc, isLoading } = useChallan(id, orgId);
   const { data: movements } = useMovements(id, orgId);
@@ -202,6 +202,27 @@ async function handleMarkDelivered() {
           <FileText className="w-4 h-4" />
           Print Challan
         </a>
+
+        {/* Billing */}
+        {dc.invoice ? (
+          <Link
+            href={`/invoices/${dc.invoice.id}` as Route}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors"
+          >
+            <Receipt className="w-4 h-4" />
+            {dc.invoice.invoice_no}
+          </Link>
+        ) : (
+          canBill && dc.status !== 'returned' && (
+            <Link
+              href={`/invoices/new?challan=${dc.id}` as Route}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+            >
+              <Receipt className="w-4 h-4" />
+              Create Invoice
+            </Link>
+          )
+        )}
 
         {/* Mark as delivered */}
         {dc.status === "dispatched" && canDispatch && (

@@ -14,6 +14,8 @@ import { formatCurrency } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { Plus, Search, X } from 'lucide-react'
 import { useOrgId } from '@/lib/hooks/use-tenant'
+import { useGstStates } from '@/lib/hooks/use-finance'
+import { gstinError, normalizeGstin, stateCodeFromGstin } from '@/lib/gst'
 import { ilikeAny } from '@/lib/utils/search'
 
 function useClients(search: string, orgId: string | null) {
@@ -39,6 +41,8 @@ function useClients(search: string, orgId: string | null) {
           address,
           city,
           state,
+          state_code,
+          pincode,
           gst_number,
           credit_limit,
           credit_days,
@@ -73,7 +77,8 @@ interface ClientForm {
   email:          string
   address:        string
   city:           string
-  state:          string
+  state_code:     string
+  pincode:        string
   gst_number:     string
   credit_limit:   string
   credit_days:    string
@@ -82,7 +87,7 @@ interface ClientForm {
 
 const EMPTY_FORM: ClientForm = {
   name: '', contact_person: '', phone: '', email: '',
-  address: '', city: '', state: 'Gujarat',
+  address: '', city: '', state_code: '', pincode: '',
   gst_number: '', credit_limit: '0', credit_days: '0', notes: '',
 }
 
@@ -98,9 +103,19 @@ export default function ClientsPage() {
   const [saving,     setSaving]     = useState(false)
 
   const { data: clients, isLoading } = useClients(search, orgId)
+  const { data: gstStates } = useGstStates()
+  const gstError = gstinError(form.gst_number)
 
   function setField(field: keyof ClientForm, value: string) {
-    setForm(prev => ({ ...prev, [field]: value }))
+    setForm(prev => {
+      const next = { ...prev, [field]: value }
+      // A valid GSTIN fixes the state: its first two digits are the state code
+      if (field === 'gst_number') {
+        const code = stateCodeFromGstin(value)
+        if (code) next.state_code = code
+      }
+      return next
+    })
   }
 
   function openNew() {
@@ -110,6 +125,10 @@ export default function ClientsPage() {
   }
 
   function openEdit(client: Omit<Tables<'clients'>, 'org_id' | 'created_at' | 'updated_at'>) {
+    // Older clients only have the free-text state; map it to a code if it matches
+    const codeFromName = gstStates?.find(
+      st => st.name.toLowerCase() === (client.state ?? '').trim().toLowerCase()
+    )?.code
     setForm({
       name:           client.name           ?? '',
       contact_person: client.contact_person ?? '',
@@ -117,7 +136,8 @@ export default function ClientsPage() {
       email:          client.email          ?? '',
       address:        client.address        ?? '',
       city:           client.city           ?? '',
-      state:          client.state          ?? 'Gujarat',
+      state_code:     client.state_code     ?? codeFromName ?? '',
+      pincode:        client.pincode        ?? '',
       gst_number:     client.gst_number     ?? '',
       credit_limit:   String(client.credit_limit ?? 0),
       credit_days:    String(client.credit_days  ?? 0),
@@ -138,6 +158,16 @@ async function handleSave() {
     return;
   }
 
+  if (gstError) {
+    toast.error(gstError);
+    return;
+  }
+
+  if (form.pincode && !/^[1-9][0-9]{5}$/.test(form.pincode.trim())) {
+    toast.error("PIN code must be 6 digits");
+    return;
+  }
+
   setSaving(true);
 
   try {
@@ -148,8 +178,10 @@ async function handleSave() {
       email: form.email || null,
       address: form.address || null,
       city: form.city || null,
-      state: form.state || null,
-      gst_number: form.gst_number || null,
+      state_code: form.state_code || null,
+      state: gstStates?.find(st => st.code === form.state_code)?.name ?? null,
+      pincode: form.pincode.trim() || null,
+      gst_number: normalizeGstin(form.gst_number) || null,
       credit_limit: Number(form.credit_limit) || 0,
       credit_days: Number(form.credit_days) || 0,
       notes: form.notes || null,
@@ -252,10 +284,14 @@ async function handleSave() {
                 />
               </div>
               <Input
-                label="GST Number"
+                label="GSTIN"
                 value={form.gst_number}
-                onChange={e => setField('gst_number', e.target.value)}
-                placeholder="22XXXXX1234X1ZX"
+                onChange={e => setField('gst_number', e.target.value.toUpperCase())}
+                placeholder="24ABCDE1234F1Z5"
+                maxLength={15}
+                error={gstError ?? undefined}
+                hint="Leave empty for unregistered (B2C) customers"
+                className="font-mono uppercase"
               />
               <Textarea
                 label="Address"
@@ -270,10 +306,33 @@ async function handleSave() {
                   onChange={e => setField('city', e.target.value)}
                 />
                 <Input
-                  label="State"
-                  value={form.state}
-                  onChange={e => setField('state', e.target.value)}
+                  label="PIN Code"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={form.pincode}
+                  onChange={e => setField('pincode', e.target.value.replace(/\D/g, ''))}
                 />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-slate-700">
+                  State <span className="text-xs font-normal text-slate-400">(place of supply)</span>
+                </label>
+                <select
+                  value={form.state_code}
+                  onChange={e => setField('state_code', e.target.value)}
+                  disabled={!!stateCodeFromGstin(form.gst_number)}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
+                >
+                  <option value="">Select state…</option>
+                  {gstStates?.map(st => (
+                    <option key={st.code} value={st.code}>{st.code} — {st.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-400">
+                  {stateCodeFromGstin(form.gst_number)
+                    ? 'Set from the GSTIN'
+                    : 'Decides CGST + SGST (same state) or IGST (other state) on invoices'}
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Input

@@ -1,5 +1,7 @@
 'use client'
 
+import { GST_RATE_OPTIONS, type GstRate } from '@/lib/gst'
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -17,7 +19,6 @@ import type {
     Enums
   } from '@/lib/types/database'
 
-type GstRate = Enums<'gst_rate'>
 
 type TransportMode = Enums<'transport_mode'>
   
@@ -484,10 +485,8 @@ const { data: items } = useItemsForGrn(orgId);
                             }
                             className="w-full px-1.5 py-1.5 text-xs rounded border border-slate-200 text-center focus:outline-none focus:ring-1 focus:ring-teal-500"
                           >
-                            {["0", "5", "12", "18", "28"].map((r) => (
-                              <option key={r} value={r}>
-                                {r}%
-                              </option>
+                            {GST_RATE_OPTIONS.map((r) => (
+                              <option key={r.value} value={r.value}>{r.label}</option>
                             ))}
                           </select>
                         </td>

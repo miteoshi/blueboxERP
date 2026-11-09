@@ -82,3 +82,20 @@ export function useCanDispatch(): boolean {
 export function useIsAdmin(): boolean {
   return useRole() === 'admin'
 }
+// Matches create_sales_invoice() / record_customer_receipt()
+export function useCanBill(): boolean {
+  const role = useRole()
+  return role === 'admin' || role === 'manager' || role === 'sales'
+}
+
+// Matches cancel_sales_invoice() / cancel_customer_receipt()
+export function useCanManageFinance(): boolean {
+  const role = useRole()
+  return role === 'admin' || role === 'manager'
+}
+
+// Matches the RLS read policy on sales_invoices (production can't see finance)
+export function useCanViewFinance(): boolean {
+  const role = useRole()
+  return role !== null && role !== 'production'
+}

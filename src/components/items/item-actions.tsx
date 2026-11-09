@@ -50,7 +50,8 @@ type ReferenceCheck = {
     | "delivery_challan_lines"
     | "quotation_lines"
     | "sales_order_lines"
-    | "production_order_items";
+    | "production_order_items"
+    | "sales_invoice_lines";
   label: string;
   column: ReferenceColumn;
   selectColumn: string;
@@ -125,6 +126,10 @@ function deleteErrorMessage(err: unknown) {
 
     if (combined.includes("production_order_items")) {
       return "Cannot delete item: it is referenced by production order items.";
+    }
+
+    if (combined.includes("sales_invoice_lines")) {
+      return "Cannot delete item: it appears on tax invoices.";
     }
 
     return "Cannot delete item because another record references it.";
@@ -452,6 +457,12 @@ export default function ItemActions({ item }: ItemActionsProps) {
         {
           table: "production_order_items",
           label: "production order items",
+          column: "item_id",
+          selectColumn: "id",
+        },
+        {
+          table: "sales_invoice_lines",
+          label: "tax invoices",
           column: "item_id",
           selectColumn: "id",
         },

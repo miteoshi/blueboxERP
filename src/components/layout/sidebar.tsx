@@ -28,6 +28,10 @@ import {
   Layers,
   Plus,
   List,
+  Receipt,
+  Wallet,
+  Landmark,
+  FileSpreadsheet,
 } from 'lucide-react'
 import type { Enums } from '@/lib/types/database'
 import { Route } from 'next'
@@ -139,6 +143,40 @@ const NAV: (NavItem | NavGroup)[] = [
         href: "/dispatch",
         icon: PackageOpen,
         roles: ["admin", "manager", "store"],
+      },
+    ],
+  },
+
+  // ── Finance — invoices, payments, receivables, GST ────────
+  // Matches the RLS read policies on sales_invoices / customer_receipts
+  {
+    label: "Finance",
+    icon: Landmark,
+    roles: ["admin", "manager", "sales", "store", "viewer"],
+    items: [
+      {
+        label: "Invoices",
+        href: "/invoices",
+        icon: Receipt,
+        roles: ["admin", "manager", "sales", "store", "viewer"],
+      },
+      {
+        label: "Payments",
+        href: "/payments",
+        icon: Wallet,
+        roles: ["admin", "manager", "sales", "viewer"],
+      },
+      {
+        label: "Receivables",
+        href: "/receivables",
+        icon: BarChart3,
+        roles: ["admin", "manager", "sales", "viewer"],
+      },
+      {
+        label: "GST Reports",
+        href: "/reports/gst",
+        icon: FileSpreadsheet,
+        roles: ["admin", "manager", "viewer"],
       },
     ],
   },

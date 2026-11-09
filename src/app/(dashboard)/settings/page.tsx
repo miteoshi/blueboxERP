@@ -1,5 +1,8 @@
 'use client'
 
+import { useSearchParams } from 'next/navigation'
+import { CompanyProfile } from '@/components/settings/company-profile'
+
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
@@ -19,7 +22,7 @@ import { ilikeAny } from '@/lib/utils/search'
 
 type UserRole = Enums<"user_role">
 // ── Tabs ──────────────────────────────────────────────────────
-const TABS = ['Users', 'Price Update', 'Reconcile'] as const
+const TABS = ['Company', 'Users', 'Price Update', 'Reconcile'] as const
 type Tab = typeof TABS[number]
 
 // ── Role badge colors ─────────────────────────────────────────
@@ -120,7 +123,11 @@ export default function SettingsPage() {
   const orgId        = useOrgId()
   const { data: me } = useProfile()
 
-  const [activeTab, setActiveTab] = useState<Tab>('Users')
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const requested = searchParams.get('tab')
+    return TABS.find((t) => t === requested) ?? 'Company'
+  })
 
   // ── Users state ───────────────────────────────────────────
   const { data: profiles, isLoading: loadingProfiles } = useAllProfiles(orgId)
@@ -254,7 +261,7 @@ export default function SettingsPage() {
     <div>
       <PageHeader
         title="Settings"
-        description="User management, item pricing, and system administration"
+        description="Company & GST details, users, item pricing and system administration"
       />
 
       {/* Tabs */}
@@ -276,6 +283,8 @@ export default function SettingsPage() {
           </button>
         ))}
       </div>
+
+      {activeTab === "Company" && <CompanyProfile />}
 
       {/* ══ USERS ══════════════════════════════════════════════ */}
       {activeTab === "Users" && (

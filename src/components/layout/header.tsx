@@ -18,6 +18,10 @@ const pageTitles: Record<string, string> = {
   '/clients':      'Clients',
   '/suppliers':    'Suppliers',
   '/workers':      'Workers',
+  '/invoices':     'Invoices',
+  '/payments':     'Payments',
+  '/receivables':  'Receivables',
+  '/reports':      'GST Reports',
   '/settings':     'Settings',
 }
 

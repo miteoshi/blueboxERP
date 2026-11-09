@@ -10,6 +10,8 @@ import { formatCurrency, formatDate, formatQty } from '@/lib/utils/format'
 import { ShoppingCart, FileText, Factory, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { useOrgId } from '@/lib/hooks/use-tenant'
+import { useRole } from '@/lib/hooks/use-profile'
+import { FinanceSummary } from '@/components/finance/finance-summary'
 
 // ── Data hooks ────────────────────────────────────────────────
 
@@ -107,6 +109,7 @@ export default function DashboardPage() {
   const { data: recentOrders } = useRecentOrders(orgId)
 
   const alertCount = alerts?.length ?? 0
+  const role = useRole()
 
   // ── Realtime subscriptions ─────────────────────────────────
   useEffect(() => {
@@ -167,6 +170,9 @@ export default function DashboardPage() {
         title="Dashboard"
         description={`Good ${getGreeting()} — here's what's happening today`}
       />
+
+      {/* ── Finance (roles that can read invoices and receipts) ── */}
+      {role && ['admin', 'manager', 'sales', 'viewer'].includes(role) && <FinanceSummary />}
 
       {/* ── Stat Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

@@ -1,9 +1,8 @@
 'use client'
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useOrgId } from '@/lib/hooks/use-tenant'
-import { toast } from 'sonner'
 
 import type { Enums } from '@/lib/types/database'
 
@@ -81,7 +80,7 @@ export function useSalesOrder(id: string | null) {
           )
           ),
           production_orders ( id, po_number, status ),
-          delivery_challans ( id, challan_no, challan_date, status, total_amount )
+          delivery_challans ( id, challan_no, challan_date, status, total_amount, invoice:sales_invoices ( id, invoice_no, status ) )
         `)
         .eq('id', id)
         .single()
@@ -90,34 +89,5 @@ export function useSalesOrder(id: string | null) {
     },
     enabled: !!id && !!orgId,
     staleTime: 30 * 1000,
-  })
-}
-
-// ── Record advance payment ────────────────────────────────────
-export function useRecordPayment() {
-  const supabase = createClient()
-  const qc = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({
-      id,
-      amount,
-    }: {
-      id: string
-      amount: number
-    }) => {
-      // Atomic increment in the database, refused above the balance due —
-      // two payments recorded at the same time can no longer lose one.
-      const { error } = await supabase.rpc('record_so_payment', {
-        p_so_id:  id,
-        p_amount: amount,
-      })
-      if (error) throw new Error(error.message)
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['sales-orders'] })
-      toast.success('Payment recorded')
-    },
-    onError: (err: Error) => toast.error(err.message),
   })
 }

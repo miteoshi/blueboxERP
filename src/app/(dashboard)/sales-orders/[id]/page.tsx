@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useOrgId } from "@/lib/hooks/use-tenant";
 import { useParams, useRouter } from 'next/navigation'
-import { useSalesOrder, useRecordPayment } from '@/lib/hooks/use-sales-orders'
+import { useSalesOrder } from '@/lib/hooks/use-sales-orders'
+import { PAYMENT_MODES, useRecordReceipt, type PaymentMode } from '@/lib/hooks/use-finance'
 import { useCanSell, useCanDispatch } from '@/lib/hooks/use-profile'
 import { reserveSalesOrder, cancelSalesOrder } from '@/lib/utils/inventory'
 import { createClient } from '@/lib/supabase/client'
@@ -15,12 +16,9 @@ import { Badge, OrderStatusBadge } from '@/components/ui/badge'
 import { PageLoader } from '@/components/ui/spinner'
 import { formatCurrency, formatDate, formatQty, isPastDate } from '@/lib/utils/format'
 import { toast } from 'sonner'
-import {
-  ArrowLeft, Send, CreditCard,
-  Package, Truck, CheckCircle,
-  User, FileText, AlertTriangle, XCircle
-} from 'lucide-react'
+import { ArrowLeft, Send, CreditCard, Package, Truck, CheckCircle, User, FileText, AlertTriangle, XCircle, Receipt } from 'lucide-react'
 import Link from 'next/link'
+import type { Route } from 'next'
 
 export default function SalesOrderDetailPage() {
   const { id }   = useParams<{ id: string }>()
@@ -33,9 +31,11 @@ export default function SalesOrderDetailPage() {
   const canDispatch = useCanDispatch()
 
   const { data: so, isLoading, refetch } = useSalesOrder(id)
-  const { mutate: recordPayment, isPending: recordingPayment } = useRecordPayment()
+  const recordReceipt = useRecordReceipt()
 
   const [paymentAmount,   setPaymentAmount]   = useState('')
+  const [paymentMode,     setPaymentMode]     = useState<PaymentMode>('bank_transfer')
+  const [paymentRef,      setPaymentRef]      = useState('')
   const [showPaymentBox,  setShowPaymentBox]  = useState(false)
   const [reservingStock,  setReservingStock]  = useState(false)
   const [cancelling,      setCancelling]      = useState(false)
@@ -156,16 +156,24 @@ const { data: reservations } = useQuery({
       toast.error(`Amount exceeds balance due (${formatCurrency(salesOrder.balance_due ?? 0)})`)
       return
     }
-    recordPayment(
+    // A receipt against the SO: applied to this order's invoices first,
+    // the rest is held as an advance and applied when it is invoiced.
+    recordReceipt.mutate(
       {
-        id,
-        amount,
+        clientId: salesOrder.client_id,
+        soId: salesOrder.id,
+        amount: Math.round(amount * 100) / 100,
+        mode: paymentMode,
+        reference: paymentRef.trim() || undefined,
       },
       {
-        onSuccess: () => {
+        onSuccess: (res) => {
+          toast.success(`Receipt ${res.receipt_no} recorded`)
           setPaymentAmount('')
+          setPaymentRef('')
           setShowPaymentBox(false)
         },
+        onError: (err: Error) => toast.error(err.message),
       }
     )
   }
@@ -208,6 +216,16 @@ const { data: reservations } = useQuery({
             <Button size="sm">
               <Send className="w-4 h-4" />
               Create Challan
+            </Button>
+          </Link>
+        )}
+
+        {/* Bill delivered goods */}
+        {canSell && challans.some((c) => !c.invoice && c.status !== 'returned') && (
+          <Link href={`/invoices/new?so=${so.id}` as Route}>
+            <Button size="sm" variant="secondary">
+              <Receipt className="w-4 h-4" />
+              Create Invoice
             </Button>
           </Link>
         )}
@@ -294,7 +312,20 @@ const { data: reservations } = useQuery({
               placeholder="Amount received (₹)"
               className="flex-1 max-w-xs px-3 py-2 text-sm rounded-lg border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-            <Button size="sm" loading={recordingPayment} onClick={handleRecordPayment}>Save</Button>
+            <select
+              value={paymentMode}
+              onChange={e => setPaymentMode(e.target.value as PaymentMode)}
+              className="px-3 py-2 text-sm rounded-lg border border-blue-200 bg-white"
+            >
+              {PAYMENT_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+            <input
+              value={paymentRef}
+              onChange={e => setPaymentRef(e.target.value)}
+              placeholder="UTR / cheque no."
+              className="w-40 px-3 py-2 text-sm rounded-lg border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <Button size="sm" loading={recordReceipt.isPending} onClick={handleRecordPayment}>Save</Button>
             <Button variant="ghost" size="sm" onClick={() => setShowPaymentBox(false)}>Cancel</Button>
           </div>
         </div>
@@ -469,6 +500,13 @@ const { data: reservations } = useQuery({
                     <div className="flex items-center gap-2">
                       <span className="text-slate-400 text-xs">{formatDate(c.challan_date)}</span>
                       <Badge variant={c.status === 'delivered' ? 'success' : 'warning'}>{c.status}</Badge>
+                      {c.invoice ? (
+                        <Link href={`/invoices/${c.invoice.id}` as Route} className="font-mono text-xs text-blue-600 hover:underline">
+                          {c.invoice.invoice_no}
+                        </Link>
+                      ) : (
+                        <span className="text-xs text-amber-600">Not billed</span>
+                      )}
                     </div>
                   </div>
                 ))}

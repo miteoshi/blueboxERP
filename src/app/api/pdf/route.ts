@@ -1,12 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { html, raw, printScript, printableResponse, type SafeHtml } from '@/lib/pdf/html'
+import { amountInWords } from '@/lib/gst'
 
 // ─────────────────────────────────────────────────────────────
 // PDF Generation Route
 // GET /api/pdf?type=quotation&id=uuid
 // GET /api/pdf?type=challan&id=uuid
 // GET /api/pdf?type=grn&id=uuid
+// GET /api/pdf?type=invoice&id=uuid[&copies=3]
 //
 // Returns printable HTML — the browser auto-triggers window.print().
 // All document data is HTML-escaped (see lib/pdf/html.ts) and the page
@@ -24,6 +26,11 @@ type Organization = {
   phone?: string | null
   email?: string | null
   gst_number?: string | null
+  invoice_terms?: string | null
+  bank_name?: string | null
+  bank_account_no?: string | null
+  bank_ifsc?: string | null
+  bank_branch?: string | null
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -52,7 +59,8 @@ export async function GET(request: NextRequest) {
     .select(`
       org_id,
       organizations:org_id (
-        name, address, city, state, pincode, phone, email, gst_number
+        name, address, city, state, pincode, phone, email, gst_number,
+        invoice_terms, bank_name, bank_account_no, bank_ifsc, bank_branch
       )
     `)
     .eq('id', user.id)
@@ -75,6 +83,10 @@ export async function GET(request: NextRequest) {
         return printableResponse(await challanPage(supabase, id, org))
       case 'grn':
         return printableResponse(await grnPage(supabase, id, org))
+      case 'invoice':
+        return printableResponse(
+          await invoicePage(supabase, id, org, searchParams.get('copies') === '3')
+        )
       default:
         return NextResponse.json({ error: 'Unknown document type' }, { status: 400 })
     }
@@ -487,4 +499,217 @@ async function grnPage(supabase: Supabase, id: string, org: Organization | null)
 
   ${signatures('Received By', 'Store Keeper', 'Authorised Signatory')}
   `)
+}
+
+// ── GST Tax Invoice (CGST Rule 46) ────────────────────────────
+
+const INVOICE_CSS = `
+  .inv          { border: 1px solid #1E3A5F; }
+  .inv-head     { display: flex; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid #1E3A5F; }
+  .inv-title    { text-align: center; font-size: 16px; font-weight: bold; letter-spacing: 0.08em; color: #1E3A5F; padding: 6px; border-bottom: 1px solid #1E3A5F; }
+  .copy-label   { font-size: 9px; font-weight: bold; color: #64748B; text-align: right; }
+  .grid2        { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid #1E3A5F; }
+  .grid2 > div  { padding: 8px 12px; font-size: 10.5px; line-height: 1.6; }
+  .grid2 > div + div { border-left: 1px solid #1E3A5F; }
+  .lbl          { font-size: 8.5px; font-weight: bold; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; }
+  .inv table    { margin: 0; }
+  .inv thead th { font-size: 8.5px; padding: 6px 5px; }
+  .inv tbody td { font-size: 10px; padding: 5px; border-bottom: 1px solid #E2E8F0; }
+  .inv tfoot td { font-size: 10px; padding: 5px; font-weight: bold; border-top: 1px solid #1E3A5F; background: #F8FAFC; }
+  .sum          { display: grid; grid-template-columns: 1.4fr 1fr; border-top: 1px solid #1E3A5F; }
+  .sum > div    { padding: 8px 12px; font-size: 10.5px; }
+  .sum > div + div { border-left: 1px solid #1E3A5F; }
+  .row          { display: flex; justify-content: space-between; padding: 2px 0; }
+  .grand        { font-size: 13px; font-weight: bold; color: #1D4ED8; border-top: 1px solid #CBD5E1; margin-top: 4px; padding-top: 4px; }
+  .words        { font-style: italic; margin-top: 6px; }
+  .small        { font-size: 9px; color: #475569; line-height: 1.5; }
+  .sign         { text-align: right; padding: 8px 12px 10px; border-top: 1px solid #1E3A5F; font-size: 10.5px; }
+  .sign .space  { height: 42px; }
+  .page-break   { page-break-after: always; break-after: page; }
+`
+
+async function invoicePage(supabase: Supabase, id: string, org: Organization | null, threeCopies: boolean) {
+  const [{ data: inv, error }, { data: states }] = await Promise.all([
+    supabase
+      .from('sales_invoices')
+      .select(`
+        *,
+        sales_order:sales_orders ( so_number, order_date ),
+        sales_invoice_lines ( * ),
+        delivery_challans ( challan_no, challan_date, vehicle_no )
+      `)
+      .eq('id', id)
+      .single(),
+    supabase.from('gst_states').select('code, name'),
+  ])
+
+  if (error || !inv) throw new Error('Invoice not found')
+
+  const stateName = (code: string | null) => {
+    if (!code) return '—'
+    return `${states?.find((s) => s.code === code)?.name ?? ''} (${code})`
+  }
+  const items = [...(inv.sales_invoice_lines ?? [])].sort((a, b) => a.sort_order - b.sort_order)
+  const inter = inv.is_interstate
+  const cancelled = inv.status === 'cancelled'
+
+  // HSN / rate-wise tax summary
+  const summary = new Map<string, { hsn: string; rate: number; taxable: number; cgst: number; sgst: number; igst: number }>()
+  for (const l of items) {
+    const key = `${l.hsn_code ?? '—'}|${l.gst_rate}`
+    const row = summary.get(key) ?? { hsn: l.hsn_code ?? '—', rate: l.gst_rate, taxable: 0, cgst: 0, sgst: 0, igst: 0 }
+    row.taxable += l.taxable_value
+    row.cgst += l.cgst_amount
+    row.sgst += l.sgst_amount
+    row.igst += l.igst_amount
+    summary.set(key, row)
+  }
+
+  const qtyTotal = items.reduce((s, l) => s + l.qty, 0)
+  const challans = inv.delivery_challans ?? []
+  const vehicles = [...new Set(challans.map((c) => c.vehicle_no).filter(Boolean))]
+
+  const copy = (label: string, last: boolean) => html`
+  <div class="${last ? '' : 'page-break'}">
+  <div class="copy-label">${label}</div>
+  ${cancelled ? html`<div style="color:#DC2626;font-weight:bold;text-align:center;font-size:14px;margin:4px 0">CANCELLED — ${inv.cancel_reason ?? ''}</div>` : ''}
+  <div class="inv">
+    <div class="inv-title">TAX INVOICE</div>
+    <div class="inv-head">
+      <div>
+        <div class="company-name">${inv.supplier_name}</div>
+        ${inv.supplier_address ? html`<div class="company-sub">${inv.supplier_address}</div>` : ''}
+        <div class="company-sub">State: ${stateName(inv.supplier_state_code)}</div>
+        ${[org?.phone, org?.email].filter(Boolean).length ? html`<div class="company-sub">${[org?.phone, org?.email].filter(Boolean).join(' | ')}</div>` : ''}
+        <div class="company-sub"><strong>GSTIN: ${inv.supplier_gstin}</strong></div>
+      </div>
+      <div style="text-align:right; font-size:10.5px; line-height:1.7">
+        <div class="lbl">Invoice No.</div>
+        <div style="font-family:monospace;font-size:13px;font-weight:bold">${inv.invoice_no}</div>
+        <div><span class="lbl">Date</span> ${dt(inv.invoice_date)}</div>
+        <div><span class="lbl">Due</span> ${dt(inv.due_date)}</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <div class="lbl">Bill to / Ship to</div>
+        <strong>${inv.buyer_name}</strong><br>
+        ${inv.buyer_address ? html`${inv.buyer_address}<br>` : ''}
+        GSTIN: ${inv.buyer_gstin ?? 'Unregistered'}<br>
+        State: ${stateName(inv.buyer_state_code ?? inv.place_of_supply)}
+      </div>
+      <div>
+        <div><span class="lbl">Place of supply</span> ${stateName(inv.place_of_supply)}</div>
+        <div><span class="lbl">Reverse charge</span> ${inv.reverse_charge ? 'Yes' : 'No'}</div>
+        ${inv.sales_order ? html`<div><span class="lbl">Order ref.</span> ${inv.sales_order.so_number} (${dt(inv.sales_order.order_date)})</div>` : ''}
+        ${challans.length ? html`<div><span class="lbl">Delivery challan</span> ${challans.map((c) => `${c.challan_no} (${dt(c.challan_date)})`).join(', ')}</div>` : ''}
+        ${vehicles.length ? html`<div><span class="lbl">Vehicle</span> ${vehicles.join(', ')}</div>` : ''}
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:22px">#</th>
+          <th>Description of goods</th>
+          <th class="c" style="width:62px">HSN</th>
+          <th class="r" style="width:54px">Qty</th>
+          <th class="r" style="width:66px">Rate</th>
+          <th class="r" style="width:78px">Taxable value</th>
+          ${inter
+            ? html`<th class="r" style="width:84px">IGST</th>`
+            : html`<th class="r" style="width:74px">CGST</th><th class="r" style="width:74px">SGST</th>`}
+          <th class="r" style="width:82px">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items.map((l, i) => html`<tr>
+          <td class="c">${i + 1}</td>
+          <td>${l.description}</td>
+          <td class="c">${l.hsn_code ?? '—'}</td>
+          <td class="r">${qtyFmt(l.qty)} ${l.unit_name ?? ''}</td>
+          <td class="r">${inr(l.rate)}</td>
+          <td class="r">${inr(l.taxable_value)}</td>
+          ${inter
+            ? html`<td class="r">${inr(l.igst_amount)}<br><span class="small">@ ${l.gst_rate}%</span></td>`
+            : html`<td class="r">${inr(l.cgst_amount)}<br><span class="small">@ ${l.gst_rate / 2}%</span></td>
+                   <td class="r">${inr(l.sgst_amount)}<br><span class="small">@ ${l.gst_rate / 2}%</span></td>`}
+          <td class="r">${inr(l.line_total)}</td>
+        </tr>`)}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td></td><td>Total</td><td></td>
+          <td class="r">${qtyFmt(qtyTotal)}</td><td></td>
+          <td class="r">${inr(inv.taxable_value)}</td>
+          ${inter
+            ? html`<td class="r">${inr(inv.igst_amount)}</td>`
+            : html`<td class="r">${inr(inv.cgst_amount)}</td><td class="r">${inr(inv.sgst_amount)}</td>`}
+          <td class="r">${inr(inv.taxable_value + inv.cgst_amount + inv.sgst_amount + inv.igst_amount)}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="sum">
+      <div>
+        <div class="lbl">Tax summary (HSN-wise)</div>
+        <table style="margin-top:4px">
+          <thead><tr>
+            <th>HSN</th><th class="r">Taxable</th><th class="c">Rate</th>
+            ${inter ? html`<th class="r">IGST</th>` : html`<th class="r">CGST</th><th class="r">SGST</th>`}
+          </tr></thead>
+          <tbody>
+            ${[...summary.values()].map((r) => html`<tr>
+              <td>${r.hsn}</td><td class="r">${inr(r.taxable)}</td><td class="c">${r.rate}%</td>
+              ${inter ? html`<td class="r">${inr(r.igst)}</td>` : html`<td class="r">${inr(r.cgst)}</td><td class="r">${inr(r.sgst)}</td>`}
+            </tr>`)}
+          </tbody>
+        </table>
+        <div class="words"><strong>Amount in words:</strong> ${amountInWords(inv.total_amount)}</div>
+        ${org?.bank_account_no ? html`
+        <div class="small" style="margin-top:8px">
+          <strong>Bank details</strong><br>
+          ${[org.bank_name, org.bank_branch].filter(Boolean).join(', ')}<br>
+          A/c No. ${org.bank_account_no}${org.bank_ifsc ? html` · IFSC ${org.bank_ifsc}` : ''}
+        </div>` : ''}
+      </div>
+      <div>
+        <div class="row"><span>Taxable value</span><span>${inr(inv.taxable_value)}</span></div>
+        ${inter
+          ? html`<div class="row"><span>IGST</span><span>${inr(inv.igst_amount)}</span></div>`
+          : html`<div class="row"><span>CGST</span><span>${inr(inv.cgst_amount)}</span></div>
+                 <div class="row"><span>SGST</span><span>${inr(inv.sgst_amount)}</span></div>`}
+        ${inv.round_off !== 0 ? html`<div class="row"><span>Round off</span><span>${inr(inv.round_off)}</span></div>` : ''}
+        <div class="row grand"><span>Invoice total</span><span>${inr(inv.total_amount)}</span></div>
+        ${inv.reverse_charge ? html`<div class="small" style="margin-top:6px">Tax on this supply is payable by the recipient under reverse charge.</div>` : ''}
+      </div>
+    </div>
+
+    ${org?.invoice_terms || inv.notes ? html`
+    <div class="small" style="padding:8px 12px; border-top:1px solid #1E3A5F; white-space:pre-line">
+      ${org?.invoice_terms ? html`<strong>Terms &amp; conditions</strong>\n${org.invoice_terms}` : ''}
+      ${inv.notes ? html`${org?.invoice_terms ? '\n' : ''}<strong>Notes:</strong> ${inv.notes}` : ''}
+    </div>` : ''}
+
+    <div class="sign">
+      For <strong>${inv.supplier_name}</strong>
+      <div class="space"></div>
+      Authorised Signatory
+    </div>
+  </div>
+  <div class="small" style="text-align:center;margin-top:6px">This is a computer-generated invoice.</div>
+  </div>`
+
+  const labels = threeCopies
+    ? ['ORIGINAL FOR RECIPIENT', 'DUPLICATE FOR TRANSPORTER', 'TRIPLICATE FOR SUPPLIER']
+    : ['ORIGINAL FOR RECIPIENT']
+
+  return html`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>${inv.invoice_no}</title><style>${raw(CSS)}${raw(INVOICE_CSS)}</style></head>
+<body><div class="page">
+${labels.map((label, i) => copy(label, i === labels.length - 1))}
+</div>
+${printScript}
+</body></html>`
 }

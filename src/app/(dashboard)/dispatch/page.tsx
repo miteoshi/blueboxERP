@@ -188,7 +188,7 @@ export default function DispatchPage() {
                     </td>
                   </tr>
                 )}
-                {challans?.map((c: any) => (
+                {challans?.map((c) => (
                   <tr
                     key={c.id}
                     className="hover:bg-slate-50 transition-colors"

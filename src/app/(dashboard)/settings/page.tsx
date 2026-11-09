@@ -11,12 +11,10 @@ import { Badge } from '@/components/ui/badge'
 import { TableLoader } from '@/components/ui/spinner'
 import { formatDate, formatCurrency } from '@/lib/utils/format'
 import { toast } from 'sonner'
-import {
-  Shield, RefreshCw, Tag,
-  Check, X, AlertTriangle, Users,
-} from 'lucide-react'
-import type { Enums } from '@/lib/types/database'
+import { Shield, RefreshCw, Tag, Check, X, AlertTriangle } from 'lucide-react'
+import type { Enums, Database } from '@/lib/types/database'
 import { useOrgId } from '@/lib/hooks/use-tenant'
+import { ilikeAny } from '@/lib/utils/search'
 
 
 type UserRole = Enums<"user_role">
@@ -88,7 +86,7 @@ function useItemsWithPrices(search: string, orgId: string | null) {
         .order("category_id");
 
       if (search) {
-        query = query.or(`name.ilike.%${search}%,item_code.ilike.%${search}%`);
+        query = query.or(ilikeAny(['name', 'item_code'], search));
       }
 
       const { data: items, error } = await query;
@@ -112,6 +110,8 @@ function useItemsWithPrices(search: string, orgId: string | null) {
     enabled: !!orgId,
   });
 }
+
+type ReconcileRow = Database['public']['Functions']['reconcile_inventory_balance']['Returns'][number]
 
 export default function SettingsPage() {
   const supabase     = createClient()
@@ -137,7 +137,7 @@ export default function SettingsPage() {
 
   // ── Reconcile state ───────────────────────────────────────
   const [reconciling,     setReconciling]     = useState(false)
-  const [reconcileResult, setReconcileResult] = useState<any[] | null>(null)
+  const [reconcileResult, setReconcileResult] = useState<ReconcileRow[] | null>(null)
 
   // ── Update role ───────────────────────────────────────────
   async function handleRoleChange(userId: string, newRole: UserRole) {
@@ -184,37 +184,13 @@ export default function SettingsPage() {
 
     setSavingPrice(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      const today = new Date().toISOString().split('T')[0]
-
-      // Close the current active price
-      await supabase
-        .from('item_prices')
-        .update({ effective_to: today })
-        .eq('item_id', itemId)
-        .is('effective_to', null)
-
-      // Insert new price row
-      ///LATEST CHANGE
-      const currentPrice = items?.find((i) => i.id === itemId)?.currentPrice;
-
-      const selectedItem = items?.find((i) => i.id === itemId);
-
-      if (!selectedItem?.unit_id) {
-        toast.error("Item has no unit assigned");
-        return;
-      }
-
-      const { error } = await supabase.from("item_prices").insert({
-        org_id: orgId,
-        item_id: itemId,
-        purchase_rate: newPurchase ? Number(newPurchase) : null,
-        selling_rate: newSelling ? Number(newSelling) : null,
-        gst_percent: (currentPrice?.gst_percent ?? "18") as any,
-        unit_id: selectedItem.unit_id,
-        effective_from: today,
-        created_by: user?.id ?? null,
-      });
+      // One transaction: closes the current price and starts the new one,
+      // keeping whichever rate was left blank.
+      const { error } = await supabase.rpc('set_item_price', {
+        p_item_id: itemId,
+        p_purchase_rate: newPurchase ? Number(newPurchase) : undefined,
+        p_selling_rate: newSelling ? Number(newSelling) : undefined,
+      })
 
       if (error) throw error
 
@@ -243,7 +219,7 @@ export default function SettingsPage() {
     try {
       const { data, error } = await supabase.rpc("reconcile_inventory_balance");
       if (error) throw error;
-      const result = (data as any[]) ?? [];
+      const result = data ?? [];
       setReconcileResult(result);
       if (result.length === 0) {
         toast.success("All balances correct — no drift detected");
@@ -352,7 +328,7 @@ export default function SettingsPage() {
                       </td>
                     </tr>
                   )}
-                  {profiles?.map((profile: any) => (
+                  {profiles?.map((profile) => (
                     <tr
                       key={profile.id}
                       className={`hover:bg-slate-50 transition-colors ${
@@ -512,7 +488,7 @@ export default function SettingsPage() {
                         </td>
                       </tr>
                     )}
-                    {items?.map((item: any) => (
+                    {items?.map((item) => (
                       <tr
                         key={item.id}
                         className="hover:bg-slate-50 transition-colors"
@@ -630,7 +606,7 @@ export default function SettingsPage() {
             </CardHeader>
             <CardBody className="space-y-4">
               <p className="text-sm text-slate-600 leading-relaxed">
-                This function recalculates every item's inventory balance from
+                This function recalculates every item&apos;s inventory balance from
                 scratch using the raw <strong>stock_movements</strong> ledger as
                 the source of truth. It compares the recalculated values against
                 the cached
@@ -694,7 +670,7 @@ export default function SettingsPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
-                            {reconcileResult.map((r: any, i: number) => (
+                            {reconcileResult.map((r, i) => (
                               <tr key={i} className="hover:bg-slate-50">
                                 <td className="px-3 py-2 font-mono text-slate-500 truncate max-w-[200px]">
                                   {r.item_id}

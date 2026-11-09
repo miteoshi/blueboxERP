@@ -6,7 +6,7 @@ import { useProductionOrders } from '@/lib/hooks/use-production'
 import { PageHeader } from '@/components/layout/page-header'
 import { ProductionStatusBadge } from '@/components/ui/badge'
 import { TableLoader } from '@/components/ui/spinner'
-import { formatDate, formatQty } from '@/lib/utils/format'
+import { formatDate, formatQty, isPastDate } from '@/lib/utils/format'
 import { Search, Eye, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -143,11 +143,11 @@ export default function ProductionPage() {
                     </td>
                   </tr>
                 )}
-                {filtered.map((order: any) => {
+                {filtered.map((order) => {
                   const items       = order.production_order_items ?? []
                   const assignments = order.production_assignments ?? []
                   const isOverdue   = order.target_date &&
-                    new Date(order.target_date) < new Date() &&
+                    isPastDate(order.target_date) &&
                     !['completed', 'cancelled'].includes(order.status)
 
                   return (
@@ -198,7 +198,7 @@ export default function ProductionPage() {
 
                       <td className="px-4 py-3">
                         <div className="space-y-0.5">
-                          {items.slice(0, 2).map((item: any) => (
+                          {items.slice(0, 2).map((item) => (
                             <div
                               key={item.id}
                               className="text-xs text-slate-600"
@@ -225,7 +225,7 @@ export default function ProductionPage() {
                       <td className="px-4 py-3">
                         {assignments.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
-                            {assignments.slice(0, 3).map((a: any) => (
+                            {assignments.slice(0, 3).map((a) => (
                               <span
                                 key={a.id}
                                 className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded"

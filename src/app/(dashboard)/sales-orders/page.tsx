@@ -5,7 +5,7 @@ import { useSalesOrders } from '@/lib/hooks/use-sales-orders'
 import { PageHeader } from '@/components/layout/page-header'
 import { OrderStatusBadge } from '@/components/ui/badge'
 import { TableLoader } from '@/components/ui/spinner'
-import { formatCurrency, formatDate } from '@/lib/utils/format'
+import { formatCurrency, formatDate, isPastDate } from '@/lib/utils/format'
 import { Search, Eye, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import type { Enums } from '@/lib/types/database'
@@ -22,20 +22,6 @@ const STATUS_TABS: { label: string; value: OrderStatus | '' }[] = [
   { label: 'Cancelled',  value: 'cancelled' },
 ]
 
-// Maps DB status to friendly display label
-function statusLabel(status: string): string {
-  const map: Record<string, string> = {
-    draft:         'Draft',
-    confirmed:     'Confirmed',
-    in_production: 'In Production', // legacy — keep for display only
-    ready:         'Reserved',      // renamed
-    dispatched:    'Dispatched',
-    delivered:     'Delivered',
-    cancelled:     'Cancelled',
-  }
-  return map[status] ?? status
-}
-
 export default function SalesOrdersPage() {
   const [status, setStatus] = useState<OrderStatus | ''>('')
   const [search, setSearch] = useState('')
@@ -46,8 +32,8 @@ export default function SalesOrdersPage() {
   })
 
   const totalOutstanding = (orders ?? [])
-    .filter((o: any) => (o.balance_due ?? 0) > 0)
-    .reduce((s: number, o: any) => s + (o.balance_due ?? 0), 0)
+    .filter((o) => (o.balance_due ?? 0) > 0)
+    .reduce((s, o) => s + (o.balance_due ?? 0), 0)
 
   return (
     <div>
@@ -131,13 +117,9 @@ export default function SalesOrdersPage() {
                     </td>
                   </tr>
                 )}
-                {orders?.map((order: any) => {
-                  const isOverdue = order.delivery_date &&
-                    new Date(order.delivery_date) < new Date() &&
+                {orders?.map((order) => {
+                  const isOverdue = isPastDate(order.delivery_date) &&
                     !['delivered', 'cancelled'].includes(order.status)
-
-                  // Show "Reserved" label instead of "Ready"
-                  const displayStatus = order.status === 'ready' ? 'reserved' : order.status
 
                   return (
                     <tr

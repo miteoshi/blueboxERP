@@ -124,8 +124,6 @@ export default function OnboardingPage() {
         throw new Error(result.error || "Failed to create organization");
       }
 
-      const orgId = result.orgId;
-
       if (user && fullName.trim()) {
         try {
           await supabase.auth.updateUser({

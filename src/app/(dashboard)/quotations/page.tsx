@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { DocumentStatusBadge } from '@/components/ui/badge'
 import { TableLoader } from '@/components/ui/spinner'
-import { formatCurrency, formatDate } from '@/lib/utils/format'
+import { formatCurrency, formatDate, isPastDate } from '@/lib/utils/format'
 import { Plus, Search, CheckCircle, XCircle, Eye } from 'lucide-react'
 import Link from 'next/link'
 import type { Enums } from '@/lib/types/database'
@@ -127,9 +127,9 @@ export default function QuotationsPage() {
                   </tr>
                 )}
                 {quotations?.map(q => {
-                  const isExpired   = q.valid_until && new Date(q.valid_until) < new Date()
+                  const isExpired   = isPastDate(q.valid_until)
                   const isPendingQ  = q.status === 'pending_approval'
-                  const isConverted = (q.status as any) === 'converted'
+                  const isConverted = q.status === 'converted'
 
                   return (
                     <tr key={q.id} className="hover:bg-slate-50 transition-colors">
@@ -142,8 +142,8 @@ export default function QuotationsPage() {
                         </Link>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-medium text-slate-900">{(q.client as any)?.name}</div>
-                        <div className="text-xs text-slate-400">{(q.client as any)?.phone}</div>
+                        <div className="font-medium text-slate-900">{q.client?.name}</div>
+                        <div className="text-xs text-slate-400">{q.client?.phone}</div>
                       </td>
                       <td className="px-4 py-3 text-slate-600">{formatDate(q.quotation_date)}</td>
                       <td className="px-4 py-3">
@@ -172,7 +172,7 @@ export default function QuotationsPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-slate-500 text-xs">
-                        {(q.creator as any)?.full_name ?? '—'}
+                        {q.creator?.full_name ?? '—'}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-center gap-1.5">

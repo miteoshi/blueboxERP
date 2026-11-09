@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Input, Textarea } from '@/components/ui/input'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
-import { formatCurrency, formatQty } from '@/lib/utils/format'
+import { formatCurrency, formatQty, todayISO } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { Trash2, Save, AlertTriangle } from 'lucide-react'
 import type { Enums } from '@/lib/types/database'
@@ -27,7 +27,6 @@ interface ChallanLine {
   unit: string;
   rate: number;
   max_qty: number;
-  reservation_id: string | null;
 }
 
 function useSalesOrdersForDispatch(orgId: string | null) {
@@ -50,7 +49,8 @@ function useSalesOrdersForDispatch(orgId: string | null) {
 
             client:clients (
               id,
-              name
+              name,
+              phone
             ),
 
             sales_order_lines (
@@ -118,6 +118,32 @@ function useSOReservations(soId: string, orgId: string | null) {
   });
 }
 
+type DispatchSoLine = {
+  id: string
+  qty: number
+  qty_dispatched: number | null
+  unit_rate: number
+  unit_id: string
+  unit: { id: string; name: string } | null
+  item: { id: string; item_code: string; name: string } | null
+}
+
+function buildChallanLines(soLines: DispatchSoLine[] | null | undefined): ChallanLine[] {
+  return (soLines ?? [])
+    .filter((l) => l.qty - (l.qty_dispatched ?? 0) > 0)
+    .map((l) => ({
+      item_id: l.item?.id ?? '',
+      item_name: l.item?.name ?? '',
+      item_code: l.item?.item_code ?? '',
+      so_line_id: l.id,
+      qty: l.qty - (l.qty_dispatched ?? 0),
+      unit_id: l.unit_id,
+      unit: l.unit?.name ?? '',
+      rate: l.unit_rate,
+      max_qty: l.qty - (l.qty_dispatched ?? 0),
+    }))
+}
+
 export default function NewChallanPage() {
   const router       = useRouter()
   const searchParams = useSearchParams()
@@ -127,7 +153,7 @@ export default function NewChallanPage() {
 const { data: salesOrders } = useSalesOrdersForDispatch(orgId);
 
   const [selectedSoId,  setSelectedSoId]  = useState(searchParams.get('so') ?? '')
-  const [challanDate,   setChallanDate]   = useState(new Date().toISOString().split('T')[0])
+  const [challanDate,   setChallanDate]   = useState(todayISO)
   const [transportMode, setTransportMode] = useState<TransportMode>('client_truck')
   const [vehicleNo,     setVehicleNo]     = useState('')
   const [driverName,    setDriverName]    = useState('')
@@ -138,49 +164,26 @@ const { data: salesOrders } = useSalesOrdersForDispatch(orgId);
   // ── Fetch reservations for the selected SO ────────────────
 const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
 
-  // Pre-fill lines from SO when selected
-  // Now also attaches reservation_id per item from reservationMap
-  useEffect(() => {
-    if (!selectedSoId || !salesOrders) return;
-    const so = salesOrders.find((s) => s.id === selectedSoId);
-    if (!so) return;
+  // ── Pre-fill lines once per selected SO ───────────────────
+  // Built during render (not in an effect keyed on the query data) so a
+  // background refetch of the sales orders doesn't wipe quantities the
+  // user has already edited. Lines are rebuilt only when the SO changes.
+  const [linesSoId, setLinesSoId] = useState<string | null>(null)
+  const soForLines = salesOrders?.find((s) => s.id === selectedSoId)
+  if (selectedSoId !== linesSoId && (soForLines || !selectedSoId)) {
+    setLinesSoId(selectedSoId)
+    setLines(soForLines ? buildChallanLines(soForLines.sales_order_lines) : [])
+  }
 
-    const soLines = (so.sales_order_lines as any[]) ?? [];
-    const remaining = soLines
-      .filter((l) => l.qty - (l.qty_dispatched ?? 0) > 0)
-      .map((l) => ({
-        item_id: l.item?.id ?? "",
-        item_name: l.item?.name ?? "",
-        item_code: l.item?.item_code ?? "",
-        so_line_id: l.id,
-        qty: l.qty - (l.qty_dispatched ?? 0),
-        unit_id: l.unit_id,
-        unit: l.unit?.name ?? "",
-        rate: l.unit_rate,
-        max_qty: l.qty - (l.qty_dispatched ?? 0),
-        reservation_id: reservationMap?.get(l.item?.id) ?? null,
-      }));
-
-    setLines(remaining);
-  }, [selectedSoId, salesOrders, reservationMap]);
-
-  // ── Re-attach reservation_ids once reservationMap loads ───
-  // The SO lines effect runs before reservationMap is ready on
-  // first render, so we patch them in as soon as the map arrives.
-  useEffect(() => {
-    if (!reservationMap || lines.length === 0) return
-    setLines(prev => prev.map(l => ({
-      ...l,
-      reservation_id: reservationMap.get(l.item_id) ?? null,
-    })))
-  }, [reservationMap])
+  // Reservation status is derived, so it stays current as the map loads.
+  const hasReservation = (l: ChallanLine) => !!reservationMap?.has(l.item_id)
 
   const selectedSo     = salesOrders?.find(s => s.id === selectedSoId)
-  const selectedClient = selectedSo?.client as any
+  const selectedClient = selectedSo?.client
   const totalAmount    = lines.reduce((s, l) => s + l.qty * l.rate, 0)
 
   // Warn if any line has no reservation (stock not reserved for this SO)
-  const missingReservations = lines.filter(l => !l.reservation_id)
+  const missingReservations = lines.filter(l => !hasReservation(l))
 
   function updateLine(i: number, field: keyof ChallanLine, value: string | number) {
     setLines(prev => prev.map((l, idx) => {
@@ -320,7 +323,7 @@ const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
                   <option value="">Select sales order…</option>
                   {salesOrders?.map(so => (
                     <option key={so.id} value={so.id}>
-                      {so.so_number} — {(so.client as any)?.name}
+                      {so.so_number} — {so.client?.name}
                     </option>
                   ))}
                 </select>
@@ -465,7 +468,7 @@ const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
                           </td>
                           {/* ── Reserved / Available indicator ── */}
                           <td className="px-3 py-2.5 text-center">
-                            {line.reservation_id ? (
+                            {hasReservation(line) ? (
                               <span style={{ fontSize: 10, fontWeight: 600, background: 'rgba(20,184,166,0.12)', color: '#0d9488', padding: '2px 7px', borderRadius: 5 }}>
                                 Reserved
                               </span>

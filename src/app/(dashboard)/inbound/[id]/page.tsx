@@ -75,10 +75,10 @@ export default async function GrnDetailPage({ params }: Props) {
 
   if (!grn) notFound()
 
-  const supplier = grn.supplier  as any
-  const receiver = grn.receiver  as any
-  const creator  = grn.creator   as any
-  const lines    = (grn.inbound_receipt_lines as any[]) ?? []
+  const supplier = grn.supplier
+  const receiver = grn.receiver
+  const creator  = grn.creator
+  const lines    = grn.inbound_receipt_lines ?? []
   const subtotal   = grn.total_amount ?? 0
   const gstAmount  = grn.gst_amount   ?? 0
   const grandTotal = subtotal + gstAmount
@@ -205,7 +205,7 @@ export default async function GrnDetailPage({ params }: Props) {
                   {lines.length === 0 && (
                     <tr><td colSpan={7} className="text-center py-8 text-slate-400 text-xs">No lines</td></tr>
                   )}
-                  {lines.map((line: any, i: number) => {
+                  {lines.map((line, i) => {
                     const variance = line.qty_ordered
                       ? line.qty_received - line.qty_ordered
                       : null
@@ -307,7 +307,7 @@ export default async function GrnDetailPage({ params }: Props) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {movements.map((m: any) => (
+                    {movements.map((m) => (
                       <tr key={m.id}>
                         <td className="px-4 py-2.5">
                           <Badge variant="success">{m.movement_type}</Badge>

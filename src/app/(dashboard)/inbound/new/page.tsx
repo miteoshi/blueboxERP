@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Input, Textarea } from '@/components/ui/input'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
-import { formatCurrency } from '@/lib/utils/format'
+import { formatCurrency, todayISO } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { Plus, Trash2, Save } from 'lucide-react'
 import type {
@@ -128,7 +128,7 @@ const { data: suppliers } = useSuppliers(orgId);
 const { data: items } = useItemsForGrn(orgId);
 
   const [supplierId,    setSupplierId]    = useState('')
-  const [receiptDate,   setReceiptDate]   = useState(new Date().toISOString().split('T')[0])
+  const [receiptDate,   setReceiptDate]   = useState(todayISO)
   const [transportMode, setTransportMode] = useState<TransportMode>('supplier_truck')
   const [vehicleNo,     setVehicleNo]     = useState('')
   const [driverName,    setDriverName]    = useState('')

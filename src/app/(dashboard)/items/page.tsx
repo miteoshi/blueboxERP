@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useItemCategories } from "@/lib/hooks/use-items";
+import { ilikeAny } from '@/lib/utils/search'
 
 // Fetch items with their current prices joined
 function useItemsWithPrices(
@@ -69,7 +70,7 @@ function useItemsWithPrices(
       }
 
       if (search) {
-        query = query.or(`name.ilike.%${search}%,item_code.ilike.%${search}%`);
+        query = query.or(ilikeAny(['name', 'item_code'], search));
       }
 
       const { data: items, error } = await query;

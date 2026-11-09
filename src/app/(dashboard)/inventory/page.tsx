@@ -10,10 +10,7 @@ import { TableLoader } from '@/components/ui/spinner'
 import { formatQty } from '@/lib/utils/format'
 import { useProfile } from '@/lib/hooks/use-profile'
 import Link from 'next/link'
-import {
-  Search, AlertTriangle, Package,
-  TrendingDown, CheckCircle2, Filter
-} from 'lucide-react'
+import { Search, AlertTriangle, Package, TrendingDown, CheckCircle2 } from 'lucide-react'
 
 
 import { useEffect } from 'react'

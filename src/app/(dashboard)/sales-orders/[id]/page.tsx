@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useOrgId } from "@/lib/hooks/use-tenant";
 import { useParams, useRouter } from 'next/navigation'
 import { useSalesOrder, useRecordPayment } from '@/lib/hooks/use-sales-orders'
-import { useCanApprove, useCanSell, useCanDispatch } from '@/lib/hooks/use-profile'
+import { useCanSell, useCanDispatch } from '@/lib/hooks/use-profile'
 import { reserveSalesOrder, cancelSalesOrder } from '@/lib/utils/inventory'
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -13,7 +13,7 @@ import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge, OrderStatusBadge } from '@/components/ui/badge'
 import { PageLoader } from '@/components/ui/spinner'
-import { formatCurrency, formatDate, formatQty } from '@/lib/utils/format'
+import { formatCurrency, formatDate, formatQty, isPastDate } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import {
   ArrowLeft, Send, CreditCard,
@@ -29,7 +29,6 @@ export default function SalesOrderDetailPage() {
   const qc       = useQueryClient()
   const orgId = useOrgId();
 
-  const canApprove = useCanApprove()
   const canSell    = useCanSell()
   const canDispatch = useCanDispatch()
 
@@ -68,9 +67,9 @@ const { data: reservations } = useQuery({
   if (!so)       return <div className="text-slate-500 text-sm p-6">Sales order not found</div>
 
   const salesOrder = so
-  const client     = so.client as any
-  const lines      = (so.sales_order_lines as any[]) ?? []
-  const challans   = (so.delivery_challans as any[]) ?? []
+  const client     = so.client
+  const lines      = so.sales_order_lines ?? []
+  const challans   = so.delivery_challans ?? []
 
   const isConfirmed  = so.status === 'confirmed'
   const isReserved   = so.status === 'ready'
@@ -331,7 +330,7 @@ const { data: reservations } = useQuery({
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">Delivery By</span>
                   <span className={
-                    new Date(salesOrder.delivery_date) < new Date() &&
+                    isPastDate(salesOrder.delivery_date) &&
                     !['delivered', 'cancelled'].includes(salesOrder.status)
                       ? 'text-red-500 font-medium'
                       : 'text-slate-700'
@@ -420,7 +419,7 @@ const { data: reservations } = useQuery({
                     href={`/quotations/${salesOrder.quotation_id as string}`}
                     className="font-mono text-blue-600 hover:underline text-xs"
                   >
-                    {(salesOrder.quotation as any)?.quotation_no}
+                    {salesOrder.quotation?.quotation_no}
                   </Link>
                 </div>
               </CardBody>
@@ -438,7 +437,7 @@ const { data: reservations } = useQuery({
                 </h3>
               </CardHeader>
               <CardBody className="space-y-2 text-sm">
-                {reservations?.map((r: any) => (
+                {reservations?.map((r) => (
                   <div key={r.id} className="flex justify-between items-center">
                     <span className="text-slate-600 text-xs truncate max-w-[140px]">{r.item_id}</span>
                     <span className="font-medium text-teal-700">{r.qty_reserved} reserved</span>
@@ -462,7 +461,7 @@ const { data: reservations } = useQuery({
                 </h3>
               </CardHeader>
               <CardBody className="space-y-2">
-                {challans.map((c: any) => (
+                {challans.map((c) => (
                   <div key={c.id} className="flex items-center justify-between text-sm">
                     <Link href={`/dispatch/${c.id}`} className="font-mono text-blue-600 hover:underline">
                       {c.challan_no}
@@ -502,7 +501,7 @@ const { data: reservations } = useQuery({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {lines.map((line: any, i: number) => {
+                  {lines.map((line, i) => {
                     const subtotal      = line.qty * line.unit_rate
                     const gst           = subtotal * Number(line.gst_percent) / 100
                     const allDispatched = (line.qty_dispatched ?? 0) >= line.qty
@@ -518,16 +517,16 @@ const { data: reservations } = useQuery({
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums font-semibold">
-                          {formatQty(line.qty, line.unit)}
+                          {formatQty(line.qty, line.unit?.name)}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">
                           <span className={allDispatched ? 'text-green-600 font-medium' : 'text-amber-600'}>
-                            {formatQty(line.qty_dispatched ?? 0, line.unit)}
+                            {formatQty(line.qty_dispatched ?? 0, line.unit?.name)}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-slate-600">
                           {formatCurrency(line.unit_rate)}
-                          <div className="text-xs text-slate-400">/{line.unit}</div>
+                          <div className="text-xs text-slate-400">/{line.unit?.name}</div>
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">
                           <div className="font-semibold text-slate-900">{formatCurrency(subtotal + gst)}</div>

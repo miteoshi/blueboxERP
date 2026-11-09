@@ -131,7 +131,6 @@ export default function NewQuotationPage() {
   // ── Line calculations ─────────────────────────────────────
   const lineSubtotal  = (l: LineItem) => l.qty * l.unit_rate
   const lineGst       = (l: LineItem) => lineSubtotal(l) * Number(l.gst_percent) / 100
-  const lineTotal     = (l: LineItem) => lineSubtotal(l) + lineGst(l)
 
   const subtotal   = lines.reduce((s, l) => s + lineSubtotal(l), 0)
   const gstAmount  = lines.reduce((s, l) => s + lineGst(l), 0)
@@ -190,12 +189,18 @@ export default function NewQuotationPage() {
       toast.error("All quantities must be greater than 0");
       return;
     }
+
+    if (lines.some((l) => !(l.unit_rate >= 0))) {
+      toast.error("Rates cannot be negative");
+      return;
+    }
     if (!orgId) {
       toast.error("Organization not loaded");
       return;
     }
 
-    submit ? setSubmitting(true) : setSaving(true)
+    if (submit) setSubmitting(true)
+    else setSaving(true)
 
     try {
       // One transaction in the database: header + lines, with the totals

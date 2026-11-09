@@ -216,7 +216,10 @@ export async function POST(req: NextRequest) {
       // Let the client know if a suffix was added
       emailSuffixed: finalEmail !== baseEmail,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Could not create worker' },
+      { status: 500 },
+    );
   }
 }

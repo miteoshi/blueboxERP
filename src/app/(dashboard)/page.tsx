@@ -7,10 +7,7 @@ import { StatCard } from '@/components/ui/card'
 import { PageHeader } from '@/components/layout/page-header'
 import { OrderStatusBadge } from '@/components/ui/badge'
 import { formatCurrency, formatDate, formatQty } from '@/lib/utils/format'
-import {
-  Package, ShoppingCart, FileText,
-  Factory, AlertTriangle,
-} from 'lucide-react'
+import { ShoppingCart, FileText, Factory, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 
@@ -63,7 +60,7 @@ function useDashboardStats(orgId: string | null) {
 function useReorderAlerts(orgId: string | null) {
   const supabase = createClient();
   return useQuery({
-    queryKey: ["reorder-alerts", orgId],
+    queryKey: ["reorder-alerts", orgId, "top5"],
     queryFn: async () => {
       if (!orgId) return [];
       const { data, error } = await supabase
@@ -214,7 +211,7 @@ export default function DashboardPage() {
             {!recentOrders?.length && (
               <p className="text-sm text-slate-400 text-center py-8">No orders yet</p>
             )}
-            {recentOrders?.map((order: any) => (
+            {recentOrders?.map((order) => (
               <Link
                 key={order.id}
                 href={`/sales-orders/${order.id}`}
@@ -233,13 +230,13 @@ export default function DashboardPage() {
                     <div className="text-sm font-semibold text-slate-900">
                       {formatCurrency(order.total_amount)}
                     </div>
-                    {order.balance_due > 0 && (
+                    {(order.balance_due ?? 0) > 0 && (
                       <div className="text-xs text-amber-600">
                         {formatCurrency(order.balance_due)} due
                       </div>
                     )}
                   </div>
-                  <OrderStatusBadge status={order.status as any} />
+                  <OrderStatusBadge status={order.status} />
                 </div>
               </Link>
             ))}
@@ -263,7 +260,7 @@ export default function DashboardPage() {
                 All stock levels healthy ✓
               </p>
             )}
-            {alerts?.map((item: any) => (
+            {alerts?.map((item) => (
               <div key={item.item_id} className="px-5 py-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>

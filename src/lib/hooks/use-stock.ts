@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import type { Tables } from '@/lib/types/database'
+import { ilikeAny } from '@/lib/utils/search'
 
 export type StockLevel = Tables<'v_stock_levels'>
 // ── All stock levels ──────────────────────────────────────────
@@ -23,9 +24,7 @@ export function useStockLevels(search?: string) {
         .order('name')
 
       if (search) {
-        query = query.or(
-          `name.ilike.%${search}%,item_code.ilike.%${search}%`
-        )
+        query = query.or(ilikeAny(['name', 'item_code'], search))
       }
 
       const { data, error } = await query

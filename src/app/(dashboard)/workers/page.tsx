@@ -1,5 +1,7 @@
 'use client'
 
+import type { Tables } from '@/lib/types/database'
+
 import { useState } from 'react'
 import { useOrgId } from "@/lib/hooks/use-tenant";
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -40,11 +42,6 @@ function generateEmail(name: string): string {
     .replace(/[^a-z0-9\s]/g, '')
     .replace(/\s+/g, '.')
   return `${slug}@bluebox.com`
-}
-
-function defaultPassword(name: string): string {
-  const slug = name.trim().toLowerCase().replace(/\s+/g, '').slice(0, 6)
-  return `bluebox@${slug}123`
 }
 
 interface WorkerForm {
@@ -92,11 +89,10 @@ export default function WorkersPage() {
 
   // Preview the generated email as user types the name
   const previewEmail = form.name.trim() ? generateEmail(form.name) : null
-  const previewPass  = form.name.trim() ? defaultPassword(form.name) : null
 
   function openNew() { setForm(EMPTY); setEditId(null); setCreated(null); setShowForm(true) }
 
-  function openEdit(w: any) {
+  function openEdit(w: Tables<'workers'>) {
     setForm({ name: w.name ?? '', phone: w.phone ?? '', skill: w.skill ?? '' })
     setEditId(w.id)
     setCreated(null)
@@ -371,11 +367,11 @@ export default function WorkersPage() {
                     </div>
                     <div>
                       <span style={{ color: '#64748b' }}>Password: </span>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{previewPass}</span>
+                      <span style={{ fontWeight: 600 }}>random 12 characters, shown once after saving</span>
                     </div>
                   </div>
                   <p style={{ fontSize: 11, color: '#64748b', marginTop: 6 }}>
-                    These will be created automatically. Share with the worker after saving.
+                    The email may get a number added if it is already taken. Copy the password when it appears — it can&apos;t be shown again.
                   </p>
                 </div>
               )}
@@ -430,7 +426,7 @@ export default function WorkersPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-              {active.map((w: any) => (
+              {active.map((w) => (
                 <div key={w.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
@@ -464,7 +460,7 @@ export default function WorkersPage() {
             <>
               <h3 className="text-sm font-semibold text-slate-400 mb-3">Inactive Workers ({inactive.length})</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {inactive.map((w: any) => (
+                {inactive.map((w) => (
                   <div key={w.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex items-start justify-between gap-3 opacity-50">
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">

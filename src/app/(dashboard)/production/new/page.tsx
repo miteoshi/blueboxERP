@@ -29,6 +29,8 @@ import { formatQty } from '@/lib/utils/format'
 import { toast } from 'sonner'
 
 import { Trash2, Save, AlertTriangle, CheckCircle, Package } from 'lucide-react'
+import { RequirePermission } from '@/components/auth/require-permission'
+import { allRows } from "@/lib/utils/all-rows"
 
 
 
@@ -86,7 +88,7 @@ function useManufacturedItems(orgId: string | null) {
 
 
 
-      const { data, error } = await supabase
+      const { data, error } = await allRows(supabase
 
         .from("items")
 
@@ -120,7 +122,8 @@ function useManufacturedItems(orgId: string | null) {
 
         .eq("is_active", true)
 
-        .order("name");
+        .order("name")
+        .order("id"));
 
 
 
@@ -156,7 +159,7 @@ function useRawMaterialItems(orgId: string | null) {
 
 
 
-      const { data, error } = await supabase
+      const { data, error } = await allRows(supabase
 
         .from("items")
 
@@ -190,7 +193,8 @@ function useRawMaterialItems(orgId: string | null) {
 
         .eq("is_active", true)
 
-        .order("name");
+        .order("name")
+        .order("id"));
 
 
 
@@ -210,7 +214,7 @@ function useRawMaterialItems(orgId: string | null) {
 
 
 
-export default function NewProductionPage() {
+function NewProductionPageContent() {
 
   const router   = useRouter()
 
@@ -1068,4 +1072,12 @@ const { data: rawItems } = useRawMaterialItems(orgId);
 
   )
 
+}
+
+export default function NewProductionPage() {
+  return (
+    <RequirePermission permission="createProduction">
+      <NewProductionPageContent />
+    </RequirePermission>
+  )
 }

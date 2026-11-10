@@ -18,6 +18,8 @@ import { Plus, Trash2, Save } from 'lucide-react'
 import type {
     Enums
   } from '@/lib/types/database'
+import { RequirePermission } from '@/components/auth/require-permission'
+import { allRows } from "@/lib/utils/all-rows"
 
 
 type TransportMode = Enums<'transport_mode'>
@@ -56,11 +58,12 @@ function useSuppliers(orgId: string | null) {
     queryFn: async () => {
       if (!orgId) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await allRows(supabase
         .from("suppliers")
         .select("id, name, payment_terms")
         .eq("is_active", true)
-        .order("name");
+        .order("name")
+        .order("id"));
 
       if (error) throw error;
       return data;
@@ -78,7 +81,7 @@ function useItemsForGrn(orgId: string | null) {
     queryFn: async () => {
       if (!orgId) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await allRows(supabase
         .from("items")
         .select(
           `
@@ -95,14 +98,16 @@ function useItemsForGrn(orgId: string | null) {
         )
         .eq("is_active", true)
         .or("is_traded.eq.true,is_raw_material.eq.true")
-        .order("name");
+        .order("name")
+        .order("id"));
 
       if (error) throw error;
 
       // Get current purchase prices
-      const { data: prices, error: pricesError } = await supabase
+      const { data: prices, error: pricesError } = await allRows(supabase
         .from("v_current_prices")
-        .select("item_id, purchase_rate, gst_percent");
+        .select("item_id, purchase_rate, gst_percent")
+        .order("item_id"));
 
       if (pricesError) throw pricesError;
 
@@ -120,7 +125,7 @@ function useItemsForGrn(orgId: string | null) {
   });
 }
 
-export default function NewGrnPage() {
+function NewGrnPageContent() {
   const router   = useRouter()
   const qc       = useQueryClient()
   const orgId    = useOrgId()
@@ -566,4 +571,12 @@ const { data: items } = useItemsForGrn(orgId);
       </div>
     </div>
   );
+}
+
+export default function NewGrnPage() {
+  return (
+    <RequirePermission permission="receiveGoods">
+      <NewGrnPageContent />
+    </RequirePermission>
+  )
 }

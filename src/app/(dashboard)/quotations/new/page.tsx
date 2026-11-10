@@ -14,6 +14,8 @@ import { formatCurrency } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { Plus, Trash2, Save, Send } from 'lucide-react'
 import { useOrgId } from '@/lib/hooks/use-tenant'
+import { RequirePermission } from '@/components/auth/require-permission'
+import { allRows } from "@/lib/utils/all-rows"
 
 
 interface LineItem {
@@ -50,11 +52,12 @@ function useClients() {
     queryFn: async () => {
       if (!orgId) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await allRows(supabase
         .from("clients")
         .select("id, name, phone, gst_number")
         .eq("is_active", true)
-        .order("name");
+        .order("name")
+        .order("id"));
 
       if (error) throw error;
       return data;
@@ -74,7 +77,7 @@ function useItemsForQuote() {
     queryKey: ["items-for-quote", orgId],
     queryFn: async () => {
       if (!orgId) return [];
-      const { data: items, error } = await supabase
+      const { data: items, error } = await allRows(supabase
         .from("items")
         .select(
           `
@@ -91,12 +94,16 @@ function useItemsForQuote() {
         `
         )
         .eq("is_active", true)
-        .order("name");
+        .order("name")
+        .order("id"));
       if (error) throw error;
 
-      const { data: prices } = await supabase
+      const { data: prices, error: pricesError } = await allRows(supabase
         .from("v_current_prices")
-        .select("item_id, selling_rate, gst_percent, rate_unit");
+        .select("item_id, selling_rate, gst_percent, rate_unit")
+        .order("item_id"));
+
+      if (pricesError) throw pricesError;
 
       const priceMap = new Map(prices?.map((p) => [p.item_id, p]) ?? []);
       return (
@@ -108,7 +115,7 @@ function useItemsForQuote() {
   });
 }
 
-export default function NewQuotationPage() {
+function NewQuotationPageContent() {
   const router = useRouter()
   const supabase = createClient()
   const qc = useQueryClient()
@@ -520,5 +527,13 @@ export default function NewQuotationPage() {
 
       </div>
     </div>
+  )
+}
+
+export default function NewQuotationPage() {
+  return (
+    <RequirePermission permission="sell">
+      <NewQuotationPageContent />
+    </RequirePermission>
   )
 }

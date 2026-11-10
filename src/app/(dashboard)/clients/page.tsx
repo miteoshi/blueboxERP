@@ -14,9 +14,11 @@ import { formatCurrency } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { Plus, Search, X } from 'lucide-react'
 import { useOrgId } from '@/lib/hooks/use-tenant'
+import { useCan } from '@/lib/hooks/use-profile'
 import { useGstStates } from '@/lib/hooks/use-finance'
 import { gstinError, normalizeGstin, stateCodeFromGstin } from '@/lib/gst'
 import { ilikeAny } from '@/lib/utils/search'
+import { allRows } from "@/lib/utils/all-rows"
 
 function useClients(search: string, orgId: string | null) {
   const supabase = createClient();
@@ -56,7 +58,7 @@ function useClients(search: string, orgId: string | null) {
         query = query.or(ilikeAny(['name', 'email', 'phone'], search));
       }
 
-      const { data, error } = await query;
+      const { data, error } = await allRows(query.order("id"));
 
       if (error) {
         throw error;
@@ -95,6 +97,7 @@ export default function ClientsPage() {
   const supabase = createClient()
   const qc       = useQueryClient()
   const orgId    = useOrgId()
+  const canEdit  = useCan('manageClients')
 
   const [search,     setSearch]     = useState('')
   const [showForm,   setShowForm]   = useState(false)
@@ -235,10 +238,12 @@ async function handleSave() {
         title="Clients"
         description="Customer master — all companies and individuals you sell to"
       >
-        <Button size="sm" onClick={openNew}>
-          <Plus className="w-4 h-4" />
-          New Client
-        </Button>
+        {canEdit && (
+          <Button size="sm" onClick={openNew}>
+            <Plus className="w-4 h-4" />
+            New Client
+          </Button>
+        )}
       </PageHeader>
 
       {/* Slide-in form */}
@@ -453,7 +458,7 @@ async function handleSave() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-2">
+                      {canEdit && <div className="flex items-center justify-center gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -469,7 +474,7 @@ async function handleSave() {
                         >
                           {client.is_active ? 'Deactivate' : 'Activate'}
                         </Button>
-                      </div>
+                      </div>}
                     </td>
                   </tr>
                 ))}

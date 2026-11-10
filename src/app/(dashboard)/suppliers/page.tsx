@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { Plus, Search, X } from 'lucide-react'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import { ilikeAny } from '@/lib/utils/search'
+import { allRows } from '@/lib/utils/all-rows'
 
 function useSuppliers(search: string, orgId: string | null) {
   const supabase = createClient();
@@ -25,7 +26,7 @@ function useSuppliers(search: string, orgId: string | null) {
       if (search) {
         query = query.or(ilikeAny(['name', 'phone'], search));
       }
-      const { data, error } = await query;
+      const { data, error } = await allRows(query.order("id"));
       if (error) throw error;
       return data;
     },

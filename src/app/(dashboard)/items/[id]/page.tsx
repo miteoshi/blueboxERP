@@ -276,7 +276,7 @@ export default async function ItemDetailPage({ params }: Props) {
                           )}
                         </td>
                         <td className="px-4 py-2.5 text-right tabular-nums">
-                          {formatCurrency(price.selling_rate)}
+                          {formatCurrency(price.purchase_rate)}
                           <span className="text-xs text-slate-400 font-normal ml-1">
                             /{item.unit?.name ?? "—"}
                           </span>

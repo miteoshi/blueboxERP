@@ -18,6 +18,7 @@ import { Shield, RefreshCw, Tag, Check, X, AlertTriangle } from 'lucide-react'
 import type { Enums, Database } from '@/lib/types/database'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import { ilikeAny } from '@/lib/utils/search'
+import { allRows } from "@/lib/utils/all-rows"
 
 
 type UserRole = Enums<"user_role">
@@ -92,14 +93,17 @@ function useItemsWithPrices(search: string, orgId: string | null) {
         query = query.or(ilikeAny(['name', 'item_code'], search));
       }
 
-      const { data: items, error } = await query;
+      const { data: items, error } = await allRows(query.order("id"));
       if (error) throw error;
 
-      const { data: prices } = await supabase
+      const { data: prices, error: pricesError } = await allRows(supabase
         .from("v_current_prices")
         .select(
           "item_id, purchase_rate, selling_rate, gst_percent, rate_unit, effective_from"
-        );
+        )
+        .order("item_id"));
+
+      if (pricesError) throw pricesError;
 
       const priceMap = new Map(prices?.map((p) => [p.item_id, p]) ?? []);
       return (

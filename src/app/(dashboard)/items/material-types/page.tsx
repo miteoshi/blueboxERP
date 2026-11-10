@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 
 import { useOrgId } from "@/lib/hooks/use-tenant";
+import { useCan } from "@/lib/hooks/use-profile";
 
 import { PageHeader } from "@/components/layout/page-header";
 
@@ -43,6 +44,7 @@ const emptyForm: MaterialTypeForm = {
 export default function MaterialTypesPage() {
   const supabase = createClient();
   const orgId = useOrgId();
+  const canEdit = useCan("manageMasterData");
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState("");
@@ -238,10 +240,12 @@ export default function MaterialTypesPage() {
         title="Material Types"
         description="Manage material types for your organization"
       >
-        <Button size="sm" onClick={openAddModal}>
+        {canEdit && (
+          <Button size="sm" onClick={openAddModal}>
           <Plus className="w-4 h-4" />
           Add Material Type
         </Button>
+        )}
       </PageHeader>
 
       {/* Search */}
@@ -339,7 +343,7 @@ export default function MaterialTypesPage() {
                       </td>
 
                       <td className="px-4 py-3">
-                        <div className="flex justify-end gap-2">
+                        {canEdit && <div className="flex justify-end gap-2">
                           <Button
                             variant="outline"
                             size="sm"
@@ -357,7 +361,7 @@ export default function MaterialTypesPage() {
                             <Power className="w-4 h-4 mr-1" />
                             {materialType.is_active ? "Deactivate" : "Activate"}
                           </Button>
-                        </div>
+                        </div>}
                       </td>
                     </tr>
                   ))}

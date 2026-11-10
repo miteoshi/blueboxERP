@@ -155,11 +155,14 @@ export default function SettingsPage() {
     if (userId === me?.id) { toast.error("You can't change your own role"); return }
     setUpdatingRole(userId)
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
         .update({ role: newRole })
-        .eq("id", userId);
+        .eq("id", userId)
+        .select("id");
       if (error) throw error;
+      // A refused update changes no rows without raising an error
+      if (!data?.length) throw new Error("The role was not changed — only an admin can change roles");
       qc.invalidateQueries({ queryKey: ["all-profiles"] });
       toast.success("Role updated");
     } catch (err: unknown) {
@@ -172,11 +175,13 @@ export default function SettingsPage() {
   // ── Toggle active ─────────────────────────────────────────
   async function handleToggleUser(userId: string, current: boolean) {
     if (userId === me?.id) { toast.error("You can't deactivate yourself"); return }
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .update({ is_active: !current })
       .eq('id', userId)
+      .select('id')
     if (error) { toast.error(error.message); return }
+    if (!data?.length) { toast.error('Not changed — only an admin can activate or deactivate users'); return }
     qc.invalidateQueries({ queryKey: ['all-profiles'] })
     toast.success(current ? 'User deactivated' : 'User activated')
   }

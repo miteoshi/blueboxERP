@@ -204,7 +204,7 @@ const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
     if (!selectedSoId)               { toast.error('Select a sales order');        return }
     if (lines.length === 0)          { toast.error('Add at least one item');       return }
     if (lines.some(l => l.qty <= 0)) { toast.error('All quantities must be > 0'); return }
-    if (lines.some(l => l.rate <= 0)){ toast.error('All rates must be > 0');      return }
+    if (challanDate > todayISO())    { toast.error('Challan date cannot be in the future'); return }
 
     if (!orgId) {
         toast.error("Organization context is not available");
@@ -342,6 +342,7 @@ const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
               <Input
                 label="Challan Date"
                 type="date"
+                max={todayISO()}
                 value={challanDate}
                 onChange={e => setChallanDate(e.target.value)}
               />
@@ -457,12 +458,11 @@ const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
                           </td>
                           <td className="px-3 py-2.5 font-mono text-xs text-slate-500 text-center">{line.unit}</td>
                           <td className="px-3 py-2.5">
-                            <input
-                              type="number" min="0" step="any"
-                              value={line.rate}
-                              onChange={e => updateLine(i, 'rate', Number(e.target.value))}
-                              className="w-full px-2 py-1.5 text-xs rounded border border-slate-200 text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            />
+                            {/* The order's approved rate; the database uses it regardless.
+                                Price corrections after dispatch go through a credit note. */}
+                            <div className="px-2 py-1.5 text-xs text-right tabular-nums text-slate-600">
+                              {formatCurrency(line.rate)}
+                            </div>
                           </td>
                           <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-slate-900 text-xs">
                             {formatCurrency(line.qty * line.rate)}

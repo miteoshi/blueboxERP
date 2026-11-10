@@ -162,10 +162,13 @@ export async function adjustInventory(params: {
   delta:   number
   reason:  string
   refId?:  string
+  // Pass the same id when retrying the same adjustment, so a save that
+  // reached the database but timed out on the way back isn't applied twice.
+  operationId?: string
 }) {
   const supabase = createClient()
   const { data, error } = await supabase.rpc('adjust_inventory', {
-    p_operation_id: opId(),
+    p_operation_id: params.operationId ?? opId(),
     p_item_id:      params.itemId,
     p_delta:        params.delta,
     p_reason:       params.reason,

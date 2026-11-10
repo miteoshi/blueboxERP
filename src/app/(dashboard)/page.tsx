@@ -28,13 +28,10 @@ function useDashboardStats(orgId: string | null) {
           pendingApprovals: 0,
           activeOrders: 0,
           inProduction: 0,
+          lowStock: 0,
         };
       }
-      const [
-        { count: pendingApprovals },
-        { count: activeOrders },
-        { count: inProduction },
-      ] = await Promise.all([
+      const results = await Promise.all([
         supabase
           .from("quotations")
           .select("id", { count: "exact", head: true })
@@ -47,12 +44,14 @@ function useDashboardStats(orgId: string | null) {
           .from("production_orders")
           .select("id", { count: "exact", head: true })
           .eq("status", "in_progress"),
+        supabase
+          .from("v_reorder_alerts")
+          .select("item_id", { count: "exact", head: true }),
       ]);
-      return {
-        pendingApprovals: pendingApprovals ?? 0,
-        activeOrders: activeOrders ?? 0,
-        inProduction: inProduction ?? 0,
-      };
+      const failed = results.find((r) => r.error);
+      if (failed?.error) throw failed.error;
+      const [pendingApprovals, activeOrders, inProduction, lowStock] = results.map((r) => r.count ?? 0);
+      return { pendingApprovals, activeOrders, inProduction, lowStock };
     },
     enabled: !!orgId,
     staleTime: 30 * 1000,
@@ -108,7 +107,7 @@ export default function DashboardPage() {
   const { data: alerts }       = useReorderAlerts(orgId)
   const { data: recentOrders } = useRecentOrders(orgId)
 
-  const alertCount = alerts?.length ?? 0
+  const alertCount = stats?.lowStock ?? 0
   const role = useRole()
 
   // ── Realtime subscriptions ─────────────────────────────────
@@ -126,6 +125,7 @@ export default function DashboardPage() {
         filter: `org_id=eq.${orgId}`,
       }, () => {
         qc.invalidateQueries({ queryKey: ['reorder-alerts'] })
+        qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
       })
 
       // Sales order changes → refresh recent orders + stats
@@ -296,8 +296,12 @@ export default function DashboardPage() {
   )
 }
 
+// Indian business hours on both server and browser, so the rendered text
+// doesn't change on hydration (the server runs in UTC).
 function getGreeting() {
-  const h = new Date().getHours()
+  const h = Number(
+    new Intl.DateTimeFormat('en-IN', { hour: 'numeric', hourCycle: 'h23', timeZone: 'Asia/Kolkata' }).format(new Date())
+  )
   if (h < 12) return 'morning'
   if (h < 17) return 'afternoon'
   return 'evening'

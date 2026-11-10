@@ -36,27 +36,40 @@ export function formatQty(
 }
 
 // ── Date ──────────────────────────────────────────────────────
+// The business runs on Indian time (the database uses Asia/Kolkata too).
+// Format explicitly in IST so server-rendered pages (UTC on Vercel) and the
+// browser agree, and "today" doesn't lag a day between 00:00 and 05:30.
+const IST = 'Asia/Kolkata'
+
+const istDateFmt = new Intl.DateTimeFormat('en-CA', { timeZone: IST, year: 'numeric', month: '2-digit', day: '2-digit' })
+const istTimeFmt = new Intl.DateTimeFormat('en-IN', { timeZone: IST, hour: '2-digit', minute: '2-digit', hour12: true })
+
+// YYYY-MM-DD of an instant, in IST
+function istDate(d: Date): string {
+  return istDateFmt.format(d)
+}
+
 export function formatDate(
   date: string | null | undefined,
   fmt = 'dd MMM yyyy'
 ): string {
   if (!date) return '—'
   try {
-    return format(parseISO(date), fmt)
+    // A bare date (2026-11-10) is a calendar day; a timestamp is an instant
+    // that must be read in IST before taking its day.
+    const day = date.length <= 10 ? date : istDate(new Date(date))
+    return format(parseISO(day), fmt)
   } catch {
     return '—'
   }
 }
 
-// Today's date (YYYY-MM-DD) in the user's local time zone.
-// toISOString() is UTC, which in IST is still "yesterday" until 05:30.
+// Today's date (YYYY-MM-DD) in IST
 export function todayISO(): string {
-  const d = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  return istDate(new Date())
 }
 
-// True when a YYYY-MM-DD date is strictly before today (local time).
+// True when a YYYY-MM-DD date is strictly before today.
 // A document due today is not overdue yet.
 export function isPastDate(date: string | null | undefined): boolean {
   if (!date) return false
@@ -64,7 +77,10 @@ export function isPastDate(date: string | null | undefined): boolean {
 }
 
 export function formatDateTime(date: string | null | undefined): string {
-  return formatDate(date, 'dd MMM yyyy, hh:mm a')
+  if (!date) return '—'
+  const d = new Date(date)
+  if (Number.isNaN(d.getTime())) return '—'
+  return `${formatDate(date)}, ${istTimeFmt.format(d).toUpperCase()}`
 }
 
 export function formatRelative(date: string | null | undefined): string {

@@ -423,7 +423,8 @@ const { data: reservations } = useQuery({
                 <span>{formatCurrency(salesOrder.total_amount)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Advance Paid</span>
+                {/* Payments on the order plus its share of invoice payments and credit notes */}
+                <span className="text-slate-500">Received / credited</span>
                 <span className="text-green-600 font-medium">
                   {formatCurrency(salesOrder.advance_paid ?? 0)}
                 </span>
@@ -431,7 +432,7 @@ const { data: reservations } = useQuery({
               <div className="flex justify-between font-bold border-t border-slate-100 pt-2">
                 <span>Balance Due</span>
                 <span className={(salesOrder.balance_due ?? 0) > 0 ? 'text-amber-600' : 'text-green-600'}>
-                  {(salesOrder.balance_due ?? 0) > 0 ? formatCurrency(salesOrder.balance_due) : 'Paid ✓'}
+                  {(salesOrder.balance_due ?? 0) > 0 ? formatCurrency(salesOrder.balance_due) : 'Settled ✓'}
                 </span>
               </div>
             </CardBody>

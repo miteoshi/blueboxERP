@@ -32,6 +32,7 @@ import {
   Wallet,
   Landmark,
   FileSpreadsheet,
+  FileMinus,
 } from 'lucide-react'
 import type { Enums } from '@/lib/types/database'
 import { Route } from 'next'
@@ -148,7 +149,7 @@ const NAV: (NavItem | NavGroup)[] = [
   },
 
   // ── Finance — invoices, payments, receivables, GST ────────
-  // Matches the RLS read policies on sales_invoices / customer_receipts
+  // Matches the RLS read policies on sales_invoices / credit_notes / customer_receipts
   {
     label: "Finance",
     icon: Landmark,
@@ -159,6 +160,12 @@ const NAV: (NavItem | NavGroup)[] = [
         href: "/invoices",
         icon: Receipt,
         roles: ["admin", "manager", "sales", "store", "viewer"],
+      },
+      {
+        label: "Credit Notes",
+        href: "/credit-notes",
+        icon: FileMinus,
+        roles: ["admin", "manager", "sales", "viewer"],
       },
       {
         label: "Payments",

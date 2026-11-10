@@ -266,6 +266,250 @@ export type Database = {
           },
         ]
       }
+      credit_note_lines: {
+        Row: {
+          cgst_amount: number
+          credit_note_id: string
+          description: string
+          gst_rate: number
+          hsn_code: string | null
+          id: string
+          igst_amount: number
+          invoice_line_id: string
+          item_id: string
+          line_total: number
+          org_id: string
+          qty: number | null
+          rate: number | null
+          sgst_amount: number
+          sort_order: number
+          taxable_value: number
+          unit_name: string | null
+        }
+        Insert: {
+          cgst_amount?: number
+          credit_note_id: string
+          description: string
+          gst_rate: number
+          hsn_code?: string | null
+          id?: string
+          igst_amount?: number
+          invoice_line_id: string
+          item_id: string
+          line_total: number
+          org_id: string
+          qty?: number | null
+          rate?: number | null
+          sgst_amount?: number
+          sort_order: number
+          taxable_value: number
+          unit_name?: string | null
+        }
+        Update: {
+          cgst_amount?: number
+          credit_note_id?: string
+          description?: string
+          gst_rate?: number
+          hsn_code?: string | null
+          id?: string
+          igst_amount?: number
+          invoice_line_id?: string
+          item_id?: string
+          line_total?: number
+          org_id?: string
+          qty?: number | null
+          rate?: number | null
+          sgst_amount?: number
+          sort_order?: number
+          taxable_value?: number
+          unit_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_note_lines_credit_note_id_fkey"
+            columns: ["credit_note_id"]
+            isOneToOne: false
+            referencedRelation: "credit_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_note_lines_invoice_line_id_fkey"
+            columns: ["invoice_line_id"]
+            isOneToOne: false
+            referencedRelation: "sales_invoice_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_note_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_note_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_alerts"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "credit_note_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_levels"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "credit_note_lines_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_notes: {
+        Row: {
+          buyer_gstin: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cgst_amount: number
+          client_id: string
+          created_at: string
+          created_by: string | null
+          credit_note_no: string
+          financial_year: string
+          id: string
+          igst_amount: number
+          invoice_id: string
+          is_interstate: boolean
+          note_date: string
+          notes: string | null
+          org_id: string
+          place_of_supply: string
+          reason: string
+          restocked: boolean
+          round_off: number
+          sgst_amount: number
+          status: string
+          taxable_value: number
+          total_amount: number
+        }
+        Insert: {
+          buyer_gstin?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cgst_amount?: number
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          credit_note_no: string
+          financial_year: string
+          id?: string
+          igst_amount?: number
+          invoice_id: string
+          is_interstate: boolean
+          note_date: string
+          notes?: string | null
+          org_id: string
+          place_of_supply: string
+          reason: string
+          restocked?: boolean
+          round_off?: number
+          sgst_amount?: number
+          status?: string
+          taxable_value: number
+          total_amount: number
+        }
+        Update: {
+          buyer_gstin?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cgst_amount?: number
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          credit_note_no?: string
+          financial_year?: string
+          id?: string
+          igst_amount?: number
+          invoice_id?: string
+          is_interstate?: boolean
+          note_date?: string
+          notes?: string | null
+          org_id?: string
+          place_of_supply?: string
+          reason?: string
+          restocked?: boolean
+          round_off?: number
+          sgst_amount?: number
+          status?: string
+          taxable_value?: number
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_notes_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_receivables"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "credit_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "sales_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "v_invoice_ageing"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_place_of_supply_fkey"
+            columns: ["place_of_supply"]
+            isOneToOne: false
+            referencedRelation: "gst_states"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       customer_receipts: {
         Row: {
           amount: number
@@ -2721,6 +2965,10 @@ export type Database = {
         Args: { p_roles: Database["public"]["Enums"]["user_role"][] }
         Returns: undefined
       }
+      cancel_credit_note: {
+        Args: { p_credit_note_id: string; p_reason: string }
+        Returns: Json
+      }
       cancel_customer_receipt: {
         Args: { p_reason: string; p_receipt_id: string }
         Returns: Json
@@ -2757,6 +3005,17 @@ export type Database = {
       }
       convert_quotation_to_sales_order: {
         Args: { p_quotation_id: string }
+        Returns: Json
+      }
+      create_credit_note: {
+        Args: {
+          p_invoice_id: string
+          p_lines: Json
+          p_note_date?: string
+          p_notes?: string
+          p_reason: string
+          p_restock?: boolean
+        }
         Returns: Json
       }
       create_delivery_challan: {

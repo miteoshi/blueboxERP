@@ -21,7 +21,7 @@ import { Download } from 'lucide-react'
 // (GSTR-1 Table 5, B2CL) — ₹1 lakh from 1 Aug 2024 (Notification 12/2024-CT).
 const B2CL_THRESHOLD = 100000
 
-const TABS = ['Summary', 'B2B', 'B2CL', 'B2CS', 'HSN', 'Documents'] as const
+const TABS = ['Summary', 'B2B', 'B2CL', 'B2CS', 'CDNR', 'CDNUR', 'HSN', 'Documents'] as const
 type Tab = (typeof TABS)[number]
 
 function monthRange(offset: number) {
@@ -68,6 +68,32 @@ function useInvoicesForPeriod(from: string, to: string) {
   })
 }
 
+function useCreditNotesForPeriod(from: string, to: string) {
+  const supabase = createClient()
+  const orgId = useOrgId()
+  return useQuery({
+    queryKey: ['gst-credit-notes', orgId, from, to],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('credit_notes')
+        .select(`
+          id, credit_note_no, note_date, status, buyer_gstin, place_of_supply, is_interstate,
+          taxable_value, cgst_amount, sgst_amount, igst_amount, total_amount,
+          client:clients ( name ),
+          invoice:sales_invoices ( id, invoice_no, invoice_date, total_amount, buyer_name, reverse_charge ),
+          credit_note_lines ( gst_rate, taxable_value, cgst_amount, sgst_amount, igst_amount )
+        `)
+        .gte('note_date', from)
+        .lte('note_date', to)
+        .order('credit_note_no')
+      if (error) throw error
+      return data
+    },
+    enabled: !!orgId && !!from && !!to,
+    staleTime: 60 * 1000,
+  })
+}
+
 const sum = <T,>(rows: T[], f: (r: T) => number) => rows.reduce((s, r) => s + (f(r) || 0), 0)
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
 
@@ -77,7 +103,9 @@ export default function GstReportsPage() {
   const [to, setTo] = useState(thisMonth.to)
   const [tab, setTab] = useState<Tab>('Summary')
 
-  const { data: invoices, isLoading } = useInvoicesForPeriod(from, to)
+  const { data: invoices, isLoading: loadingInvoices } = useInvoicesForPeriod(from, to)
+  const { data: creditNotes, isLoading: loadingNotes } = useCreditNotesForPeriod(from, to)
+  const isLoading = loadingInvoices || loadingNotes
   const { data: hsn, isLoading: loadingHsn } = useHsnSummary(from, to)
   const { data: states } = useGstStates()
   const stateLabel = (code: string | null) =>
@@ -88,44 +116,71 @@ export default function GstReportsPage() {
   const b2cl = issued.filter((i) => !i.buyer_gstin && i.is_interstate && i.total_amount > B2CL_THRESHOLD)
   const b2cInvoices = issued.filter((i) => !i.buyer_gstin && !(i.is_interstate && i.total_amount > B2CL_THRESHOLD))
 
-  // B2CS: consolidated by place of supply and rate
+  // Credit notes (Table 9B): registered buyers → CDNR; unregistered buyers on a
+  // B2CL invoice → CDNUR; other B2C credit notes are netted into B2CS (Table 7).
+  const issuedNotes = useMemo(() => (creditNotes ?? []).filter((n) => n.status === 'issued'), [creditNotes])
+  const cdnr = issuedNotes.filter((n) => !!n.buyer_gstin)
+  const cdnur = issuedNotes.filter(
+    (n) => !n.buyer_gstin && n.is_interstate && (n.invoice?.total_amount ?? 0) > B2CL_THRESHOLD
+  )
+  const b2csNotes = issuedNotes.filter((n) => !cdnr.includes(n) && !cdnur.includes(n))
+
+  // B2CS: consolidated by place of supply and rate, net of B2C credit notes
   const b2cs = useMemo(() => {
     const map = new Map<string, { pos: string; rate: number; taxable: number; igst: number; cgst: number; sgst: number }>()
-    for (const inv of b2cInvoices) {
-      for (const l of inv.sales_invoice_lines) {
-        const key = `${inv.place_of_supply}|${l.gst_rate}`
-        const row = map.get(key) ?? { pos: inv.place_of_supply, rate: l.gst_rate, taxable: 0, igst: 0, cgst: 0, sgst: 0 }
-        row.taxable = r2(row.taxable + l.taxable_value)
-        row.igst = r2(row.igst + l.igst_amount)
-        row.cgst = r2(row.cgst + l.cgst_amount)
-        row.sgst = r2(row.sgst + l.sgst_amount)
-        map.set(key, row)
-      }
+    const add = (
+      pos: string,
+      l: { gst_rate: number; taxable_value: number; igst_amount: number; cgst_amount: number; sgst_amount: number },
+      sign: 1 | -1
+    ) => {
+      const key = `${pos}|${l.gst_rate}`
+      const row = map.get(key) ?? { pos, rate: l.gst_rate, taxable: 0, igst: 0, cgst: 0, sgst: 0 }
+      row.taxable = r2(row.taxable + sign * l.taxable_value)
+      row.igst = r2(row.igst + sign * l.igst_amount)
+      row.cgst = r2(row.cgst + sign * l.cgst_amount)
+      row.sgst = r2(row.sgst + sign * l.sgst_amount)
+      map.set(key, row)
     }
+    for (const inv of b2cInvoices) for (const l of inv.sales_invoice_lines) add(inv.place_of_supply, l, 1)
+    for (const n of b2csNotes) for (const l of n.credit_note_lines) add(n.place_of_supply, l, -1)
     return [...map.values()].sort((a, b) => a.pos.localeCompare(b.pos) || a.rate - b.rate)
-  }, [b2cInvoices])
+  }, [b2cInvoices, b2csNotes])
+
+  // CDNR / CDNUR are reported note-wise and rate-wise
+  type Note = (typeof issuedNotes)[number]
+  const noteRateRows = (notes: Note[]) =>
+    notes.flatMap((n) => {
+      const byRate = new Map<number, number>()
+      for (const l of n.credit_note_lines) byRate.set(l.gst_rate, r2((byRate.get(l.gst_rate) ?? 0) + l.taxable_value))
+      return [...byRate.entries()].map(([rate, taxable]) => ({ note: n, rate, taxable }))
+    })
 
   // Documents issued (GSTR-1 Table 13): per series, numbers used, cancelled
   const documents = useMemo(() => {
-    const map = new Map<string, { series: string; from: string; to: string; total: number; cancelled: number }>()
-    for (const inv of invoices ?? []) {
-      const series = inv.invoice_no.replace(/\d+$/, '')
-      const row = map.get(series) ?? { series, from: inv.invoice_no, to: inv.invoice_no, total: 0, cancelled: 0 }
-      if (inv.invoice_no < row.from) row.from = inv.invoice_no
-      if (inv.invoice_no > row.to) row.to = inv.invoice_no
+    type Doc = { nature: string; series: string; from: string; to: string; total: number; cancelled: number }
+    const map = new Map<string, Doc>()
+    const add = (nature: string, no: string, cancelled: boolean) => {
+      const series = no.replace(/\d+$/, '')
+      const key = `${nature}|${series}`
+      const row = map.get(key) ?? { nature, series, from: no, to: no, total: 0, cancelled: 0 }
+      if (no < row.from) row.from = no
+      if (no > row.to) row.to = no
       row.total += 1
-      if (inv.status === 'cancelled') row.cancelled += 1
-      map.set(series, row)
+      if (cancelled) row.cancelled += 1
+      map.set(key, row)
     }
+    for (const inv of invoices ?? []) add('Invoices for outward supply', inv.invoice_no, inv.status === 'cancelled')
+    for (const n of creditNotes ?? []) add('Credit Note', n.credit_note_no, n.status === 'cancelled')
     return [...map.values()]
-  }, [invoices])
+  }, [invoices, creditNotes])
 
+  // Net of credit notes issued in the period
   const totals = {
-    taxable: sum(issued, (i) => i.taxable_value),
-    cgst: sum(issued, (i) => i.cgst_amount),
-    sgst: sum(issued, (i) => i.sgst_amount),
-    igst: sum(issued, (i) => i.igst_amount),
-    value: sum(issued, (i) => i.total_amount),
+    taxable: sum(issued, (i) => i.taxable_value) - sum(issuedNotes, (n) => n.taxable_value),
+    cgst: sum(issued, (i) => i.cgst_amount) - sum(issuedNotes, (n) => n.cgst_amount),
+    sgst: sum(issued, (i) => i.sgst_amount) - sum(issuedNotes, (n) => n.sgst_amount),
+    igst: sum(issued, (i) => i.igst_amount) - sum(issuedNotes, (n) => n.igst_amount),
+    value: sum(issued, (i) => i.total_amount) - sum(issuedNotes, (n) => n.total_amount),
   }
 
   type Inv = (typeof issued)[number]
@@ -161,6 +216,39 @@ export default function GstReportsPage() {
           { header: 'CGST', value: (r) => r.cgst },
           { header: 'SGST', value: (r) => r.sgst },
         ])
+      case 'CDNR':
+        return downloadCsv(`gstr1-cdnr-${tag}`, noteRateRows(cdnr), [
+          { header: 'GSTIN/UIN of Recipient', value: (r) => r.note.buyer_gstin },
+          { header: 'Receiver Name', value: (r) => r.note.invoice?.buyer_name ?? r.note.client?.name },
+          { header: 'Note Number', value: (r) => r.note.credit_note_no },
+          { header: 'Note Date', value: (r) => r.note.note_date },
+          { header: 'Note Type', value: () => 'C' },
+          { header: 'Place Of Supply', value: (r) => stateLabel(r.note.place_of_supply) },
+          { header: 'Reverse Charge', value: (r) => (r.note.invoice?.reverse_charge ? 'Y' : 'N') },
+          { header: 'Note Supply Type', value: () => 'Regular B2B' },
+          { header: 'Note Value', value: (r) => r.note.total_amount },
+          { header: 'Applicable % of Tax Rate', value: () => '' },
+          { header: 'Rate', value: (r) => r.rate },
+          { header: 'Taxable Value', value: (r) => r.taxable },
+          { header: 'Cess Amount', value: () => 0 },
+          { header: 'Original Invoice Number', value: (r) => r.note.invoice?.invoice_no },
+          { header: 'Original Invoice Date', value: (r) => r.note.invoice?.invoice_date },
+        ])
+      case 'CDNUR':
+        return downloadCsv(`gstr1-cdnur-${tag}`, noteRateRows(cdnur), [
+          { header: 'UR Type', value: () => 'B2CL' },
+          { header: 'Note Number', value: (r) => r.note.credit_note_no },
+          { header: 'Note Date', value: (r) => r.note.note_date },
+          { header: 'Note Type', value: () => 'C' },
+          { header: 'Place Of Supply', value: (r) => stateLabel(r.note.place_of_supply) },
+          { header: 'Note Value', value: (r) => r.note.total_amount },
+          { header: 'Applicable % of Tax Rate', value: () => '' },
+          { header: 'Rate', value: (r) => r.rate },
+          { header: 'Taxable Value', value: (r) => r.taxable },
+          { header: 'Cess Amount', value: () => 0 },
+          { header: 'Original Invoice Number', value: (r) => r.note.invoice?.invoice_no },
+          { header: 'Original Invoice Date', value: (r) => r.note.invoice?.invoice_date },
+        ])
       case 'HSN':
         return downloadCsv(`gstr1-hsn-${tag}`, hsn ?? [], [
           { header: 'Type', value: (r) => (r.b2b ? 'B2B' : 'B2C') },
@@ -177,7 +265,7 @@ export default function GstReportsPage() {
         ])
       case 'Documents':
         return downloadCsv(`gstr1-docs-${tag}`, documents, [
-          { header: 'Nature of Document', value: () => 'Invoices for outward supply' },
+          { header: 'Nature of Document', value: (r) => r.nature },
           { header: 'Sr. No. From', value: (r) => r.from },
           { header: 'Sr. No. To', value: (r) => r.to },
           { header: 'Total Number', value: (r) => r.total },
@@ -195,7 +283,7 @@ export default function GstReportsPage() {
 
   return (
     <div>
-      <PageHeader title="GST Reports" description="Outward supplies for GSTR-1, from issued tax invoices">
+      <PageHeader title="GST Reports" description="Outward supplies for GSTR-1, from issued tax invoices and credit notes">
         <Button variant="outline" size="sm" onClick={exportTab} disabled={isLoading}>
           <Download className="w-4 h-4" />
           Export {tab === 'Summary' ? 'B2B' : tab} CSV
@@ -223,11 +311,15 @@ export default function GstReportsPage() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <StatCard label="Taxable value" value={formatCurrency(totals.taxable)} />
+        <StatCard label="Net taxable value" value={formatCurrency(totals.taxable)} sub="after credit notes" />
         <StatCard label="IGST" value={formatCurrency(totals.igst)} />
         <StatCard label="CGST" value={formatCurrency(totals.cgst)} />
         <StatCard label="SGST" value={formatCurrency(totals.sgst)} />
-        <StatCard label="Invoice value" value={formatCurrency(totals.value)} sub={`${issued.length} invoices`} />
+        <StatCard
+          label="Net value"
+          value={formatCurrency(totals.value)}
+          sub={`${issued.length} invoices · ${issuedNotes.length} credit notes`}
+        />
       </div>
 
       <div className="flex gap-1 mb-4 bg-slate-100 p-1 rounded-lg w-fit">
@@ -252,7 +344,7 @@ export default function GstReportsPage() {
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                 <th className="text-left px-4 py-3">Section</th>
-                <th className="text-right px-4 py-3">Invoices</th>
+                <th className="text-right px-4 py-3">Documents</th>
                 <th className="text-right px-4 py-3">Taxable</th>
                 <th className="text-right px-4 py-3">IGST</th>
                 <th className="text-right px-4 py-3">CGST</th>
@@ -261,17 +353,21 @@ export default function GstReportsPage() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {[
-                { label: 'B2B — registered buyers (Table 4A)', rows: b2b },
-                { label: 'B2CL — inter-state B2C over ₹1 lakh (Table 5)', rows: b2cl },
-                { label: 'B2CS — other B2C (Table 7)', rows: b2cInvoices },
+                { label: 'B2B — registered buyers (Table 4A)', rows: b2b, sign: 1 },
+                { label: 'B2CL — inter-state B2C over ₹1 lakh (Table 5)', rows: b2cl, sign: 1 },
+                { label: 'B2CS — other B2C invoices (Table 7)', rows: b2cInvoices, sign: 1 },
+                { label: 'less: B2C credit notes netted in B2CS (Table 7)', rows: b2csNotes, sign: -1 },
+                { label: 'CDNR — credit notes to registered buyers (Table 9B)', rows: cdnr, sign: -1 },
+                { label: 'CDNUR — credit notes on B2CL invoices (Table 9B)', rows: cdnur, sign: -1 },
               ].map((s) => (
-                <tr key={s.label}>
-                  <td className="px-4 py-3 text-slate-700">{s.label}</td>
+                <tr key={s.label} className={s.sign < 0 ? 'text-red-700' : undefined}>
+                  <td className={`px-4 py-3 ${s.sign < 0 ? '' : 'text-slate-700'}`}>{s.label}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{s.rows.length}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(sum(s.rows, (i) => i.taxable_value))}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(sum(s.rows, (i) => i.igst_amount))}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(sum(s.rows, (i) => i.cgst_amount))}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(sum(s.rows, (i) => i.sgst_amount))}</td>
+                  {(['taxable_value', 'igst_amount', 'cgst_amount', 'sgst_amount'] as const).map((k) => (
+                    <td key={k} className="px-4 py-3 text-right tabular-nums">
+                      {formatCurrency(s.sign * sum(s.rows as { [key in typeof k]: number }[], (i) => i[k]))}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
@@ -300,6 +396,47 @@ export default function GstReportsPage() {
                   <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(r.igst)}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(r.cgst)}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(r.sgst)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : tab === 'CDNR' || tab === 'CDNUR' ? (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
+                <th className="text-left px-4 py-3">Credit note</th>
+                <th className="text-left px-4 py-3">Buyer</th>
+                <th className="text-left px-4 py-3">Original invoice</th>
+                <th className="text-left px-4 py-3">POS</th>
+                <th className="text-right px-4 py-3">Taxable</th>
+                <th className="text-right px-4 py-3">IGST</th>
+                <th className="text-right px-4 py-3">CGST + SGST</th>
+                <th className="text-right px-4 py-3">Value</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {(tab === 'CDNR' ? cdnr : cdnur).length === 0 && <Empty cols={8} />}
+              {(tab === 'CDNR' ? cdnr : cdnur).map((n) => (
+                <tr key={n.id}>
+                  <td className="px-4 py-3">
+                    <Link href={`/credit-notes/${n.id}` as Route} className="font-mono text-xs text-blue-600 hover:underline">
+                      {n.credit_note_no}
+                    </Link>
+                    <div className="text-xs text-slate-400">{formatDate(n.note_date)}</div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div>{n.invoice?.buyer_name ?? n.client?.name}</div>
+                    <div className="text-xs font-mono text-slate-400">{n.buyer_gstin ?? 'Unregistered'}</div>
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    {n.invoice?.invoice_no}
+                    <div className="text-slate-400">{formatDate(n.invoice?.invoice_date)}</div>
+                  </td>
+                  <td className="px-4 py-3 text-xs">{stateLabel(n.place_of_supply)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(n.taxable_value)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(n.igst_amount)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(n.cgst_amount + n.sgst_amount)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums font-medium">{formatCurrency(n.total_amount)}</td>
                 </tr>
               ))}
             </tbody>
@@ -344,6 +481,7 @@ export default function GstReportsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
+                <th className="text-left px-4 py-3">Nature</th>
                 <th className="text-left px-4 py-3">Series</th>
                 <th className="text-left px-4 py-3">From</th>
                 <th className="text-left px-4 py-3">To</th>
@@ -353,9 +491,10 @@ export default function GstReportsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {documents.length === 0 && <Empty cols={6} />}
+              {documents.length === 0 && <Empty cols={7} />}
               {documents.map((d) => (
-                <tr key={d.series}>
+                <tr key={`${d.nature}-${d.series}`}>
+                  <td className="px-4 py-3 text-xs text-slate-600">{d.nature}</td>
                   <td className="px-4 py-3 font-mono text-xs">{d.series}</td>
                   <td className="px-4 py-3 font-mono text-xs">{d.from}</td>
                   <td className="px-4 py-3 font-mono text-xs">{d.to}</td>
@@ -369,8 +508,9 @@ export default function GstReportsPage() {
         )}
       </div>
       <p className="text-xs text-slate-400 mt-3">
-        Cancelled invoices are excluded from tax totals and counted under Documents. Check figures against your books
-        before filing.
+        Cancelled invoices and credit notes are excluded from tax totals and counted under Documents. Credit notes are
+        reported in the period they are issued; HSN figures are net of them. Check figures against your books before
+        filing.
       </p>
     </div>
   )

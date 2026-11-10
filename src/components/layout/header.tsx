@@ -19,6 +19,7 @@ const pageTitles: Record<string, string> = {
   '/suppliers':    'Suppliers',
   '/workers':      'Workers',
   '/invoices':     'Invoices',
+  '/credit-notes': 'Credit Notes',
   '/payments':     'Payments',
   '/receivables':  'Receivables',
   '/reports':      'GST Reports',

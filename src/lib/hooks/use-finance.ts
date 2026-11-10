@@ -39,6 +39,13 @@ const FINANCE_KEYS = [
   ['client-credit'],
   ['sales-orders'],
   ['delivery-challans'],
+  ['credit-notes'],
+  ['credit-note'],
+  ['hsn-summary'],
+  ['gst-invoices'],
+  ['gst-credit-notes'],
+  ['stock-levels'],
+  ['reorder-alerts'],
 ] as const
 
 function useInvalidateFinance() {
@@ -117,6 +124,10 @@ export function useInvoice(id: string | null) {
           receipt_allocations (
             id, amount, created_at,
             receipt:customer_receipts ( id, receipt_no, receipt_date, mode, reference, status )
+          ),
+          credit_notes (
+            id, credit_note_no, note_date, reason, restocked, status, total_amount,
+            credit_note_lines ( invoice_line_id, qty, taxable_value )
           )
         `)
         .eq('id', id)
@@ -318,6 +329,135 @@ export function useCancelReceipt() {
     onSuccess: () => {
       invalidate()
       toast.success('Receipt cancelled — invoice balances restored')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+// ── Credit notes (CGST Act s.34) ─────────────────────────────
+
+export type CreditNoteReason = 'sales_return' | 'rate_difference' | 'discount' | 'deficiency' | 'other'
+
+export const CREDIT_NOTE_REASONS: { value: CreditNoteReason; label: string; hint: string }[] = [
+  { value: 'sales_return', label: 'Sales return', hint: 'Goods sent back by the customer' },
+  { value: 'rate_difference', label: 'Rate difference', hint: 'Invoiced at a higher rate than agreed' },
+  { value: 'discount', label: 'Discount', hint: 'Discount allowed after the sale' },
+  { value: 'deficiency', label: 'Deficiency in supply', hint: 'Short, damaged or sub-standard goods kept by the customer' },
+  { value: 'other', label: 'Other', hint: 'Any other reduction in value' },
+]
+
+export const creditNoteReasonLabel = (reason: string) =>
+  CREDIT_NOTE_REASONS.find((r) => r.value === reason)?.label ?? reason
+
+// Last day a credit note may be issued for an invoice: 30 November after
+// the end of the invoice's financial year (s.34(2)) — mirrors create_credit_note().
+export function creditNoteDeadline(invoiceDate: string): string {
+  const [y, m] = invoiceDate.split('-').map(Number)
+  const fyEnd = m >= 4 ? y + 1 : y
+  return `${fyEnd}-11-30`
+}
+
+export function useCreditNotes(filters?: { invoiceId?: string; clientId?: string; from?: string; to?: string }) {
+  const supabase = createClient()
+  const orgId = useOrgId()
+
+  return useQuery({
+    queryKey: ['credit-notes', orgId, filters],
+    queryFn: async () => {
+      if (!orgId) return []
+      let query = supabase
+        .from('credit_notes')
+        .select('*, client:clients ( id, name ), invoice:sales_invoices ( id, invoice_no, invoice_date )')
+        .order('note_date', { ascending: false })
+        .order('credit_note_no', { ascending: false })
+      if (filters?.invoiceId) query = query.eq('invoice_id', filters.invoiceId)
+      if (filters?.clientId) query = query.eq('client_id', filters.clientId)
+      if (filters?.from) query = query.gte('note_date', filters.from)
+      if (filters?.to) query = query.lte('note_date', filters.to)
+      const { data, error } = await query
+      if (error) throw error
+      return data
+    },
+    enabled: !!orgId,
+    staleTime: 30 * 1000,
+  })
+}
+
+export function useCreditNote(id: string | null) {
+  const supabase = createClient()
+  const orgId = useOrgId()
+
+  return useQuery({
+    queryKey: ['credit-note', orgId, id],
+    queryFn: async () => {
+      if (!id || !orgId) return null
+      const { data, error } = await supabase
+        .from('credit_notes')
+        .select(`
+          *,
+          client:clients ( id, name ),
+          invoice:sales_invoices (
+            id, invoice_no, invoice_date, total_amount, amount_paid, amount_credited, balance_due,
+            supplier_name, supplier_gstin, supplier_address, supplier_state_code, buyer_name, buyer_address
+          ),
+          credit_note_lines ( * )
+        `)
+        .eq('id', id)
+        .single()
+      if (error) throw error
+      return data
+    },
+    enabled: !!id && !!orgId,
+    staleTime: 30 * 1000,
+  })
+}
+
+export type CreditNoteLineInput = { invoice_line_id: string; qty?: number; taxable_value?: number }
+
+export function useCreateCreditNote() {
+  const supabase = createClient()
+  const invalidate = useInvalidateFinance()
+
+  return useMutation({
+    mutationFn: async (args: {
+      invoiceId: string
+      reason: CreditNoteReason
+      lines: CreditNoteLineInput[]
+      restock?: boolean
+      noteDate?: string
+      notes?: string
+    }) => {
+      const { data, error } = await supabase.rpc('create_credit_note', {
+        p_invoice_id: args.invoiceId,
+        p_reason: args.reason,
+        p_lines: args.lines,
+        p_restock: args.restock ?? false,
+        p_note_date: args.noteDate,
+        p_notes: args.notes,
+      })
+      if (error) throw rpcError(error, 'Could not issue the credit note')
+      return data as { id: string; credit_note_no: string; total_amount: number; payment_released: number }
+    },
+    onSuccess: () => invalidate(),
+  })
+}
+
+export function useCancelCreditNote() {
+  const supabase = createClient()
+  const invalidate = useInvalidateFinance()
+
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const { data, error } = await supabase.rpc('cancel_credit_note', {
+        p_credit_note_id: id,
+        p_reason: reason,
+      })
+      if (error) throw rpcError(error, 'Could not cancel the credit note')
+      return data
+    },
+    onSuccess: () => {
+      invalidate()
+      toast.success('Credit note cancelled — the invoice balance is restored')
     },
     onError: (err: Error) => toast.error(err.message),
   })

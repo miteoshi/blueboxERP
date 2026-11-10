@@ -29,6 +29,7 @@ function useInboundReceipts(search: string, orgId: string | null) {
           vehicle_no, challan_no, invoice_no,
           total_amount, gst_amount, status, created_at,
           supplier:suppliers ( id, name ),
+          po:purchase_orders ( id, po_no ),
           inbound_receipt_lines ( id )
         `
         )
@@ -194,8 +195,16 @@ export default function InboundPage() {
                         {r.receipt_no}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      {r.supplier?.name}
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-slate-900">{r.supplier?.name}</div>
+                      {r.po && (
+                        <Link
+                          href={`/purchase-orders/${r.po.id}` as Route}
+                          className="font-mono text-xs text-blue-600 hover:underline"
+                        >
+                          {r.po.po_no}
+                        </Link>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-slate-600">
                       {formatDate(r.receipt_date)}

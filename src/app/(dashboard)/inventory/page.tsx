@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { TableLoader } from '@/components/ui/spinner'
 import { formatQty } from '@/lib/utils/format'
-import { useProfile } from '@/lib/hooks/use-profile'
+import { useCan } from '@/lib/hooks/use-profile'
 import Link from 'next/link'
 import { Search, AlertTriangle, Package, TrendingDown, CheckCircle2 } from 'lucide-react'
 
@@ -26,8 +26,8 @@ export default function InventoryPage() {
   const [showLowOnly, setShowLowOnly] = useState(false)
   const orgId = useOrgId()
 
-  const { data: profile } = useProfile()
-  const canAdjust = profile?.role === 'admin' || profile?.role === 'manager' || profile?.role === 'store'
+  const canAdjust = useCan('adjustStock')
+  const canOrder = useCan('draftPurchaseOrders')
 
 
   const { data: alerts } = useReorderAlerts()
@@ -98,6 +98,11 @@ useEffect(() => {
         title="Inventory"
         description="Live stock levels — updated in real time"
       >
+        {canOrder && lowStockCount > 0 && (
+          <Link href="/purchase-orders/new?from=low-stock">
+            <Button variant="outline" size="sm">Order low stock</Button>
+          </Link>
+        )}
         {canAdjust && (
           <Link href="/inventory/adjust">
             <Button size="sm">Adjust Stock</Button>

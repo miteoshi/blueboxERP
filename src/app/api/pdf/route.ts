@@ -10,6 +10,7 @@ import { amountInWords } from '@/lib/gst'
 // GET /api/pdf?type=grn&id=uuid
 // GET /api/pdf?type=invoice&id=uuid[&copies=3]
 // GET /api/pdf?type=credit_note&id=uuid
+// GET /api/pdf?type=purchase_order&id=uuid
 //
 // Returns printable HTML — the browser auto-triggers window.print().
 // All document data is HTML-escaped (see lib/pdf/html.ts) and the page
@@ -90,6 +91,8 @@ export async function GET(request: NextRequest) {
         )
       case 'credit_note':
         return printableResponse(await creditNotePage(supabase, id, org))
+      case 'purchase_order':
+        return printableResponse(await purchaseOrderPage(supabase, id, org))
       default:
         return NextResponse.json({ error: 'Unknown document type' }, { status: 400 })
     }
@@ -418,6 +421,7 @@ async function grnPage(supabase: Supabase, id: string, org: Organization | null)
     .select(`
       *,
       supplier:suppliers ( name, phone, gst_number, city ),
+      po:purchase_orders ( po_no ),
       inbound_receipt_lines (
         *,
         unit:units ( id, name ),
@@ -454,6 +458,7 @@ async function grnPage(supabase: Supabase, id: string, org: Organization | null)
       <div class="meta-value">
         <strong>GRN No.:</strong> ${grn.receipt_no}<br>
         <strong>Date:</strong> ${dt(grn.receipt_date)}<br>
+        ${grn.po ? html`<strong>Against PO:</strong> ${grn.po.po_no}<br>` : ''}
         <strong>Transport:</strong> ${TRANSPORT_LABEL[grn.transport_mode ?? ''] ?? grn.transport_mode ?? '—'}<br>
         ${grn.vehicle_no ? html`<strong>Vehicle:</strong> ${grn.vehicle_no}<br>` : ''}
         ${grn.challan_no ? html`<strong>Sup. Challan:</strong> ${grn.challan_no}<br>` : ''}
@@ -501,6 +506,106 @@ async function grnPage(supabase: Supabase, id: string, org: Organization | null)
   ${grn.notes ? html`<div class="terms"><strong>Notes:</strong> ${grn.notes}</div>` : ''}
 
   ${signatures('Received By', 'Store Keeper', 'Authorised Signatory')}
+  `)
+}
+
+// ── Purchase order ────────────────────────────────────────────
+
+async function purchaseOrderPage(supabase: Supabase, id: string, org: Organization | null) {
+  const { data: po, error } = await supabase
+    .from('purchase_orders')
+    .select(`
+      *,
+      supplier:suppliers ( name, contact_person, phone, email, gst_number, address, city, state ),
+      purchase_order_lines (
+        *,
+        unit:units ( name ),
+        item:items ( item_code, name, hsn_code )
+      )
+    `)
+    .eq('id', id)
+    .single()
+
+  if (error || !po) throw new Error('Purchase order not found')
+
+  const items = [...(po.purchase_order_lines ?? [])].sort((a, b) => a.sort_order - b.sort_order)
+  const half = Math.round((po.gst_amount / 2) * 100) / 100
+  const title = po.status === 'draft' ? 'PURCHASE ORDER (DRAFT)' : po.status === 'cancelled' ? 'PURCHASE ORDER (CANCELLED)' : 'PURCHASE ORDER'
+
+  return document(po.po_no, html`
+  ${header(org, title, po.po_no)}
+
+  <div class="meta-grid">
+    <div class="meta-box">
+      <div class="meta-label">To (Supplier)</div>
+      <div class="meta-value">
+        <strong>${po.supplier?.name ?? '—'}</strong><br>
+        ${lines(
+          po.supplier?.contact_person && `Attn: ${po.supplier.contact_person}`,
+          [po.supplier?.address, po.supplier?.city, po.supplier?.state].filter(Boolean).join(', '),
+          po.supplier?.phone,
+          po.supplier?.email,
+          po.supplier?.gst_number && `GSTIN: ${po.supplier.gst_number}`,
+        )}
+      </div>
+    </div>
+
+    <div class="meta-box">
+      <div class="meta-label">Order Details</div>
+      <div class="meta-value">
+        <strong>PO No.:</strong> ${po.po_no}<br>
+        <strong>Date:</strong> ${dt(po.po_date)}<br>
+        ${po.expected_date ? html`<strong>Deliver by:</strong> ${dt(po.expected_date)}<br>` : ''}
+        <strong>Deliver to:</strong> ${[org?.name, org?.address, org?.city].filter(Boolean).join(', ') || '—'}
+      </div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:28px">#</th>
+        <th>Item</th>
+        <th style="width:60px">HSN</th>
+        <th class="r" style="width:70px">Qty</th>
+        <th class="c" style="width:40px">Unit</th>
+        <th class="r" style="width:85px">Rate (₹)</th>
+        <th class="c" style="width:38px">GST%</th>
+        <th class="r" style="width:95px">Amount (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${items.map((l, i) => html`<tr>
+        <td class="c">${i + 1}</td>
+        <td>
+          <strong>${l.item?.name ?? '—'}</strong>
+          <br><span class="mono">${l.item?.item_code ?? ''}</span>
+          ${l.notes ? html`<br>${l.notes}` : ''}
+        </td>
+        <td>${l.item?.hsn_code ?? '—'}</td>
+        <td class="r"><strong>${qtyFmt(l.qty)}</strong></td>
+        <td class="c">${l.unit?.name ?? '—'}</td>
+        <td class="r">${inr(l.rate)}</td>
+        <td class="c">${l.gst_percent}%</td>
+        <td class="r">${inr(l.taxable_value)}</td>
+      </tr>`)}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="totals-row"><span>Taxable value</span><span>${inr(po.taxable_value)}</span></div>
+    ${po.is_interstate
+      ? html`<div class="totals-row"><span>IGST</span><span>${inr(po.gst_amount)}</span></div>`
+      : html`<div class="totals-row"><span>CGST</span><span>${inr(half)}</span></div>
+             <div class="totals-row"><span>SGST</span><span>${inr(po.gst_amount - half)}</span></div>`}
+    <div class="totals-row bold"><span>Total</span><span>${inr(po.total_amount)}</span></div>
+  </div>
+  <div class="terms"><strong>Amount in words:</strong> ${amountInWords(po.total_amount)}</div>
+
+  ${po.terms ? html`<div class="terms"><strong>Terms:</strong><br>${po.terms.split('\n').map((t) => html`${t}<br>`)}</div>` : ''}
+  <div class="terms">Please quote our PO number on your challan and invoice. Goods are accepted subject to inspection.</div>
+
+  ${signatures('Prepared By', 'Authorised Signatory')}
   `)
 }
 

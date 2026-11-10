@@ -838,6 +838,7 @@ export type Database = {
           item_id: string
           line_total: number | null
           notes: string | null
+          po_line_id: string | null
           qty_ordered: number | null
           qty_received: number
           rate: number
@@ -850,6 +851,7 @@ export type Database = {
           item_id: string
           line_total?: number | null
           notes?: string | null
+          po_line_id?: string | null
           qty_ordered?: number | null
           qty_received: number
           rate: number
@@ -862,6 +864,7 @@ export type Database = {
           item_id?: string
           line_total?: number | null
           notes?: string | null
+          po_line_id?: string | null
           qty_ordered?: number | null
           qty_received?: number
           rate?: number
@@ -891,6 +894,13 @@ export type Database = {
             referencedColumns: ["item_id"]
           },
           {
+            foreignKeyName: "inbound_receipt_lines_po_line_id_fkey"
+            columns: ["po_line_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_lines"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "inbound_receipt_lines_receipt_id_fkey"
             columns: ["receipt_id"]
             isOneToOne: false
@@ -917,6 +927,7 @@ export type Database = {
           invoice_no: string | null
           notes: string | null
           org_id: string
+          po_id: string | null
           receipt_date: string
           receipt_no: string
           received_by: string | null
@@ -937,6 +948,7 @@ export type Database = {
           invoice_no?: string | null
           notes?: string | null
           org_id: string
+          po_id?: string | null
           receipt_date?: string
           receipt_no: string
           received_by?: string | null
@@ -957,6 +969,7 @@ export type Database = {
           invoice_no?: string | null
           notes?: string | null
           org_id?: string
+          po_id?: string | null
           receipt_date?: string
           receipt_no?: string
           received_by?: string | null
@@ -980,6 +993,13 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_receipts_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
             referencedColumns: ["id"]
           },
           {
@@ -1706,6 +1726,211 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_order_lines: {
+        Row: {
+          gst_amount: number
+          gst_percent: Database["public"]["Enums"]["gst_rate"]
+          id: string
+          item_id: string
+          line_total: number
+          notes: string | null
+          org_id: string
+          po_id: string
+          qty: number
+          qty_received: number
+          rate: number
+          sort_order: number
+          taxable_value: number
+          unit_id: string
+        }
+        Insert: {
+          gst_amount: number
+          gst_percent: Database["public"]["Enums"]["gst_rate"]
+          id?: string
+          item_id: string
+          line_total: number
+          notes?: string | null
+          org_id: string
+          po_id: string
+          qty: number
+          qty_received?: number
+          rate: number
+          sort_order: number
+          taxable_value: number
+          unit_id: string
+        }
+        Update: {
+          gst_amount?: number
+          gst_percent?: Database["public"]["Enums"]["gst_rate"]
+          id?: string
+          item_id?: string
+          line_total?: number
+          notes?: string | null
+          org_id?: string
+          po_id?: string
+          qty?: number
+          qty_received?: number
+          rate?: number
+          sort_order?: number
+          taxable_value?: number
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_alerts"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_levels"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          close_reason: string | null
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          created_by: string | null
+          expected_date: string | null
+          financial_year: string
+          gst_amount: number
+          id: string
+          is_interstate: boolean
+          issued_at: string | null
+          issued_by: string | null
+          notes: string | null
+          org_id: string
+          po_date: string
+          po_no: string
+          status: string
+          supplier_id: string
+          taxable_value: number
+          terms: string | null
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          close_reason?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_date?: string | null
+          financial_year: string
+          gst_amount?: number
+          id?: string
+          is_interstate?: boolean
+          issued_at?: string | null
+          issued_by?: string | null
+          notes?: string | null
+          org_id: string
+          po_date: string
+          po_no: string
+          status?: string
+          supplier_id: string
+          taxable_value?: number
+          terms?: string | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          close_reason?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_date?: string | null
+          financial_year?: string
+          gst_amount?: number
+          id?: string
+          is_interstate?: boolean
+          issued_at?: string | null
+          issued_by?: string | null
+          notes?: string | null
+          org_id?: string
+          po_date?: string
+          po_no?: string
+          status?: string
+          supplier_id?: string
+          taxable_value?: number
+          terms?: string | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -2937,6 +3162,10 @@ export type Database = {
         Args: { p_invoice_id?: string; p_receipt_id: string; p_so_id?: string }
         Returns: number
       }
+      _po_is_interstate: {
+        Args: { p_org_id: string; p_supplier_id: string }
+        Returns: boolean
+      }
       _recalc_invoice_paid: {
         Args: { p_invoice_id: string }
         Returns: undefined
@@ -2946,6 +3175,14 @@ export type Database = {
         Returns: undefined
       }
       _recalc_so_advance: { Args: { p_so_id: string }; Returns: undefined }
+      _release_overpayment: {
+        Args: { p_incoming: number; p_invoice_id: string }
+        Returns: number
+      }
+      _write_purchase_order_lines: {
+        Args: { p_lines: Json; p_po_id: string }
+        Returns: undefined
+      }
       adjust_inventory: {
         Args: {
           p_delta: number
@@ -2987,6 +3224,10 @@ export type Database = {
         Returns: Json
       }
       client_credit_status: { Args: { p_client_id: string }; Returns: Json }
+      close_purchase_order: {
+        Args: { p_po_id: string; p_reason: string }
+        Returns: Json
+      }
       complete_production_order: {
         Args: { p_production_order_id: string }
         Returns: Json
@@ -3066,6 +3307,18 @@ export type Database = {
         }
         Returns: Json
       }
+      create_purchase_order: {
+        Args: {
+          p_expected_date?: string
+          p_issue?: boolean
+          p_lines: Json
+          p_notes?: string
+          p_po_date?: string
+          p_supplier_id: string
+          p_terms?: string
+        }
+        Returns: Json
+      }
       create_quotation: {
         Args: {
           p_client_id: string
@@ -3120,6 +3373,7 @@ export type Database = {
         }[]
       }
       is_valid_gstin: { Args: { p_gstin: string }; Returns: boolean }
+      issue_purchase_order: { Args: { p_po_id: string }; Returns: Json }
       lock_inventory_balance: {
         Args: { p_item_id: string }
         Returns: {
@@ -3174,6 +3428,20 @@ export type Database = {
           p_rate: number
           p_ref_id: string
           p_ref_type: string
+        }
+        Returns: Json
+      }
+      receive_purchase_order: {
+        Args: {
+          p_challan_no?: string
+          p_driver_name?: string
+          p_invoice_no?: string
+          p_lines: Json
+          p_notes?: string
+          p_po_id: string
+          p_receipt_date?: string
+          p_transport_mode?: Database["public"]["Enums"]["transport_mode"]
+          p_vehicle_no?: string
         }
         Returns: Json
       }
@@ -3249,6 +3517,17 @@ export type Database = {
       }
       start_production_order: {
         Args: { p_production_order_id: string }
+        Returns: Json
+      }
+      update_purchase_order: {
+        Args: {
+          p_expected_date?: string
+          p_lines: Json
+          p_notes?: string
+          p_po_id: string
+          p_supplier_id: string
+          p_terms?: string
+        }
         Returns: Json
       }
       validate_stock_sufficiency: {

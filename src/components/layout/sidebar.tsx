@@ -33,6 +33,7 @@ import {
   Landmark,
   FileSpreadsheet,
   FileMinus,
+  ClipboardCheck,
 } from 'lucide-react'
 import type { Enums } from '@/lib/types/database'
 import { Route } from 'next'
@@ -95,12 +96,18 @@ const NAV: (NavItem | NavGroup)[] = [
     roles: ["admin", "manager", "production"],
   },
 
-  // ── Inbound — admin, manager, store ──────────────────────
+  // ── Purchase — orders (viewer can read), GRNs ────────────
   {
-    label: "Inbound",
+    label: "Purchase",
     icon: Truck,
-    roles: ["admin", "manager", "store"],
+    roles: ["admin", "manager", "store", "viewer"],
     items: [
+      {
+        label: "Purchase Orders",
+        href: "/purchase-orders",
+        icon: ClipboardCheck,
+        roles: ["admin", "manager", "store", "viewer"],
+      },
       {
         label: "GRN List",
         href: "/inbound",

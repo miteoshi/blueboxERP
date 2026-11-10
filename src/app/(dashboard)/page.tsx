@@ -10,7 +10,7 @@ import { formatCurrency, formatDate, formatQty } from '@/lib/utils/format'
 import { ShoppingCart, FileText, Factory, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { useOrgId } from '@/lib/hooks/use-tenant'
-import { useRole } from '@/lib/hooks/use-profile'
+import { useCan, useRole } from '@/lib/hooks/use-profile'
 import { FinanceSummary } from '@/components/finance/finance-summary'
 
 // ── Data hooks ────────────────────────────────────────────────
@@ -109,6 +109,7 @@ export default function DashboardPage() {
 
   const alertCount = stats?.lowStock ?? 0
   const role = useRole()
+  const canOrder = useCan('draftPurchaseOrders')
 
   // ── Realtime subscriptions ─────────────────────────────────
   useEffect(() => {
@@ -256,9 +257,16 @@ export default function DashboardPage() {
               <AlertTriangle className="w-4 h-4 text-amber-500" />
               Reorder Alerts
             </h3>
-            <Link href="/inventory" className="text-xs text-blue-600 hover:underline">
-              View all →
-            </Link>
+            <div className="flex items-center gap-3">
+              {canOrder && (alerts?.length ?? 0) > 0 && (
+                <Link href="/purchase-orders/new?from=low-stock" className="text-xs font-medium text-teal-700 hover:underline">
+                  Create PO
+                </Link>
+              )}
+              <Link href="/inventory" className="text-xs text-blue-600 hover:underline">
+                View all →
+              </Link>
+            </div>
           </div>
           <div className="divide-y divide-slate-50">
             {alerts?.length === 0 && (

@@ -74,7 +74,10 @@ const PERMISSIONS = {
   editBom: ['admin', 'manager', 'production'],         // bom RLS
   importBom: ['admin', 'manager'],                     // creates items (manageItems) and BOM lines (editBom)
   setPrices: ['admin', 'manager', 'store'],            // set_item_price()
-  receiveGoods: ['admin', 'manager', 'store'],         // create_inbound_receipt()
+  receiveGoods: ['admin', 'manager', 'store'],         // create_inbound_receipt(), receive_purchase_order()
+  draftPurchaseOrders: ['admin', 'manager', 'store'],  // create_purchase_order() as draft, update_purchase_order()
+  approvePurchaseOrders: ['admin', 'manager'],         // issue_purchase_order(), close_purchase_order()
+  viewPurchaseOrders: ['admin', 'manager', 'store', 'viewer'], // purchase_orders RLS
   adjustStock: ['admin', 'manager', 'store'],          // adjust_inventory()
   createProduction: ['admin', 'manager'],              // create_production_order()
   sell: ['admin', 'manager', 'sales'],                 // create_quotation(), sales orders

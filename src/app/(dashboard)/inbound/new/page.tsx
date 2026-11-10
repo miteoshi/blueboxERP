@@ -4,8 +4,8 @@ import { GST_RATE_OPTIONS, type GstRate } from '@/lib/gst'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
+import { useQueryClient } from '@tanstack/react-query'
+import { useActiveSuppliers, usePurchasableItems } from '@/lib/hooks/use-purchasing'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import { createInboundReceipt } from '@/lib/utils/inventory'
 import { PageHeader } from '@/components/layout/page-header'
@@ -19,7 +19,6 @@ import type {
     Enums
   } from '@/lib/types/database'
 import { RequirePermission } from '@/components/auth/require-permission'
-import { allRows } from "@/lib/utils/all-rows"
 
 
 type TransportMode = Enums<'transport_mode'>
@@ -50,88 +49,13 @@ const EMPTY_LINE: GrnLine = {
   gst_percent: "18",
 };
 
-function useSuppliers(orgId: string | null) {
-  const supabase = createClient();
-
-  return useQuery({
-    queryKey: ["suppliers-list", orgId],
-    queryFn: async () => {
-      if (!orgId) return [];
-
-      const { data, error } = await allRows(supabase
-        .from("suppliers")
-        .select("id, name, payment_terms")
-        .eq("is_active", true)
-        .order("name")
-        .order("id"));
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!orgId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-function useItemsForGrn(orgId: string | null) {
-  const supabase = createClient();
-
-  return useQuery({
-    queryKey: ["items-for-grn", orgId],
-    queryFn: async () => {
-      if (!orgId) return [];
-
-      const { data, error } = await allRows(supabase
-        .from("items")
-        .select(
-          `
-          id,
-          item_code,
-          name,
-          unit_id,
-          hsn_code,
-          unit:units (
-            id,
-            name
-          )
-        `
-        )
-        .eq("is_active", true)
-        .or("is_traded.eq.true,is_raw_material.eq.true")
-        .order("name")
-        .order("id"));
-
-      if (error) throw error;
-
-      // Get current purchase prices
-      const { data: prices, error: pricesError } = await allRows(supabase
-        .from("v_current_prices")
-        .select("item_id, purchase_rate, gst_percent")
-        .order("item_id"));
-
-      if (pricesError) throw pricesError;
-
-      const priceMap = new Map(prices?.map((p) => [p.item_id, p]) ?? []);
-
-      return (
-        data?.map((i) => ({
-          ...i,
-          price: priceMap.get(i.id) ?? null,
-        })) ?? []
-      );
-    },
-    enabled: !!orgId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
 function NewGrnPageContent() {
   const router   = useRouter()
   const qc       = useQueryClient()
   const orgId    = useOrgId()
 
-const { data: suppliers } = useSuppliers(orgId);
-const { data: items } = useItemsForGrn(orgId);
+  const { data: suppliers } = useActiveSuppliers()
+  const { data: items } = usePurchasableItems()
 
   const [supplierId,    setSupplierId]    = useState('')
   const [receiptDate,   setReceiptDate]   = useState(todayISO)
@@ -182,6 +106,7 @@ const { data: items } = useItemsForGrn(orgId);
 
   async function handleSave() {
     if (!supplierId)              { toast.error('Select a supplier');               return }
+    if (receiptDate > todayISO()) { toast.error('Receipt date cannot be in the future'); return }
     if (lines.some(l => !l.item_id)) { toast.error('All lines need an item');      return }
     if (lines.some((l) => !l.unit_id)) {
       toast.error("All items need a unit assigned");
@@ -236,7 +161,7 @@ const { data: items } = useItemsForGrn(orgId);
     <div>
       <PageHeader
         title="New GRN"
-        description="Record goods received from supplier"
+        description="Record goods received without a purchase order. For goods on order, open the purchase order and use Receive goods."
       >
         <Button variant="outline" size="sm" onClick={() => router.back()}>
           Cancel
@@ -278,6 +203,7 @@ const { data: items } = useItemsForGrn(orgId);
               <Input
                 label="Receipt Date"
                 type="date"
+                max={todayISO()}
                 value={receiptDate}
                 onChange={(e) => setReceiptDate(e.target.value)}
               />

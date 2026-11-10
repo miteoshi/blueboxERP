@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate, formatQty } from '@/lib/utils/format'
 import { Truck, Package, FileText, User } from 'lucide-react'
 import Link from 'next/link'
+import type { Route } from 'next'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -37,6 +38,7 @@ export default async function GrnDetailPage({ params }: Props) {
         `
         *,
         supplier:suppliers ( id, name, phone, gst_number, city ),
+        po:purchase_orders ( id, po_no ),
         receiver:profiles!inbound_receipts_received_by_fkey ( full_name ),
         creator:profiles!inbound_receipts_created_by_fkey ( full_name ),
         inbound_receipt_lines (
@@ -116,6 +118,16 @@ export default async function GrnDetailPage({ params }: Props) {
               <Row label="GRN No."     value={<span className="font-mono font-bold">{grn.receipt_no}</span>} />
               <Row label="Status"      value={<Badge variant={STATUS_COLORS[grn.status] ?? 'default'}>{grn.status}</Badge>} />
               <Row label="Date"        value={formatDate(grn.receipt_date)} />
+              {grn.po && (
+                <Row
+                  label="Against PO"
+                  value={
+                    <Link href={`/purchase-orders/${grn.po.id}` as Route} className="font-mono text-blue-600 hover:underline">
+                      {grn.po.po_no}
+                    </Link>
+                  }
+                />
+              )}
               <Row label="Transport"   value={TRANSPORT_LABELS[grn.transport_mode] ?? grn.transport_mode} />
               {grn.vehicle_no  && <Row label="Vehicle"        value={grn.vehicle_no} />}
               {grn.driver_name && <Row label="Driver"         value={grn.driver_name} />}

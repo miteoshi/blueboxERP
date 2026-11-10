@@ -88,8 +88,10 @@ security definer
 set search_path to 'public'
 as $function$
 begin
-  -- Only app users are held to this; the project owner can still clean up.
-  if current_user not in ('authenticated', 'anon') then
+  -- Only signed-in app users are held to this; the project owner (SQL
+  -- editor) and the service role can still clean up. current_user can't be
+  -- used here: in a SECURITY DEFINER function it is always the owner.
+  if auth.uid() is null then
     return coalesce(new, old);
   end if;
 

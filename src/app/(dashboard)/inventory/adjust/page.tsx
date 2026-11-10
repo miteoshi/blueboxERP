@@ -23,6 +23,10 @@ const { data: items, isLoading: itemsLoading } = useItems();
   const [reason, setReason] = useState('')
   const [refId, setRefId] = useState('')
   const [saving, setSaving] = useState(false)
+  // One id per adjustment: a retry of the same entry reuses it (the database
+  // then won't apply it twice); editing the entry starts a new one.
+  const [operationId, setOperationId] = useState(() => crypto.randomUUID())
+  const edited = () => setOperationId(crypto.randomUUID())
 
   async function handleSave() {
     if (!itemId) { toast.error('Please select an item'); return }
@@ -41,6 +45,7 @@ const { data: items, isLoading: itemsLoading } = useItems();
         delta: Number(delta),
         reason: reason.trim(),
         refId: refId.trim() || undefined,
+        operationId,
       })
 
       toast.success('Stock adjusted successfully')
@@ -102,7 +107,7 @@ const { data: items, isLoading: itemsLoading } = useItems();
               </label>
               <select
                 value={itemId}
-                onChange={(e) => setItemId(e.target.value)}
+                onChange={(e) => { setItemId(e.target.value); edited() }}
                 disabled={itemsLoading}
                 className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
               >
@@ -130,7 +135,7 @@ const { data: items, isLoading: itemsLoading } = useItems();
               step="any"
               placeholder="e.g. 5 or -2"
               value={delta}
-              onChange={(e) => setDelta(e.target.value)}
+              onChange={(e) => { setDelta(e.target.value); edited() }}
               required
             />
 
@@ -138,7 +143,7 @@ const { data: items, isLoading: itemsLoading } = useItems();
               label="Reason for Adjustment"
               placeholder="Explain why this adjustment is necessary…"
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              onChange={(e) => { setReason(e.target.value); edited() }}
               required
               rows={3}
             />

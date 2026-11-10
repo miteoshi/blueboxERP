@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Input, Textarea } from '@/components/ui/input'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
-import { formatCurrency } from '@/lib/utils/format'
+import { formatCurrency, todayISO } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { Plus, Trash2, Save, Send } from 'lucide-react'
 import { useOrgId } from '@/lib/hooks/use-tenant'
@@ -182,6 +182,7 @@ function NewQuotationPageContent() {
   // ── Save / Submit ─────────────────────────────────────────
   async function save(submit: boolean) {
     if (!clientId) { toast.error('Please select a client'); return }
+    if (validUntil && validUntil < todayISO()) { toast.error('Valid-until date is already past'); return }
     if (lines.some((l) => !l.item_id)) {
       toast.error("All lines must have an item selected");
       return;
@@ -297,6 +298,7 @@ function NewQuotationPageContent() {
               <Input
                 label="Valid Until"
                 type="date"
+                min={todayISO()}
                 value={validUntil}
                 onChange={e => setValidUntil(e.target.value)}
                 hint="Typically 30–45 days from today"

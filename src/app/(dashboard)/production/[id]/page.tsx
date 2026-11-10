@@ -156,7 +156,7 @@ const { data: workers = [] } = useWorkers(orgId);
         <div className="mb-6 flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-5 py-3">
           <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-blue-800">
-            To start, pause, or complete this production order, go to{" "}
+            To start or complete this production order, go to{" "}
             <a
               href="/tasks"
               className="font-semibold underline underline-offset-2"

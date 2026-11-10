@@ -24,23 +24,22 @@ const B2CL_THRESHOLD = 100000
 const TABS = ['Summary', 'B2B', 'B2CL', 'B2CS', 'CDNR', 'CDNUR', 'HSN', 'Documents'] as const
 type Tab = (typeof TABS)[number]
 
+// Calendar maths on today's IST date, so server and browser agree
 function monthRange(offset: number) {
-  const now = new Date()
-  const first = new Date(now.getFullYear(), now.getMonth() + offset, 1)
-  const last = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0)
-  const iso = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const [y, m] = todayISO().split('-').map(Number)
+  const first = new Date(Date.UTC(y, m - 1 + offset, 1))
+  const last = new Date(Date.UTC(y, m + offset, 0))
+  const iso = (d: Date) => d.toISOString().slice(0, 10)
   return { from: iso(first), to: iso(last) }
 }
 
 function quarterRange() {
-  const now = new Date()
+  const [y, m] = todayISO().split('-').map(Number)
   // Indian FY quarters: Apr–Jun, Jul–Sep, Oct–Dec, Jan–Mar
-  const qStartMonth = Math.floor(now.getMonth() / 3) * 3
-  const first = new Date(now.getFullYear(), qStartMonth, 1)
-  const last = new Date(now.getFullYear(), qStartMonth + 3, 0)
-  const iso = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const qStartMonth = Math.floor((m - 1) / 3) * 3
+  const first = new Date(Date.UTC(y, qStartMonth, 1))
+  const last = new Date(Date.UTC(y, qStartMonth + 3, 0))
+  const iso = (d: Date) => d.toISOString().slice(0, 10)
   return { from: iso(first), to: iso(last) }
 }
 

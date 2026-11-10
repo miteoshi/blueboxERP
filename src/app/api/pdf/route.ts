@@ -9,6 +9,7 @@ import { amountInWords } from '@/lib/gst'
 // GET /api/pdf?type=challan&id=uuid
 // GET /api/pdf?type=grn&id=uuid
 // GET /api/pdf?type=invoice&id=uuid[&copies=3]
+// GET /api/pdf?type=credit_note&id=uuid
 //
 // Returns printable HTML — the browser auto-triggers window.print().
 // All document data is HTML-escaped (see lib/pdf/html.ts) and the page
@@ -87,6 +88,8 @@ export async function GET(request: NextRequest) {
         return printableResponse(
           await invoicePage(supabase, id, org, searchParams.get('copies') === '3')
         )
+      case 'credit_note':
+        return printableResponse(await creditNotePage(supabase, id, org))
       default:
         return NextResponse.json({ error: 'Unknown document type' }, { status: 400 })
     }
@@ -709,6 +712,140 @@ async function invoicePage(supabase: Supabase, id: string, org: Organization | n
 <title>${inv.invoice_no}</title><style>${raw(CSS)}${raw(INVOICE_CSS)}</style></head>
 <body><div class="page">
 ${labels.map((label, i) => copy(label, i === labels.length - 1))}
+</div>
+${printScript}
+</body></html>`
+}
+
+// ── Credit note (CGST Rules, Rule 53) ─────────────────────────
+
+const REASON_LABEL: Record<string, string> = {
+  sales_return: 'Sales return',
+  rate_difference: 'Rate difference',
+  discount: 'Post-sale discount',
+  deficiency: 'Deficiency in supply',
+  other: 'Other',
+}
+
+async function creditNotePage(supabase: Supabase, id: string, org: Organization | null) {
+  const [{ data: cn, error }, { data: states }] = await Promise.all([
+    supabase
+      .from('credit_notes')
+      .select(`
+        *,
+        invoice:sales_invoices (
+          invoice_no, invoice_date, supplier_name, supplier_gstin, supplier_address, supplier_state_code,
+          buyer_name, buyer_address, buyer_state_code
+        ),
+        credit_note_lines ( * )
+      `)
+      .eq('id', id)
+      .single(),
+    supabase.from('gst_states').select('code, name'),
+  ])
+
+  if (error || !cn || !cn.invoice) throw new Error('Credit note not found')
+
+  const inv = cn.invoice
+  const stateName = (code: string | null) => {
+    if (!code) return '—'
+    return `${states?.find((s) => s.code === code)?.name ?? ''} (${code})`
+  }
+  const items = [...(cn.credit_note_lines ?? [])].sort((a, b) => a.sort_order - b.sort_order)
+  const inter = cn.is_interstate
+  const cancelled = cn.status === 'cancelled'
+
+  return html`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>${cn.credit_note_no}</title><style>${raw(CSS)}${raw(INVOICE_CSS)}</style></head>
+<body><div class="page">
+  ${cancelled ? html`<div style="color:#DC2626;font-weight:bold;text-align:center;font-size:14px;margin:4px 0">CANCELLED — ${cn.cancel_reason ?? ''}</div>` : ''}
+  <div class="inv">
+    <div class="inv-title">CREDIT NOTE</div>
+    <div class="inv-head">
+      <div>
+        <div class="company-name">${inv.supplier_name}</div>
+        ${inv.supplier_address ? html`<div class="company-sub">${inv.supplier_address}</div>` : ''}
+        <div class="company-sub">State: ${stateName(inv.supplier_state_code)}</div>
+        ${[org?.phone, org?.email].filter(Boolean).length ? html`<div class="company-sub">${[org?.phone, org?.email].filter(Boolean).join(' | ')}</div>` : ''}
+        <div class="company-sub"><strong>GSTIN: ${inv.supplier_gstin}</strong></div>
+      </div>
+      <div style="text-align:right; font-size:10.5px; line-height:1.7">
+        <div class="lbl">Credit Note No.</div>
+        <div style="font-family:monospace;font-size:13px;font-weight:bold">${cn.credit_note_no}</div>
+        <div><span class="lbl">Date</span> ${dt(cn.note_date)}</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <div class="lbl">Issued to</div>
+        <strong>${inv.buyer_name}</strong><br>
+        ${inv.buyer_address ? html`${inv.buyer_address}<br>` : ''}
+        GSTIN: ${cn.buyer_gstin ?? 'Unregistered'}<br>
+        State: ${stateName(inv.buyer_state_code ?? cn.place_of_supply)}
+      </div>
+      <div>
+        <div><span class="lbl">Against invoice</span> ${inv.invoice_no} dated ${dt(inv.invoice_date)}</div>
+        <div><span class="lbl">Place of supply</span> ${stateName(cn.place_of_supply)}</div>
+        <div><span class="lbl">Reason</span> ${REASON_LABEL[cn.reason] ?? cn.reason}${cn.reason === 'sales_return' && cn.restocked ? ' (goods received back)' : ''}</div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:22px">#</th>
+          <th>Description of goods</th>
+          <th class="c" style="width:62px">HSN</th>
+          <th class="r" style="width:54px">Qty</th>
+          <th class="r" style="width:66px">Rate</th>
+          <th class="r" style="width:78px">Taxable value</th>
+          ${inter
+            ? html`<th class="r" style="width:84px">IGST</th>`
+            : html`<th class="r" style="width:74px">CGST</th><th class="r" style="width:74px">SGST</th>`}
+          <th class="r" style="width:82px">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items.map((l, i) => html`<tr>
+          <td class="c">${i + 1}</td>
+          <td>${l.description}</td>
+          <td class="c">${l.hsn_code ?? '—'}</td>
+          <td class="r">${l.qty != null ? html`${qtyFmt(l.qty)} ${l.unit_name ?? ''}` : '—'}</td>
+          <td class="r">${l.qty != null ? inr(l.rate) : '—'}</td>
+          <td class="r">${inr(l.taxable_value)}</td>
+          ${inter
+            ? html`<td class="r">${inr(l.igst_amount)}<br><span class="small">@ ${l.gst_rate}%</span></td>`
+            : html`<td class="r">${inr(l.cgst_amount)}<br><span class="small">@ ${l.gst_rate / 2}%</span></td>
+                   <td class="r">${inr(l.sgst_amount)}<br><span class="small">@ ${l.gst_rate / 2}%</span></td>`}
+          <td class="r">${inr(l.line_total)}</td>
+        </tr>`)}
+      </tbody>
+    </table>
+
+    <div class="sum">
+      <div>
+        <div class="words"><strong>Amount in words:</strong> ${amountInWords(cn.total_amount)}</div>
+        ${cn.notes ? html`<div class="small" style="margin-top:8px"><strong>Notes:</strong> ${cn.notes}</div>` : ''}
+      </div>
+      <div>
+        <div class="row"><span>Taxable value</span><span>${inr(cn.taxable_value)}</span></div>
+        ${inter
+          ? html`<div class="row"><span>IGST</span><span>${inr(cn.igst_amount)}</span></div>`
+          : html`<div class="row"><span>CGST</span><span>${inr(cn.cgst_amount)}</span></div>
+                 <div class="row"><span>SGST</span><span>${inr(cn.sgst_amount)}</span></div>`}
+        ${cn.round_off !== 0 ? html`<div class="row"><span>Round off</span><span>${inr(cn.round_off)}</span></div>` : ''}
+        <div class="row grand"><span>Total credit</span><span>${inr(cn.total_amount)}</span></div>
+      </div>
+    </div>
+
+    <div class="sign">
+      For <strong>${inv.supplier_name}</strong>
+      <div class="space"></div>
+      Authorised Signatory
+    </div>
+  </div>
+  <div class="small" style="text-align:center;margin-top:6px">This is a computer-generated credit note issued under section 34 of the CGST Act, 2017.</div>
 </div>
 ${printScript}
 </body></html>`

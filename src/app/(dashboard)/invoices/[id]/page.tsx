@@ -12,6 +12,8 @@ import { PageLoader } from '@/components/ui/spinner'
 import { InvoiceStatusBadge } from '@/components/finance/invoice-status'
 import {
   PAYMENT_MODES,
+  creditNoteDeadline,
+  creditNoteReasonLabel,
   paymentModeLabel,
   useCancelInvoice,
   useGstStates,
@@ -23,7 +25,7 @@ import { useCanBill, useCanManageFinance } from '@/lib/hooks/use-profile'
 import { formatCurrency, formatDate, formatDateTime, formatQty, todayISO } from '@/lib/utils/format'
 import { amountInWords } from '@/lib/gst'
 import { toast } from 'sonner'
-import { ArrowLeft, Printer, Wallet, XCircle } from 'lucide-react'
+import { ArrowLeft, FileMinus, Printer, Wallet, XCircle } from 'lucide-react'
 
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -52,6 +54,14 @@ export default function InvoiceDetailPage() {
     code ? `${code} — ${gstStates?.find((s) => s.code === code)?.name ?? ''}` : '—'
   const lines = [...inv.sales_invoice_lines].sort((a, b) => a.sort_order - b.sort_order)
   const payments = inv.receipt_allocations.filter((a) => a.receipt?.status === 'active')
+  const creditNotes = [...inv.credit_notes].sort((a, b) => b.note_date.localeCompare(a.note_date))
+  const activeCreditNotes = creditNotes.filter((n) => n.status === 'issued')
+  const deadline = creditNoteDeadline(inv.invoice_date)
+  const canCredit =
+    canManage &&
+    inv.status === 'issued' &&
+    inv.total_amount - inv.amount_credited > 0 &&
+    todayISO() <= deadline
 
   async function recordPayment() {
     if (!inv) return
@@ -134,7 +144,15 @@ export default function InvoiceDetailPage() {
             Record payment
           </Button>
         )}
-        {canManage && inv.status === 'issued' && (
+        {canCredit && (
+          <Link href={`/credit-notes/new?invoice=${inv.id}` as Route}>
+            <Button variant="outline" size="sm">
+              <FileMinus className="w-4 h-4" />
+              Credit note
+            </Button>
+          </Link>
+        )}
+        {canManage && inv.status === 'issued' && activeCreditNotes.length === 0 && (
           <Button variant="outline" size="sm" className="text-red-600" onClick={() => setShowCancel(true)}>
             <XCircle className="w-4 h-4" />
             Cancel
@@ -307,6 +325,34 @@ export default function InvoiceDetailPage() {
               </table>
             )}
           </Card>
+
+          {creditNotes.length > 0 && (
+            <Card>
+              <CardHeader>
+                <h3 className="font-semibold text-slate-900">Credit notes</h3>
+              </CardHeader>
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-slate-50">
+                  {creditNotes.map((n) => (
+                    <tr key={n.id} className={n.status === 'cancelled' ? 'opacity-50' : undefined}>
+                      <td className="px-5 py-3">
+                        <Link href={`/credit-notes/${n.id}` as Route} className="font-mono text-xs text-blue-600 hover:underline">
+                          {n.credit_note_no}
+                        </Link>
+                      </td>
+                      <td className="px-5 py-3 text-slate-600">{formatDate(n.note_date)}</td>
+                      <td className="px-5 py-3 text-slate-600">
+                        {creditNoteReasonLabel(n.reason)}
+                        {n.restocked ? ' · restocked' : ''}
+                        {n.status === 'cancelled' ? ' · cancelled' : ''}
+                      </td>
+                      <td className="px-5 py-3 text-right tabular-nums font-medium">{formatCurrency(n.total_amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -332,6 +378,7 @@ export default function InvoiceDetailPage() {
               </div>
               <p className="text-xs text-slate-500">{amountInWords(inv.total_amount)}</p>
               <Line label="Paid" value={inv.amount_paid} />
+              {inv.amount_credited > 0 && <Line label="Credit notes" value={inv.amount_credited} />}
               <div className="flex justify-between font-semibold">
                 <span>Balance due</span>
                 <span className={`tabular-nums ${balance > 0 ? 'text-amber-600' : 'text-green-600'}`}>
@@ -343,6 +390,11 @@ export default function InvoiceDetailPage() {
                 <span>{formatDate(inv.due_date)}</span>
               </div>
               {inv.reverse_charge && <p className="text-xs text-amber-700">Tax payable on reverse charge</p>}
+              {inv.status === 'issued' && (
+                <p className="text-xs text-slate-400 pt-1">
+                  Credit notes allowed until {formatDate(deadline)} (CGST Act s.34)
+                </p>
+              )}
             </CardBody>
           </Card>
 

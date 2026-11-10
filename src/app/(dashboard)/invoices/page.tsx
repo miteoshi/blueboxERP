@@ -18,7 +18,7 @@ const FILTERS: { label: string; value: 'all' | PaymentState | 'open' }[] = [
   { label: 'All', value: 'all' },
   { label: 'Open', value: 'open' },
   { label: 'Overdue', value: 'overdue' },
-  { label: 'Paid', value: 'paid' },
+  { label: 'Settled', value: 'paid' },
   { label: 'Cancelled', value: 'cancelled' },
 ]
 
@@ -33,7 +33,8 @@ export default function InvoicesPage() {
     return (invoices ?? []).filter((inv) => {
       const state = paymentState(inv)
       if (filter === 'open' && !['unpaid', 'partial', 'overdue'].includes(state)) return false
-      if (filter !== 'all' && filter !== 'open' && state !== filter) return false
+      if (filter === 'paid' && state !== 'paid' && state !== 'credited') return false
+      if (filter !== 'all' && filter !== 'open' && filter !== 'paid' && state !== filter) return false
       if (!term) return true
       return (
         inv.invoice_no.toLowerCase().includes(term) ||
@@ -69,6 +70,7 @@ export default function InvoicesPage() {
       { header: 'Round Off', value: (r) => r.round_off },
       { header: 'Invoice Value', value: (r) => r.total_amount },
       { header: 'Paid', value: (r) => r.amount_paid },
+      { header: 'Credit Notes', value: (r) => r.amount_credited },
       { header: 'Balance', value: (r) => r.balance_due },
       { header: 'Due Date', value: (r) => r.due_date },
       { header: 'Status', value: (r) => paymentState(r) },

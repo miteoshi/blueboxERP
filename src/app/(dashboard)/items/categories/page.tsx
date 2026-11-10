@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useOrgId } from "@/lib/hooks/use-tenant";
+import { useCan } from "@/lib/hooks/use-profile";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,7 @@ const emptyForm: CategoryForm = {
 export default function ItemCategoriesPage() {
   const supabase = createClient();
   const orgId = useOrgId();
+  const canEdit = useCan("manageMasterData");
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState("");
@@ -226,10 +228,12 @@ export default function ItemCategoriesPage() {
         title="Item Categories"
         description="Manage item categories for your organization"
       >
-        <Button size="sm" onClick={openAddModal}>
+        {canEdit && (
+          <Button size="sm" onClick={openAddModal}>
           <Plus className="w-4 h-4" />
           Add Category
         </Button>
+        )}
       </PageHeader>
 
       {/* Search */}
@@ -325,7 +329,7 @@ export default function ItemCategoriesPage() {
                       </td>
 
                       <td className="px-4 py-3">
-                        <div className="flex justify-end gap-2">
+                        {canEdit && <div className="flex justify-end gap-2">
                           <Button
                             variant="outline"
                             size="sm"
@@ -343,7 +347,7 @@ export default function ItemCategoriesPage() {
                             <Power className="w-4 h-4 mr-1" />
                             {category.is_active ? "Deactivate" : "Activate"}
                           </Button>
-                        </div>
+                        </div>}
                       </td>
                     </tr>
                   ))}

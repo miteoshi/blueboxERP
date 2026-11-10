@@ -14,6 +14,7 @@ import { formatCurrency, formatQty, todayISO } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { Trash2, Save, AlertTriangle } from 'lucide-react'
 import type { Enums } from '@/lib/types/database'
+import { RequirePermission } from '@/components/auth/require-permission'
 
 type TransportMode = Enums<'transport_mode'>
 
@@ -144,7 +145,7 @@ function buildChallanLines(soLines: DispatchSoLine[] | null | undefined): Challa
     }))
 }
 
-export default function NewChallanPage() {
+function NewChallanPageContent() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const qc           = useQueryClient()
@@ -508,5 +509,13 @@ const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
         </div>
       </div>
     </div>
+  )
+}
+
+export default function NewChallanPage() {
+  return (
+    <RequirePermission permission="dispatch">
+      <NewChallanPageContent />
+    </RequirePermission>
   )
 }

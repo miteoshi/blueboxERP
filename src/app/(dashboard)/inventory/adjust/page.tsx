@@ -11,8 +11,9 @@ import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { Save, AlertTriangle } from 'lucide-react'
 import { useOrgId } from "@/lib/hooks/use-tenant";
+import { RequirePermission } from '@/components/auth/require-permission'
 
-export default function AdjustInventoryPage() {
+function AdjustInventoryPageContent() {
 const router = useRouter();
 const orgId = useOrgId();
 const { data: items, isLoading: itemsLoading } = useItems();
@@ -153,4 +154,12 @@ const { data: items, isLoading: itemsLoading } = useItems();
       </div>
     </div>
   );
+}
+
+export default function AdjustInventoryPage() {
+  return (
+    <RequirePermission permission="adjustStock">
+      <AdjustInventoryPageContent />
+    </RequirePermission>
+  )
 }

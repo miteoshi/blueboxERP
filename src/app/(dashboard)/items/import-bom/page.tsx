@@ -14,8 +14,10 @@ import {
 import { validateBomRow, type BomImportRow } from "@/lib/utils/bom-import";
 import { toast } from "sonner";
 import { Upload, CheckCircle2, XCircle, Save } from "lucide-react";
+import { RequirePermission } from '@/components/auth/require-permission'
+import { allRows } from "@/lib/utils/all-rows"
 
-export default function ImportBomPage() {
+function ImportBomPageContent() {
   const router = useRouter();
   const supabase = createClient();
   const orgId = useOrgId();
@@ -42,10 +44,11 @@ export default function ImportBomPage() {
       /*
        * Load this organization's items.
        */
-      const { data: items, error: itemsError } = await supabase
+      const { data: items, error: itemsError } = await allRows(supabase
         .from("items")
         .select("id, item_code")
-        .eq("org_id", orgId);
+        .eq("org_id", orgId)
+        .order("id"));
 
       if (itemsError) {
         throw itemsError;
@@ -508,4 +511,12 @@ export default function ImportBomPage() {
       )}
     </div>
   );
+}
+
+export default function ImportBomPage() {
+  return (
+    <RequirePermission permission="importBom">
+      <ImportBomPageContent />
+    </RequirePermission>
+  )
 }

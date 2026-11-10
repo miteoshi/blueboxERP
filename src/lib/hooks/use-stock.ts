@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import type { Tables } from '@/lib/types/database'
 import { ilikeAny } from '@/lib/utils/search'
+import { allRows } from '@/lib/utils/all-rows'
 
 export type StockLevel = Tables<'v_stock_levels'>
 // ── All stock levels ──────────────────────────────────────────
@@ -27,7 +28,7 @@ export function useStockLevels(search?: string) {
         query = query.or(ilikeAny(['name', 'item_code'], search))
       }
 
-      const { data, error } = await query
+      const { data, error } = await allRows(query.order('item_id'))
       if (error) throw error
       return data as StockLevel[]
     },
@@ -69,10 +70,11 @@ export function useReorderAlerts() {
     queryFn: async () => {
       if (!orgId) return []
 
-      const { data, error } = await supabase
+      const { data, error } = await allRows(supabase
         .from('v_reorder_alerts')
         .select('*')
         .order('qty_available', { ascending: true })
+        .order('item_id'))
       if (error) throw error
       return data as StockLevel[]
     },

@@ -27,6 +27,7 @@ import { formatCurrency, formatDate, todayISO } from '@/lib/utils/format'
 import { downloadCsv } from '@/lib/utils/csv'
 import { toast } from 'sonner'
 import { Download, Plus, Wallet, X } from 'lucide-react'
+import { allRows } from "@/lib/utils/all-rows"
 
 function useActiveClients() {
   const supabase = createClient()
@@ -34,11 +35,12 @@ function useActiveClients() {
   return useQuery({
     queryKey: ['clients-min', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await allRows(supabase
         .from('clients')
         .select('id, name')
         .eq('is_active', true)
         .order('name')
+        .order('id'))
       if (error) throw error
       return data
     },

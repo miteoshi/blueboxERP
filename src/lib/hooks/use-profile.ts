@@ -63,20 +63,37 @@ export function useCanApprove(): boolean {
   return role === 'admin' || role === 'manager'
 }
 
-export function useCanWriteInventory(): boolean {
+// Who may do what — mirrors the database (RLS write policies and the
+// assert_my_role() checks in each workflow function). Keep in sync.
+const PERMISSIONS = {
+  manageItems: ['admin', 'manager', 'store'],          // items RLS
+  manageMasterData: ['admin', 'manager'],              // categories, material types, units RLS
+  manageClients: ['admin', 'manager', 'sales'],        // clients RLS
+  manageSuppliers: ['admin', 'manager', 'store'],      // suppliers RLS
+  manageWorkers: ['admin', 'manager'],                 // workers RLS, /api/admin/create-worker
+  editBom: ['admin', 'manager', 'production'],         // bom RLS
+  importBom: ['admin', 'manager'],                     // creates items (manageItems) and BOM lines (editBom)
+  setPrices: ['admin', 'manager', 'store'],            // set_item_price()
+  receiveGoods: ['admin', 'manager', 'store'],         // create_inbound_receipt()
+  adjustStock: ['admin', 'manager', 'store'],          // adjust_inventory()
+  createProduction: ['admin', 'manager'],              // create_production_order()
+  sell: ['admin', 'manager', 'sales'],                 // create_quotation(), sales orders
+  dispatch: ['admin', 'manager', 'store'],             // create_delivery_challan()
+} as const satisfies Record<string, readonly UserRole[]>
+
+export type Permission = keyof typeof PERMISSIONS
+
+export function useCan(permission: Permission): boolean {
   const role = useRole()
-  return role === 'admin' || role === 'store' || role === 'production'
+  return role !== null && (PERMISSIONS[permission] as readonly UserRole[]).includes(role)
 }
 
 export function useCanSell(): boolean {
-  const role = useRole()
-  return role === 'admin' || role === 'manager' || role === 'sales'
+  return useCan('sell')
 }
 
-// Matches the delivery_challans RLS policy and create_delivery_challan()
 export function useCanDispatch(): boolean {
-  const role = useRole()
-  return role === 'admin' || role === 'manager' || role === 'store'
+  return useCan('dispatch')
 }
 
 export function useIsAdmin(): boolean {

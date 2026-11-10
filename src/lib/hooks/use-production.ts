@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import { toast } from 'sonner'
 import type { Enums } from '@/lib/types/database'
+import { allRows } from '@/lib/utils/all-rows'
 
 type ProductionStatus = Enums<'production_status'>
 
@@ -159,7 +160,7 @@ export function useManufacturedItems() {
     queryFn: async () => {
       if (!orgId) return []
 
-      const { data, error } = await supabase
+      const { data, error } = await allRows(supabase
         .from('items')
         .select(`
               id,
@@ -174,6 +175,7 @@ export function useManufacturedItems() {
         .eq('is_manufactured', true)
         .eq('is_active', true)
         .order('name')
+        .order('id'))
 
       if (error) throw error
       return data ?? []
@@ -193,7 +195,7 @@ export function useRawMaterialItems() {
     queryFn: async () => {
       if (!orgId) return []
 
-      const { data, error } = await supabase
+      const { data, error } = await allRows(supabase
         .from('items')
         .select(`
               id,
@@ -208,6 +210,7 @@ export function useRawMaterialItems() {
         .eq('is_raw_material', true)
         .eq('is_active', true)
         .order('name')
+        .order('id'))
 
       if (error) throw error
       return data ?? []

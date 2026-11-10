@@ -6,6 +6,7 @@ import { useOrgId } from '@/lib/hooks/use-tenant'
 import { toast } from 'sonner'
 import type { Tables} from '@/lib/types/database'
 import { ilikeAny } from '@/lib/utils/search'
+import { allRows } from '@/lib/utils/all-rows'
 
 type Item = Tables<'items'>
 
@@ -71,7 +72,7 @@ export function useItems(filters?: {
         query = query.or(ilikeAny(['name', 'item_code', 'sub_category'], filters.search))
       }
 
-      const { data, error } = await query
+      const { data, error } = await allRows(query.order('id'))
       if (error) throw error
       return data as Item[]
     },

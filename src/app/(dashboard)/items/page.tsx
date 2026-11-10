@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useOrgId } from "@/lib/hooks/use-tenant";
+import { useCan } from "@/lib/hooks/use-profile";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { TableLoader } from "@/components/ui/spinner";
@@ -14,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useItemCategories } from "@/lib/hooks/use-items";
 import { ilikeAny } from '@/lib/utils/search'
+import { allRows } from "@/lib/utils/all-rows"
 
 // Fetch items with their current prices joined
 function useItemsWithPrices(
@@ -73,13 +75,16 @@ function useItemsWithPrices(
         query = query.or(ilikeAny(['name', 'item_code'], search));
       }
 
-      const { data: items, error } = await query;
+      const { data: items, error } = await allRows(query.order("id"));
 
       if (error) throw error;
 
-      const { data: prices } = await supabase
+      const { data: prices, error: pricesError } = await allRows(supabase
         .from("v_current_prices")
-        .select("item_id, purchase_rate, selling_rate, gst_percent, rate_unit");
+        .select("item_id, purchase_rate, selling_rate, gst_percent, rate_unit")
+        .order("item_id"));
+
+      if (pricesError) throw pricesError;
 
       const priceMap = new Map(prices?.map((p) => [p.item_id, p]) ?? []);
 
@@ -101,6 +106,8 @@ export default function ItemsPage() {
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const orgId = useOrgId();
+  const canManageItems = useCan("manageItems");
+  const canImportBom = useCan("importBom");
 
   const { data: categories, isLoading: isCategoriesLoading } =
     useItemCategories();
@@ -121,21 +128,25 @@ export default function ItemsPage() {
         title="Items"
         description="Master catalogue — all products, raw materials and traded goods"
       >
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => router.push("/items/import")}
-        >
-          Import Items
-        </Button>
+        {canManageItems && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/items/import")}
+          >
+            Import Items
+          </Button>
+        )}
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => router.push("/items/import-bom")}
-        >
-          Import BOM
-        </Button>
+        {canImportBom && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/items/import-bom")}
+          >
+            Import BOM
+          </Button>
+        )}
       </PageHeader>
 
       {/* Filters */}

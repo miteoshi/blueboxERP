@@ -5,6 +5,7 @@ import type { Tables } from "@/lib/types/database";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useCan } from "@/lib/hooks/use-profile";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Pencil, Trash2 } from "lucide-react";
@@ -141,6 +142,7 @@ function deleteErrorMessage(err: unknown) {
 export default function ItemActions({ item }: ItemActionsProps) {
   const supabase = createClient();
   const router = useRouter();
+  const canEdit = useCan("manageItems");
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -523,6 +525,8 @@ export default function ItemActions({ item }: ItemActionsProps) {
       setDeleting(false);
     }
   }
+
+  if (!canEdit) return null;
 
   return (
     <>

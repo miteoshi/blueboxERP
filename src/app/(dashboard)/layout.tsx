@@ -21,12 +21,17 @@ export default async function DashboardLayout({
   // Server-side check: if profile has no org_id, route to onboarding
   const { data: profile } = await supabase
     .from('profiles')
-    .select('org_id')
+    .select('org_id, is_active')
     .eq('id', user.id)
     .maybeSingle()
 
   if (profile && !profile.org_id) {
     redirect('/onboarding')
+  }
+
+  // A deactivated user can sign in but the database shows them nothing
+  if (profile && !profile.is_active) {
+    redirect('/suspend?reason=user')
   }
 
   // Manual access switch — flip organizations.access_status in Supabase to

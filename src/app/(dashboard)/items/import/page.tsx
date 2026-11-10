@@ -15,8 +15,9 @@ import { validateItemRow, type ItemImportRow } from "@/lib/utils/item-import";
 import { toast } from "sonner";
 import { Upload, CheckCircle2, XCircle, Save } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { RequirePermission } from '@/components/auth/require-permission'
 
-export default function ImportItemsPage() {
+function ImportItemsPageContent() {
   const router = useRouter();
   const supabase = createClient();
   const orgId = useOrgId();
@@ -461,4 +462,12 @@ export default function ImportItemsPage() {
       )}
     </div>
   );
+}
+
+export default function ImportItemsPage() {
+  return (
+    <RequirePermission permission="manageItems">
+      <ImportItemsPageContent />
+    </RequirePermission>
+  )
 }

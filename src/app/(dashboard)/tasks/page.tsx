@@ -81,7 +81,7 @@ function useTasks(
       const { data: worker } = await supabase
         .from("workers")
         .select("id")
-        .ilike("email", user.email)
+        .eq("email", user.email.toLowerCase())
         .eq("is_active", true)
         .maybeSingle();
 

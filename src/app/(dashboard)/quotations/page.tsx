@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuotations, useUpdateQuotationStatus } from '@/lib/hooks/use-quotations'
-import { useCanApprove } from '@/lib/hooks/use-profile'
+import { useCanApprove, useCanSell } from '@/lib/hooks/use-profile'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { DocumentStatusBadge } from '@/components/ui/badge'
@@ -31,6 +31,7 @@ export default function QuotationsPage() {
   const [approvingId, setApprovingId] = useState<string | null>(null)
 
   const canApprove = useCanApprove()
+  const canSell = useCanSell()
   const { data: quotations, isLoading } = useQuotations({
     status: (status || undefined) as DocumentStatus | undefined,
     search,
@@ -53,12 +54,14 @@ export default function QuotationsPage() {
         title="Quotations"
         description="Customer price offers and approval workflow"
       >
-        <Link href="/quotations/new">
-          <Button size="sm">
-            <Plus className="w-4 h-4" />
-            New Quotation
-          </Button>
-        </Link>
+        {canSell && (
+          <Link href="/quotations/new">
+            <Button size="sm">
+              <Plus className="w-4 h-4" />
+              New Quotation
+            </Button>
+          </Link>
+        )}
       </PageHeader>
 
       {/* Status tabs */}

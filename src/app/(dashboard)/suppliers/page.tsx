@@ -45,13 +45,14 @@ interface SupplierForm {
   state:          string
   gst_number:     string
   payment_terms:  string
+  credit_days:    string
   notes:          string
 }
 
 const EMPTY: SupplierForm = {
   name: '', contact_person: '', phone: '', email: '',
   address: '', city: '', state: 'Gujarat',
-  gst_number: '', payment_terms: '', notes: '',
+  gst_number: '', payment_terms: '', credit_days: '30', notes: '',
 }
 
 export default function SuppliersPage() {
@@ -82,6 +83,7 @@ export default function SuppliersPage() {
       state:          s.state          ?? 'Gujarat',
       gst_number:     s.gst_number     ?? '',
       payment_terms:  s.payment_terms  ?? '',
+      credit_days:    String(s.credit_days ?? 30),
       notes:          s.notes          ?? '',
     })
     setEditId(s.id)
@@ -90,6 +92,10 @@ export default function SuppliersPage() {
 
   async function handleSave() {
     if (!form.name.trim()) { toast.error('Supplier name is required'); return }
+    const creditDays = Number(form.credit_days)
+    if (!Number.isInteger(creditDays) || creditDays < 0 || creditDays > 365) {
+      toast.error('Credit days must be a whole number from 0 to 365'); return
+    }
     if (!orgId) {
       toast.error("Organization not loaded");
       return;
@@ -106,6 +112,7 @@ export default function SuppliersPage() {
         state:          form.state          || null,
         gst_number:     form.gst_number     || null,
         payment_terms:  form.payment_terms  || null,
+        credit_days:    creditDays,
         notes:          form.notes          || null,
       }
 
@@ -171,7 +178,12 @@ export default function SuppliersPage() {
                 <Input label="City" value={form.city} onChange={f('city')} />
                 <Input label="State" value={form.state} onChange={f('state')} />
               </div>
-              <Input label="Payment Terms" value={form.payment_terms} onChange={f('payment_terms')} placeholder="e.g. 100% advance before delivery" />
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <Input label="Payment Terms" value={form.payment_terms} onChange={f('payment_terms')} placeholder="e.g. 100% advance before delivery" />
+                </div>
+                <Input label="Credit days" type="number" min="0" max="365" value={form.credit_days} onChange={f('credit_days')} />
+              </div>
               <Textarea label="Notes" value={form.notes} onChange={f('notes')} placeholder="Specialities, lead times, notes…" />
             </div>
             <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex gap-3">

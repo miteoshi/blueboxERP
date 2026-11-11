@@ -55,7 +55,7 @@ export function useActiveSuppliers() {
       if (!orgId) return []
       const { data, error } = await allRows(supabase
         .from('suppliers')
-        .select('id, name, payment_terms')
+        .select('id, name, payment_terms, credit_days')
         .eq('is_active', true)
         .order('name')
         .order('id'))

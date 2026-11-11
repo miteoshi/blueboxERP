@@ -120,6 +120,18 @@ const NAV: (NavItem | NavGroup)[] = [
         icon: Plus,
         roles: ["admin", "manager", "store"],
       },
+      {
+        label: "Supplier Bills",
+        href: "/supplier-bills",
+        icon: Receipt,
+        roles: ["admin", "manager", "viewer"],
+      },
+      {
+        label: "Payables",
+        href: "/payables",
+        icon: Wallet,
+        roles: ["admin", "manager", "viewer"],
+      },
     ],
   },
 

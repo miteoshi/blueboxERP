@@ -78,6 +78,8 @@ const PERMISSIONS = {
   draftPurchaseOrders: ['admin', 'manager', 'store'],  // create_purchase_order() as draft, update_purchase_order()
   approvePurchaseOrders: ['admin', 'manager'],         // issue_purchase_order(), close_purchase_order()
   viewPurchaseOrders: ['admin', 'manager', 'store', 'viewer'], // purchase_orders RLS
+  managePayables: ['admin', 'manager'],                // create_supplier_bill(), record_supplier_payment()
+  viewPayables: ['admin', 'manager', 'viewer'],        // supplier_bills / supplier_payments RLS
   adjustStock: ['admin', 'manager', 'store'],          // adjust_inventory()
   createProduction: ['admin', 'manager'],              // create_production_order()
   sell: ['admin', 'manager', 'sales'],                 // create_quotation(), sales orders

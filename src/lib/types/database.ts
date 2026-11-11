@@ -839,6 +839,7 @@ export type Database = {
           line_total: number | null
           notes: string | null
           po_line_id: string | null
+          qty_billed: number
           qty_ordered: number | null
           qty_received: number
           rate: number
@@ -852,6 +853,7 @@ export type Database = {
           line_total?: number | null
           notes?: string | null
           po_line_id?: string | null
+          qty_billed?: number
           qty_ordered?: number | null
           qty_received: number
           rate: number
@@ -865,6 +867,7 @@ export type Database = {
           line_total?: number | null
           notes?: string | null
           po_line_id?: string | null
+          qty_billed?: number
           qty_ordered?: number | null
           qty_received?: number
           rate?: number
@@ -1015,6 +1018,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_receipts_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payables"
+            referencedColumns: ["supplier_id"]
           },
         ]
       }
@@ -1246,6 +1256,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_prices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payables"
+            referencedColumns: ["supplier_id"]
           },
         ]
       }
@@ -1932,6 +1949,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payables"
+            referencedColumns: ["supplier_id"]
           },
         ]
       }
@@ -2849,12 +2873,400 @@ export type Database = {
           },
         ]
       }
+      supplier_bill_lines: {
+        Row: {
+          bill_id: string
+          grn_line_id: string
+          gst_amount: number
+          gst_percent: Database["public"]["Enums"]["gst_rate"]
+          id: string
+          item_id: string
+          line_total: number
+          org_id: string
+          qty: number
+          rate: number
+          sort_order: number
+          taxable_value: number
+          unit_id: string
+        }
+        Insert: {
+          bill_id: string
+          grn_line_id: string
+          gst_amount: number
+          gst_percent: Database["public"]["Enums"]["gst_rate"]
+          id?: string
+          item_id: string
+          line_total: number
+          org_id: string
+          qty: number
+          rate: number
+          sort_order: number
+          taxable_value: number
+          unit_id: string
+        }
+        Update: {
+          bill_id?: string
+          grn_line_id?: string
+          gst_amount?: number
+          gst_percent?: Database["public"]["Enums"]["gst_rate"]
+          id?: string
+          item_id?: string
+          line_total?: number
+          org_id?: string
+          qty?: number
+          rate?: number
+          sort_order?: number
+          taxable_value?: number
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_bill_lines_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bill_lines_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "v_bill_ageing"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bill_lines_grn_line_id_fkey"
+            columns: ["grn_line_id"]
+            isOneToOne: false
+            referencedRelation: "inbound_receipt_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bill_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bill_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_alerts"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "supplier_bill_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_levels"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "supplier_bill_lines_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bill_lines_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_bills: {
+        Row: {
+          amount_paid: number
+          balance_due: number | null
+          bill_date: string
+          bill_no: string
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cgst_amount: number
+          created_at: string
+          created_by: string | null
+          due_date: string
+          financial_year: string
+          id: string
+          igst_amount: number
+          is_interstate: boolean
+          notes: string | null
+          org_id: string
+          round_off: number
+          sgst_amount: number
+          status: string
+          supplier_gstin: string | null
+          supplier_id: string
+          supplier_invoice_no: string
+          taxable_value: number
+          total_amount: number
+        }
+        Insert: {
+          amount_paid?: number
+          balance_due?: number | null
+          bill_date: string
+          bill_no: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cgst_amount?: number
+          created_at?: string
+          created_by?: string | null
+          due_date: string
+          financial_year: string
+          id?: string
+          igst_amount?: number
+          is_interstate?: boolean
+          notes?: string | null
+          org_id: string
+          round_off?: number
+          sgst_amount?: number
+          status?: string
+          supplier_gstin?: string | null
+          supplier_id: string
+          supplier_invoice_no: string
+          taxable_value?: number
+          total_amount?: number
+        }
+        Update: {
+          amount_paid?: number
+          balance_due?: number | null
+          bill_date?: string
+          bill_no?: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cgst_amount?: number
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          financial_year?: string
+          id?: string
+          igst_amount?: number
+          is_interstate?: boolean
+          notes?: string | null
+          org_id?: string
+          round_off?: number
+          sgst_amount?: number
+          status?: string
+          supplier_gstin?: string | null
+          supplier_id?: string
+          supplier_invoice_no?: string
+          taxable_value?: number
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_bills_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bills_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bills_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bills_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bills_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payables"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
+      }
+      supplier_payment_allocations: {
+        Row: {
+          amount: number
+          bill_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          org_id: string
+          payment_id: string
+        }
+        Insert: {
+          amount: number
+          bill_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          org_id: string
+          payment_id: string
+        }
+        Update: {
+          amount?: number
+          bill_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          org_id?: string
+          payment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payment_allocations_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_allocations_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "v_bill_ageing"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_allocations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_allocations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_allocations_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_payments: {
+        Row: {
+          amount: number
+          amount_allocated: number
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          created_by: string | null
+          financial_year: string
+          id: string
+          mode: string
+          notes: string | null
+          org_id: string
+          payment_date: string
+          payment_no: string
+          reference: string | null
+          status: string
+          supplier_id: string
+        }
+        Insert: {
+          amount: number
+          amount_allocated?: number
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          financial_year: string
+          id?: string
+          mode: string
+          notes?: string | null
+          org_id: string
+          payment_date: string
+          payment_no: string
+          reference?: string | null
+          status?: string
+          supplier_id: string
+        }
+        Update: {
+          amount?: number
+          amount_allocated?: number
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          financial_year?: string
+          id?: string
+          mode?: string
+          notes?: string | null
+          org_id?: string
+          payment_date?: string
+          payment_no?: string
+          reference?: string | null
+          status?: string
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payments_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payables"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           address: string | null
           city: string | null
           contact_person: string | null
           created_at: string
+          credit_days: number
           email: string | null
           gst_number: string | null
           id: string
@@ -2873,6 +3285,7 @@ export type Database = {
           city?: string | null
           contact_person?: string | null
           created_at?: string
+          credit_days?: number
           email?: string | null
           gst_number?: string | null
           id?: string
@@ -2891,6 +3304,7 @@ export type Database = {
           city?: string | null
           contact_person?: string | null
           created_at?: string
+          credit_days?: number
           email?: string | null
           gst_number?: string | null
           id?: string
@@ -3005,6 +3419,46 @@ export type Database = {
       }
     }
     Views: {
+      v_bill_ageing: {
+        Row: {
+          amount_paid: number | null
+          balance_due: number | null
+          bill_date: string | null
+          bill_no: string | null
+          bucket: string | null
+          days_overdue: number | null
+          due_date: string | null
+          id: string | null
+          org_id: string | null
+          supplier_id: string | null
+          supplier_invoice_no: string | null
+          supplier_name: string | null
+          total_amount: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_bills_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bills_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bills_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payables"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
+      }
       v_client_receivables: {
         Row: {
           client_id: string | null
@@ -3156,8 +3610,44 @@ export type Database = {
         }
         Relationships: []
       }
+      v_supplier_payables: {
+        Row: {
+          advance: number | null
+          billed: number | null
+          credit_days: number | null
+          next_due: string | null
+          not_due: number | null
+          org_id: string | null
+          outstanding: number | null
+          overdue: number | null
+          overdue_1_30: number | null
+          overdue_31_60: number | null
+          overdue_61_90: number | null
+          overdue_90_plus: number | null
+          paid: number | null
+          supplier_id: string | null
+          supplier_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      _allocate_payment_explicit: {
+        Args: { p_allocations: Json; p_available: number; p_payment_id: string }
+        Returns: number
+      }
+      _allocate_payment_fifo: {
+        Args: { p_payment_id: string }
+        Returns: number
+      }
       _allocate_receipt_fifo: {
         Args: { p_invoice_id?: string; p_receipt_id: string; p_so_id?: string }
         Returns: number
@@ -3166,8 +3656,13 @@ export type Database = {
         Args: { p_org_id: string; p_supplier_id: string }
         Returns: boolean
       }
+      _recalc_bill_paid: { Args: { p_bill_id: string }; Returns: undefined }
       _recalc_invoice_paid: {
         Args: { p_invoice_id: string }
+        Returns: undefined
+      }
+      _recalc_payment_allocated: {
+        Args: { p_payment_id: string }
         Returns: undefined
       }
       _recalc_receipt_allocated: {
@@ -3197,6 +3692,10 @@ export type Database = {
         Args: { p_allocations?: Json; p_receipt_id: string }
         Returns: Json
       }
+      allocate_supplier_payment: {
+        Args: { p_allocations?: Json; p_payment_id: string }
+        Returns: Json
+      }
       assert_item_in_my_org: { Args: { p_item_id: string }; Returns: undefined }
       assert_my_role: {
         Args: { p_roles: Database["public"]["Enums"]["user_role"][] }
@@ -3219,6 +3718,14 @@ export type Database = {
         Returns: Json
       }
       cancel_sales_order: { Args: { p_so_id: string }; Returns: Json }
+      cancel_supplier_bill: {
+        Args: { p_bill_id: string; p_reason: string }
+        Returns: Json
+      }
+      cancel_supplier_payment: {
+        Args: { p_payment_id: string; p_reason: string }
+        Returns: Json
+      }
       check_bom_availability: {
         Args: { p_production_order_id: string }
         Returns: Json
@@ -3338,6 +3845,18 @@ export type Database = {
           p_invoice_date?: string
           p_notes?: string
           p_reverse_charge?: boolean
+        }
+        Returns: Json
+      }
+      create_supplier_bill: {
+        Args: {
+          p_bill_date: string
+          p_due_date?: string
+          p_invoice_total?: number
+          p_lines: Json
+          p_notes?: string
+          p_supplier_id: string
+          p_supplier_invoice_no: string
         }
         Returns: Json
       }
@@ -3470,6 +3989,19 @@ export type Database = {
       }
       record_so_payment: {
         Args: { p_amount: number; p_so_id: string }
+        Returns: Json
+      }
+      record_supplier_payment: {
+        Args: {
+          p_allocations?: Json
+          p_amount: number
+          p_auto_allocate?: boolean
+          p_mode: string
+          p_notes?: string
+          p_payment_date?: string
+          p_reference?: string
+          p_supplier_id: string
+        }
         Returns: Json
       }
       release_inventory: {

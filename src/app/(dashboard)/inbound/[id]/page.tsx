@@ -31,7 +31,7 @@ export default async function GrnDetailPage({ params }: Props) {
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: grn }, { data: movements }] = await Promise.all([
+  const [{ data: grn }, { data: movements }, { data: role }] = await Promise.all([
     supabase
       .from("inbound_receipts")
       .select(
@@ -42,7 +42,7 @@ export default async function GrnDetailPage({ params }: Props) {
         receiver:profiles!inbound_receipts_received_by_fkey ( full_name ),
         creator:profiles!inbound_receipts_created_by_fkey ( full_name ),
         inbound_receipt_lines (
-          id, qty_ordered, qty_received, unit_id,
+          id, qty_ordered, qty_received, qty_billed, unit_id,
           unit:units (
             id, name
           ),
@@ -73,6 +73,8 @@ export default async function GrnDetailPage({ params }: Props) {
       .select("id, qty, movement_type, movement_date, rate_at_time")
       .eq("ref_type", "inbound_receipt")
       .eq("ref_id", id),
+
+    supabase.rpc("my_role"),
   ]);
 
   if (!grn) notFound()
@@ -84,6 +86,9 @@ export default async function GrnDetailPage({ params }: Props) {
   const subtotal   = grn.total_amount ?? 0
   const gstAmount  = grn.gst_amount   ?? 0
   const grandTotal = subtotal + gstAmount
+  // Same roles as create_supplier_bill()
+  const canBill  = role === "admin" || role === "manager"
+  const unbilled = lines.some((l) => l.qty_billed < l.qty_received)
 
   return (
     <div>
@@ -91,6 +96,14 @@ export default async function GrnDetailPage({ params }: Props) {
         title={grn.receipt_no}
         description={`Goods Received Note · ${supplier?.name} · ${formatDate(grn.receipt_date)}`}
       >
+        {canBill && unbilled && grn.status === "received" && (
+          <Link
+            href={`/supplier-bills/new?supplier=${grn.supplier_id}&grn=${grn.id}` as Route}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          >
+            Enter supplier bill
+          </Link>
+        )}
         <a
           href={`/api/pdf?type=grn&id=${grn.id}`}
           target="_blank"
@@ -250,6 +263,15 @@ export default async function GrnDetailPage({ params }: Props) {
                           <span className="font-semibold text-slate-900">
                             {formatQty(line.qty_received, line.unit?.name)}
                           </span>
+                          {canBill && (
+                            <div className="text-xs text-slate-400">
+                              {line.qty_billed >= line.qty_received
+                                ? "Billed"
+                                : line.qty_billed > 0
+                                  ? `${formatQty(line.qty_billed)} billed`
+                                  : "Not billed"}
+                            </div>
+                          )}
                           {variance !== null && variance !== 0 && (
                             <div
                               className={`text-xs ${

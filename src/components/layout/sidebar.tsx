@@ -204,6 +204,12 @@ const NAV: (NavItem | NavGroup)[] = [
         icon: FileSpreadsheet,
         roles: ["admin", "manager", "viewer"],
       },
+      {
+        label: "Purchase Register",
+        href: "/reports/purchases",
+        icon: FileSpreadsheet,
+        roles: ["admin", "manager", "viewer"],
+      },
     ],
   },
 

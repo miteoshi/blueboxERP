@@ -12,8 +12,9 @@ import { Button } from '@/components/ui/button'
 import { StatCard } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { TableLoader } from '@/components/ui/spinner'
-import { formatCurrency, formatDate, todayISO } from '@/lib/utils/format'
-import { financialYear } from '@/lib/gst'
+import { formatCurrency, formatDate } from '@/lib/utils/format'
+import { allRows } from '@/lib/utils/all-rows'
+import { monthRange, reportPeriods } from '@/lib/utils/periods'
 import { downloadCsv, type CsvColumn } from '@/lib/utils/csv'
 import { Download } from 'lucide-react'
 
@@ -24,32 +25,13 @@ const B2CL_THRESHOLD = 100000
 const TABS = ['Summary', 'B2B', 'B2CL', 'B2CS', 'CDNR', 'CDNUR', 'HSN', 'Documents'] as const
 type Tab = (typeof TABS)[number]
 
-// Calendar maths on today's IST date, so server and browser agree
-function monthRange(offset: number) {
-  const [y, m] = todayISO().split('-').map(Number)
-  const first = new Date(Date.UTC(y, m - 1 + offset, 1))
-  const last = new Date(Date.UTC(y, m + offset, 0))
-  const iso = (d: Date) => d.toISOString().slice(0, 10)
-  return { from: iso(first), to: iso(last) }
-}
-
-function quarterRange() {
-  const [y, m] = todayISO().split('-').map(Number)
-  // Indian FY quarters: Apr–Jun, Jul–Sep, Oct–Dec, Jan–Mar
-  const qStartMonth = Math.floor((m - 1) / 3) * 3
-  const first = new Date(Date.UTC(y, qStartMonth, 1))
-  const last = new Date(Date.UTC(y, qStartMonth + 3, 0))
-  const iso = (d: Date) => d.toISOString().slice(0, 10)
-  return { from: iso(first), to: iso(last) }
-}
-
 function useInvoicesForPeriod(from: string, to: string) {
   const supabase = createClient()
   const orgId = useOrgId()
   return useQuery({
     queryKey: ['gst-invoices', orgId, from, to],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await allRows(supabase
         .from('sales_invoices')
         .select(`
           id, invoice_no, invoice_date, status, buyer_name, buyer_gstin, place_of_supply, is_interstate,
@@ -59,6 +41,7 @@ function useInvoicesForPeriod(from: string, to: string) {
         .gte('invoice_date', from)
         .lte('invoice_date', to)
         .order('invoice_no')
+        .order('id'))
       if (error) throw error
       return data
     },
@@ -73,7 +56,7 @@ function useCreditNotesForPeriod(from: string, to: string) {
   return useQuery({
     queryKey: ['gst-credit-notes', orgId, from, to],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await allRows(supabase
         .from('credit_notes')
         .select(`
           id, credit_note_no, note_date, status, buyer_gstin, place_of_supply, is_interstate,
@@ -85,6 +68,7 @@ function useCreditNotesForPeriod(from: string, to: string) {
         .gte('note_date', from)
         .lte('note_date', to)
         .order('credit_note_no')
+        .order('id'))
       if (error) throw error
       return data
     },
@@ -273,12 +257,7 @@ export default function GstReportsPage() {
     }
   }
 
-  const presets = [
-    { label: 'This month', ...monthRange(0) },
-    { label: 'Last month', ...monthRange(-1) },
-    { label: 'This quarter', ...quarterRange() },
-    { label: 'This FY', from: financialYear(todayISO()).from, to: financialYear(todayISO()).to },
-  ]
+  const presets = reportPeriods()
 
   return (
     <div>

@@ -1039,6 +1039,45 @@ export type Database = {
           },
         ]
       }
+      document_requests: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          operation: string
+          org_id: string
+          request_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          operation: string
+          org_id: string
+          request_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          operation?: string
+          org_id?: string
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_requests_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gst_states: {
         Row: {
           alpha_code: string
@@ -3886,6 +3925,10 @@ export type Database = {
         Args: { p_invoice_id?: string; p_receipt_id: string; p_so_id?: string }
         Returns: number
       }
+      _claim_document_request: {
+        Args: { p_operation: string; p_request_id: string }
+        Returns: undefined
+      }
       _po_is_interstate: {
         Args: { p_org_id: string; p_supplier_id: string }
         Returns: boolean
@@ -4004,6 +4047,7 @@ export type Database = {
           p_note_date?: string
           p_notes?: string
           p_reason: string
+          p_request_id?: string
           p_restock?: boolean
         }
         Returns: Json
@@ -4015,6 +4059,7 @@ export type Database = {
           p_note_date?: string
           p_notes?: string
           p_reason: string
+          p_request_id?: string
           p_return_stock?: boolean
         }
         Returns: Json
@@ -4025,6 +4070,7 @@ export type Database = {
           p_driver_name?: string
           p_lines: Json
           p_notes?: string
+          p_request_id?: string
           p_so_id: string
           p_transport_mode?: Database["public"]["Enums"]["transport_mode"]
           p_vehicle_no?: string
@@ -4039,6 +4085,7 @@ export type Database = {
           p_lines: Json
           p_notes?: string
           p_receipt_date?: string
+          p_request_id?: string
           p_supplier_id: string
           p_transport_mode?: Database["public"]["Enums"]["transport_mode"]
           p_vehicle_no?: string
@@ -4063,6 +4110,7 @@ export type Database = {
           p_materials: Json
           p_notes?: string
           p_qty: number
+          p_request_id?: string
           p_target_date?: string
         }
         Returns: Json
@@ -4097,6 +4145,7 @@ export type Database = {
           p_challan_ids: string[]
           p_invoice_date?: string
           p_notes?: string
+          p_request_id?: string
           p_reverse_charge?: boolean
         }
         Returns: Json
@@ -4190,6 +4239,7 @@ export type Database = {
         }
         Returns: Json
       }
+      prune_document_requests: { Args: never; Returns: number }
       receive_inventory: {
         Args: {
           p_batch_no?: string
@@ -4212,6 +4262,7 @@ export type Database = {
           p_notes?: string
           p_po_id: string
           p_receipt_date?: string
+          p_request_id?: string
           p_transport_mode?: Database["public"]["Enums"]["transport_mode"]
           p_vehicle_no?: string
         }
@@ -4236,6 +4287,7 @@ export type Database = {
           p_notes?: string
           p_receipt_date?: string
           p_reference?: string
+          p_request_id?: string
           p_so_id?: string
         }
         Returns: Json
@@ -4253,6 +4305,7 @@ export type Database = {
           p_notes?: string
           p_payment_date?: string
           p_reference?: string
+          p_request_id?: string
           p_supplier_id: string
         }
         Returns: Json

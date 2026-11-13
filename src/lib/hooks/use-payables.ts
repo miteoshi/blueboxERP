@@ -6,6 +6,8 @@ import { useOrgId } from '@/lib/hooks/use-tenant'
 import { allRows } from '@/lib/utils/all-rows'
 import type { PaymentMode } from '@/lib/hooks/use-finance'
 import { toast } from 'sonner'
+import { useRequestId } from '@/lib/hooks/use-request-id'
+import { isAlreadySaved, rpcFailure } from '@/lib/utils/rpc'
 import type { Enums } from '@/lib/types/database'
 
 // Postgres errors raised by the payables RPCs carry a readable message
@@ -285,6 +287,7 @@ export function useSupplierPayments() {
 export function useRecordSupplierPayment() {
   const supabase = createClient()
   const invalidate = useInvalidatePayables()
+  const requestId = useRequestId()
 
   return useMutation({
     mutationFn: async (input: {
@@ -305,11 +308,13 @@ export function useRecordSupplierPayment() {
         p_reference: input.reference || undefined,
         p_notes: input.notes || undefined,
         p_allocations: input.billId ? [{ bill_id: input.billId, amount: input.amount }] : undefined,
+        p_request_id: requestId.get(),
       })
-      if (error) throw rpcError(error, 'Could not record the payment')
+      if (error) throw rpcFailure(error, 'Could not record the payment')
       return data as { id: string; payment_no: string; amount: number; allocated: number; unallocated: number }
     },
     onSuccess: (data) => {
+      requestId.clear()
       invalidate()
       toast.success(
         data.unallocated > 0.005
@@ -317,7 +322,10 @@ export function useRecordSupplierPayment() {
           : `${data.payment_no} recorded`,
       )
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => {
+      toast.error(err.message)
+      if (isAlreadySaved(err)) invalidate()
+    },
   })
 }
 
@@ -436,6 +444,7 @@ export function useDebitNote(id: string | null) {
 export function useCreateDebitNote() {
   const supabase = createClient()
   const invalidate = useInvalidatePayables()
+  const requestId = useRequestId()
 
   return useMutation({
     mutationFn: async (input: {
@@ -454,11 +463,13 @@ export function useCreateDebitNote() {
         p_return_stock: input.returnStock ?? false,
         p_note_date: input.noteDate || undefined,
         p_notes: input.notes || undefined,
+        p_request_id: requestId.get(),
       })
-      if (error) throw rpcError(error, 'Could not raise the debit note')
+      if (error) throw rpcFailure(error, 'Could not raise the debit note')
       return data as { id: string; debit_note_no: string; total_amount: number; payment_released: number }
     },
     onSuccess: (data) => {
+      requestId.clear()
       invalidate()
       toast.success(
         data.payment_released > 0.005
@@ -466,7 +477,10 @@ export function useCreateDebitNote() {
           : `${data.debit_note_no} raised`,
       )
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => {
+      toast.error(err.message)
+      if (isAlreadySaved(err)) invalidate()
+    },
   })
 }
 

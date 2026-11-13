@@ -1,3 +1,4 @@
+import { rpcFailure } from '@/lib/utils/rpc'
 import { createClient } from '@/lib/supabase/client'
 import type { Enums } from '@/lib/types/database'
 
@@ -246,6 +247,8 @@ export async function createDeliveryChallan(params: {
   vehicleNo?:     string
   driverName?:    string
   notes?:         string
+  // Sent again on a retry so the database refuses a duplicate challan
+  requestId?:     string
 }) {
   const supabase = createClient()
   const { data, error } = await supabase.rpc('create_delivery_challan', {
@@ -260,8 +263,9 @@ export async function createDeliveryChallan(params: {
     p_vehicle_no:     params.vehicleNo,
     p_driver_name:    params.driverName,
     p_notes:          params.notes,
+    p_request_id:     params.requestId,
   })
-  if (error) throw new Error(error.message)
+  if (error) throw rpcFailure(error, 'Could not create the challan')
   return data as {
     success:        boolean
     id:             string
@@ -303,6 +307,8 @@ export async function createInboundReceipt(params: {
   challanNo?:     string
   invoiceNo?:     string
   notes?:         string
+  // Sent again on a retry so the database refuses a duplicate GRN
+  requestId?:     string
 }) {
   const supabase = createClient()
   const { data, error } = await supabase.rpc('create_inbound_receipt', {
@@ -322,8 +328,9 @@ export async function createInboundReceipt(params: {
     p_challan_no:     params.challanNo,
     p_invoice_no:     params.invoiceNo,
     p_notes:          params.notes,
+    p_request_id:     params.requestId,
   })
-  if (error) throw new Error(error.message)
+  if (error) throw rpcFailure(error, 'Could not record the GRN')
   return data as {
     success:      boolean
     id:           string
@@ -360,6 +367,8 @@ export async function createProductionOrder(params: {
   targetDate?:    string
   notes?:         string
   expiryHours?:   number
+  // Sent again on a retry so the database refuses a duplicate order
+  requestId?:     string
 }) {
   const supabase = createClient()
   const { data, error } = await supabase.rpc('create_production_order', {
@@ -369,8 +378,9 @@ export async function createProductionOrder(params: {
     p_target_date:      params.targetDate,
     p_notes:            params.notes,
     p_expiry_hours:     params.expiryHours ?? 168,
+    p_request_id:       params.requestId,
   })
-  if (error) throw new Error(error.message)
+  if (error) throw rpcFailure(error, 'Could not create the production order')
   return data as { success: boolean; id: string; po_number: string; materials_reserved: number }
 }
 

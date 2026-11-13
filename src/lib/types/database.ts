@@ -4037,7 +4037,7 @@ export type Database = {
         Returns: Json
       }
       convert_quotation_to_sales_order: {
-        Args: { p_quotation_id: string }
+        Args: { p_allow_expired?: boolean; p_quotation_id: string }
         Returns: Json
       }
       create_credit_note: {

@@ -45,6 +45,10 @@ export default function QuotationDetailPage() {
   const isApproved = qt.status === 'approved'
   const isConverted = qt.status === 'converted'
   const canConvert = isApproved && canSell && !isConverted
+  // The database refuses an expired quotation; only a manager or admin can
+  // convert one as it stands, and that is recorded in the approvals trail.
+  const isExpired = !isConverted && isPastDate(qt.valid_until)
+  const canOverrideExpiry = canApprove
 
   // ── Convert to Sales Order ────────────────────────────────
   async function convertToSO() {
@@ -58,14 +62,18 @@ export default function QuotationDetailPage() {
   try {
     // One transaction in the database: SO header + lines + quotation marked
     // 'converted'. A second click (or a second user) cannot create a duplicate SO.
-    const so = await convertQuotationToSalesOrder(qt.id);
+    const so = await convertQuotationToSalesOrder(qt.id, isExpired);
 
     await Promise.all([
       qc.invalidateQueries({ queryKey: ["quotations"] }),
       qc.invalidateQueries({ queryKey: ["sales-orders"] }),
     ]);
 
-    toast.success(`Sales order ${so.so_number} created`);
+    toast.success(
+      isExpired
+        ? `Sales order ${so.so_number} created from an expired quotation`
+        : `Sales order ${so.so_number} created`,
+    );
     router.push(`/sales-orders/${so.id}`);
   } catch (err: unknown) {
   toast.error(err instanceof Error ? err.message : 'Failed to convert quotation')
@@ -148,7 +156,7 @@ export default function QuotationDetailPage() {
         )}
 
         {/* Convert to SO (approved only, not yet converted) */}
-        {canConvert && (
+        {canConvert && !isExpired && (
           <Button
             size="sm"
             loading={convertingToSO}
@@ -157,6 +165,20 @@ export default function QuotationDetailPage() {
           >
             <ShoppingCart className="w-4 h-4" />
             Convert to Sales Order
+          </Button>
+        )}
+
+        {/* Expired: a manager can still convert it as it stands */}
+        {canConvert && isExpired && canOverrideExpiry && (
+          <Button
+            variant="outline"
+            size="sm"
+            loading={convertingToSO}
+            onClick={convertToSO}
+            className="text-amber-700 border-amber-300 hover:bg-amber-50"
+          >
+            <ShoppingCart className="w-4 h-4" />
+            Convert anyway
           </Button>
         )}
 
@@ -190,6 +212,15 @@ export default function QuotationDetailPage() {
               Cancel
             </Button>
           </div>
+        </div>
+      )}
+
+      {isExpired && isApproved && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          This quotation expired on {formatDate(qt.valid_until)}, so it can no longer be converted at these prices.{' '}
+          {canOverrideExpiry
+            ? 'Raise a fresh quotation at current prices, or use “Convert anyway” — that is recorded against the quotation.'
+            : 'Raise a fresh quotation at current prices, or ask a manager to convert it as it stands.'}
         </div>
       )}
 

@@ -21,6 +21,10 @@ const PAYABLES_KEYS = [
   ['supplier-payables'],
   ['bill-ageing'],
   ['inbound-receipt'],
+  ['debit-notes'],
+  ['debit-note'],
+  ['stock-levels'],
+  ['purchase-register'],
 ] as const
 
 function useInvalidatePayables() {
@@ -28,22 +32,25 @@ function useInvalidatePayables() {
   return () => Promise.all(PAYABLES_KEYS.map((queryKey) => qc.invalidateQueries({ queryKey: [...queryKey] })))
 }
 
-export type BillState = 'unpaid' | 'part_paid' | 'paid' | 'overdue' | 'cancelled'
+export type BillState = 'unpaid' | 'part_paid' | 'paid' | 'settled' | 'overdue' | 'cancelled'
 
 export const BILL_STATE: Record<BillState, { label: string; variant: 'default' | 'info' | 'warning' | 'success' | 'danger' }> = {
   unpaid:    { label: 'Unpaid',    variant: 'info' },
   part_paid: { label: 'Part paid', variant: 'warning' },
   paid:      { label: 'Paid',      variant: 'success' },
+  settled:   { label: 'Settled',   variant: 'success' },
   overdue:   { label: 'Overdue',   variant: 'danger' },
   cancelled: { label: 'Cancelled', variant: 'default' },
 }
 
+// A bill with nothing left to pay is "Paid" if money went out, and "Settled"
+// if debit notes cleared it instead.
 export function billState(
   bill: { status: string; balance_due: number | null; amount_paid: number; due_date: string },
   today: string,
 ): BillState {
   if (bill.status === 'cancelled') return 'cancelled'
-  if ((bill.balance_due ?? 0) <= 0) return 'paid'
+  if ((bill.balance_due ?? 0) <= 0) return bill.amount_paid > 0 ? 'paid' : 'settled'
   if (bill.due_date < today) return 'overdue'
   return bill.amount_paid > 0 ? 'part_paid' : 'unpaid'
 }
@@ -62,7 +69,7 @@ export function useSupplierBills() {
         .from('supplier_bills')
         .select(`
           id, bill_no, supplier_invoice_no, bill_date, due_date, status,
-          taxable_value, total_amount, amount_paid, balance_due,
+          taxable_value, total_amount, amount_paid, amount_debited, balance_due,
           supplier:suppliers ( id, name )
         `)
         .order('bill_date', { ascending: false })
@@ -100,6 +107,10 @@ export function useSupplierBill(id: string | null) {
           supplier_payment_allocations (
             id, amount,
             payment:supplier_payments ( id, payment_no, payment_date, mode, reference, status )
+          ),
+          debit_notes (
+            id, debit_note_no, note_date, reason, returned_stock, total_amount, status,
+            debit_note_lines ( bill_line_id, qty, taxable_value )
           )
         `)
         .eq('id', id)
@@ -343,6 +354,135 @@ export function useCancelSupplierPayment() {
     onSuccess: (data) => {
       invalidate()
       toast.success(`${data.payment_no} cancelled`)
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+// ── Debit notes (purchase returns and post-billing adjustments) ──
+
+export type DebitNoteReason = 'purchase_return' | 'rate_difference' | 'discount' | 'deficiency' | 'other'
+
+export const DEBIT_NOTE_REASONS: { value: DebitNoteReason; label: string; hint: string }[] = [
+  { value: 'purchase_return', label: 'Goods returned', hint: 'Return items to the supplier. Quantity based; can take the goods out of stock.' },
+  { value: 'rate_difference', label: 'Rate difference', hint: 'The supplier billed a higher rate than agreed.' },
+  { value: 'discount', label: 'Discount agreed later', hint: 'A discount settled after the invoice was raised.' },
+  { value: 'deficiency', label: 'Short or damaged', hint: 'Short supply or damaged goods you are not sending back.' },
+  { value: 'other', label: 'Other', hint: 'Anything else reducing what you owe on this bill.' },
+]
+
+export const debitNoteReasonLabel = (reason: string) =>
+  DEBIT_NOTE_REASONS.find((r) => r.value === reason)?.label ?? reason
+
+export function useDebitNotes() {
+  const supabase = createClient()
+  const orgId = useOrgId()
+
+  return useQuery({
+    queryKey: ['debit-notes', orgId],
+    queryFn: async () => {
+      if (!orgId) return []
+      const { data, error } = await allRows(supabase
+        .from('debit_notes')
+        .select(`
+          id, debit_note_no, note_date, reason, returned_stock, status, cancel_reason,
+          taxable_value, cgst_amount, sgst_amount, igst_amount, total_amount, is_interstate,
+          supplier:suppliers ( id, name ),
+          bill:supplier_bills ( id, bill_no, supplier_invoice_no )
+        `)
+        .order('note_date', { ascending: false })
+        .order('debit_note_no', { ascending: false })
+        .order('id'))
+      if (error) throw error
+      return data
+    },
+    enabled: !!orgId,
+    staleTime: 30 * 1000,
+  })
+}
+
+export function useDebitNote(id: string | null) {
+  const supabase = createClient()
+  const orgId = useOrgId()
+
+  return useQuery({
+    queryKey: ['debit-note', orgId, id],
+    queryFn: async () => {
+      if (!id || !orgId) return null
+      const { data, error } = await supabase
+        .from('debit_notes')
+        .select(`
+          *,
+          supplier:suppliers ( id, name, gst_number, phone, city ),
+          bill:supplier_bills ( id, bill_no, supplier_invoice_no, bill_date, total_amount, amount_debited, balance_due ),
+          creator:profiles!debit_notes_created_by_fkey ( full_name ),
+          canceller:profiles!debit_notes_cancelled_by_fkey ( full_name ),
+          debit_note_lines (
+            *,
+            unit:units ( name ),
+            item:items ( item_code, name, hsn_code )
+          )
+        `)
+        .eq('id', id)
+        .single()
+      if (error) throw error
+      return data
+    },
+    enabled: !!id && !!orgId,
+    staleTime: 30 * 1000,
+  })
+}
+
+export function useCreateDebitNote() {
+  const supabase = createClient()
+  const invalidate = useInvalidatePayables()
+
+  return useMutation({
+    mutationFn: async (input: {
+      billId: string
+      reason: DebitNoteReason
+      // qty for a return, taxable_value for the other reasons
+      lines: { bill_line_id: string; qty?: number; taxable_value?: number }[]
+      returnStock?: boolean
+      noteDate?: string
+      notes?: string
+    }) => {
+      const { data, error } = await supabase.rpc('create_debit_note', {
+        p_bill_id: input.billId,
+        p_reason: input.reason,
+        p_lines: input.lines,
+        p_return_stock: input.returnStock ?? false,
+        p_note_date: input.noteDate || undefined,
+        p_notes: input.notes || undefined,
+      })
+      if (error) throw rpcError(error, 'Could not raise the debit note')
+      return data as { id: string; debit_note_no: string; total_amount: number; payment_released: number }
+    },
+    onSuccess: (data) => {
+      invalidate()
+      toast.success(
+        data.payment_released > 0.005
+          ? `${data.debit_note_no} raised — ₹${Number(data.payment_released).toFixed(2)} of payment is now an advance`
+          : `${data.debit_note_no} raised`,
+      )
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+export function useCancelDebitNote() {
+  const supabase = createClient()
+  const invalidate = useInvalidatePayables()
+
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const { data, error } = await supabase.rpc('cancel_debit_note', { p_debit_note_id: id, p_reason: reason })
+      if (error) throw rpcError(error, 'Could not cancel the debit note')
+      return data as { debit_note_no: string }
+    },
+    onSuccess: (data) => {
+      invalidate()
+      toast.success(`${data.debit_note_no} cancelled`)
     },
     onError: (err: Error) => toast.error(err.message),
   })

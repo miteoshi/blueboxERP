@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 
 import { createProductionOrder } from '@/lib/utils/inventory'
+import { useRequestId } from '@/lib/hooks/use-request-id'
 
 import { PageHeader } from '@/components/layout/page-header'
 
@@ -250,6 +251,8 @@ const { data: rawItems } = useRawMaterialItems(orgId);
   const [bomExists,    setBomExists]    = useState<boolean | null>(null)
 
   const [saving,       setSaving]       = useState(false)
+  // Reused if the save is retried, so the database refuses a duplicate
+  const requestId = useRequestId()
 
 
 
@@ -474,7 +477,9 @@ const { data: rawItems } = useRawMaterialItems(orgId);
         targetDate:     targetDate || undefined,
         notes:          notes      || undefined,
         expiryHours:    168,
+        requestId:      requestId.get(),
       })
+      requestId.clear()
 
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['production-orders'] }),

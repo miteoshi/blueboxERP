@@ -2,6 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useRequestId } from '@/lib/hooks/use-request-id'
+import { isAlreadySaved, rpcFailure } from '@/lib/utils/rpc'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import { toast } from 'sonner'
 import type { Tables } from '@/lib/types/database'
@@ -178,6 +180,7 @@ export function useUninvoicedChallans(clientId?: string) {
 export function useCreateInvoice() {
   const supabase = createClient()
   const invalidate = useInvalidateFinance()
+  const requestId = useRequestId()
 
   return useMutation({
     mutationFn: async (args: {
@@ -191,8 +194,9 @@ export function useCreateInvoice() {
         p_invoice_date: args.invoiceDate,
         p_notes: args.notes,
         p_reverse_charge: args.reverseCharge ?? false,
+        p_request_id: requestId.get(),
       })
-      if (error) throw rpcError(error, 'Could not create the invoice')
+      if (error) throw rpcFailure(error, 'Could not create the invoice')
       return data as {
         id: string
         invoice_no: string
@@ -201,7 +205,13 @@ export function useCreateInvoice() {
         is_interstate: boolean
       }
     },
-    onSuccess: () => invalidate(),
+    onSuccess: () => {
+      requestId.clear()
+      invalidate()
+    },
+    onError: (err: Error) => {
+      if (isAlreadySaved(err)) invalidate()
+    },
   })
 }
 
@@ -261,6 +271,7 @@ export function useReceipts(filters?: { clientId?: string; from?: string; to?: s
 export function useRecordReceipt() {
   const supabase = createClient()
   const invalidate = useInvalidateFinance()
+  const requestId = useRequestId()
 
   return useMutation({
     mutationFn: async (args: {
@@ -284,11 +295,18 @@ export function useRecordReceipt() {
         p_so_id: args.soId,
         p_allocations: args.allocations && args.allocations.length > 0 ? args.allocations : undefined,
         p_auto_allocate: args.autoAllocate ?? true,
+        p_request_id: requestId.get(),
       })
-      if (error) throw rpcError(error, 'Could not record the payment')
+      if (error) throw rpcFailure(error, 'Could not record the payment')
       return data as { id: string; receipt_no: string; allocated: number; unallocated: number }
     },
-    onSuccess: () => invalidate(),
+    onSuccess: () => {
+      requestId.clear()
+      invalidate()
+    },
+    onError: (err: Error) => {
+      if (isAlreadySaved(err)) invalidate()
+    },
   })
 }
 
@@ -417,6 +435,7 @@ export type CreditNoteLineInput = { invoice_line_id: string; qty?: number; taxab
 export function useCreateCreditNote() {
   const supabase = createClient()
   const invalidate = useInvalidateFinance()
+  const requestId = useRequestId()
 
   return useMutation({
     mutationFn: async (args: {
@@ -434,11 +453,18 @@ export function useCreateCreditNote() {
         p_restock: args.restock ?? false,
         p_note_date: args.noteDate,
         p_notes: args.notes,
+        p_request_id: requestId.get(),
       })
-      if (error) throw rpcError(error, 'Could not issue the credit note')
+      if (error) throw rpcFailure(error, 'Could not issue the credit note')
       return data as { id: string; credit_note_no: string; total_amount: number; payment_released: number }
     },
-    onSuccess: () => invalidate(),
+    onSuccess: () => {
+      requestId.clear()
+      invalidate()
+    },
+    onError: (err: Error) => {
+      if (isAlreadySaved(err)) invalidate()
+    },
   })
 }
 

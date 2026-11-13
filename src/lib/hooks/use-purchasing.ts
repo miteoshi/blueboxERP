@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import { allRows } from '@/lib/utils/all-rows'
 import { toast } from 'sonner'
+import { useRequestId } from '@/lib/hooks/use-request-id'
+import { isAlreadySaved, rpcFailure } from '@/lib/utils/rpc'
 import type { Enums, Tables } from '@/lib/types/database'
 
 export type PurchaseOrder = Tables<'purchase_orders'>
@@ -298,6 +300,7 @@ export function useClosePurchaseOrder() {
 export function useReceivePurchaseOrder() {
   const supabase = createClient()
   const invalidate = useInvalidatePurchasing()
+  const requestId = useRequestId()
 
   return useMutation({
     mutationFn: async (input: {
@@ -321,14 +324,19 @@ export function useReceivePurchaseOrder() {
         p_challan_no: input.challanNo || undefined,
         p_invoice_no: input.invoiceNo || undefined,
         p_notes: input.notes || undefined,
+        p_request_id: requestId.get(),
       })
-      if (error) throw rpcError(error, 'Could not record the receipt')
+      if (error) throw rpcFailure(error, 'Could not record the receipt')
       return data as { id: string; receipt_no: string; po_no: string; po_status: PurchaseOrderStatus }
     },
     onSuccess: (data) => {
+      requestId.clear()
       invalidate()
       toast.success(`${data.receipt_no} recorded — stock updated${data.po_status === 'received' ? `; ${data.po_no} fully received` : ''}`)
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => {
+      toast.error(err.message)
+      if (isAlreadySaved(err)) invalidate()
+    },
   })
 }

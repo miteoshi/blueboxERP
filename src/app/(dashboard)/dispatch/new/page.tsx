@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import { createDeliveryChallan } from '@/lib/utils/inventory'
+import { useRequestId } from '@/lib/hooks/use-request-id'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Input, Textarea } from '@/components/ui/input'
@@ -161,6 +162,8 @@ const { data: salesOrders } = useSalesOrdersForDispatch(orgId);
   const [notes,         setNotes]         = useState('')
   const [lines,         setLines]         = useState<ChallanLine[]>([])
   const [saving,        setSaving]        = useState(false)
+  // Reused if the save is retried, so the database refuses a duplicate
+  const requestId = useRequestId()
 
   // ── Fetch reservations for the selected SO ────────────────
 const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
@@ -235,7 +238,9 @@ const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
         vehicleNo:     vehicleNo  || undefined,
         driverName:    driverName || undefined,
         notes:         notes      || undefined,
+        requestId:     requestId.get(),
       })
+      requestId.clear()
 
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['delivery-challans'] }),

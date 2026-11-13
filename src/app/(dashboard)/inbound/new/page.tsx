@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useActiveSuppliers, usePurchasableItems } from '@/lib/hooks/use-purchasing'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import { createInboundReceipt } from '@/lib/utils/inventory'
+import { useRequestId } from '@/lib/hooks/use-request-id'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Input, Textarea } from '@/components/ui/input'
@@ -67,6 +68,8 @@ function NewGrnPageContent() {
   const [notes,         setNotes]         = useState('')
   const [lines,         setLines]         = useState<GrnLine[]>([{ ...EMPTY_LINE }])
   const [saving,        setSaving]        = useState(false)
+  // Reused if the save is retried, so the database refuses a duplicate
+  const requestId = useRequestId()
 
   const lineSubtotal  = (l: GrnLine) => l.qty_received * l.rate
   const lineGst       = (l: GrnLine) => lineSubtotal(l) * Number(l.gst_percent) / 100
@@ -141,7 +144,9 @@ function NewGrnPageContent() {
         challanNo:  challanNo  || undefined,
         invoiceNo:  invoiceNo  || undefined,
         notes:      notes      || undefined,
+        requestId:  requestId.get(),
       });
+      requestId.clear();
 
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["inbound-receipts"] }),

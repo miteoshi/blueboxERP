@@ -345,12 +345,13 @@ export async function createInboundReceipt(params: {
 // Creates the SO + lines and marks the quotation 'converted'.
 // Refuses double conversion.
 // allowExpired is only accepted from an admin or manager, and the database
-// records the override in the approvals trail.
+// records the override in the approvals trail. It is sent only when actually
+// overriding, so an ordinary conversion does not depend on it being there.
 export async function convertQuotationToSalesOrder(quotationId: string, allowExpired = false) {
   const supabase = createClient()
   const { data, error } = await supabase.rpc('convert_quotation_to_sales_order', {
-    p_allow_expired: allowExpired,
     p_quotation_id: quotationId,
+    ...(allowExpired ? { p_allow_expired: true } : {}),
   })
   if (error) throw new Error(error.message)
   return data as { success: boolean; id: string; so_number: string }

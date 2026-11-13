@@ -12,6 +12,7 @@ import { StatCard } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { TableLoader } from '@/components/ui/spinner'
 import { formatCurrency, formatDate, formatQty } from '@/lib/utils/format'
+import { debitNoteReasonLabel } from '@/lib/hooks/use-payables'
 import { allRows } from '@/lib/utils/all-rows'
 import { monthRange, reportPeriods } from '@/lib/utils/periods'
 import { downloadCsv } from '@/lib/utils/csv'
@@ -49,6 +50,40 @@ function useBillsForPeriod(from: string, to: string) {
         .lte('bill_date', to)
         .order('bill_date')
         .order('bill_no')
+        .order('id'))
+      if (error) throw error
+      return data
+    },
+    enabled: !!orgId && !!from && !!to,
+    staleTime: 60 * 1000,
+  })
+}
+
+// Debit notes dated in the period reverse part of the input credit
+function useDebitNotesForPeriod(from: string, to: string) {
+  const supabase = createClient()
+  const orgId = useOrgId()
+  return useQuery({
+    queryKey: ['purchase-register-notes', orgId, from, to],
+    queryFn: async () => {
+      const { data, error } = await allRows(supabase
+        .from('debit_notes')
+        .select(`
+          id, debit_note_no, note_date, reason, supplier_gstin, is_interstate,
+          taxable_value, cgst_amount, sgst_amount, igst_amount, total_amount,
+          supplier:suppliers ( id, name ),
+          bill:supplier_bills ( bill_no, supplier_invoice_no ),
+          debit_note_lines (
+            qty, gst_percent, taxable_value, gst_amount,
+            unit:units ( name ),
+            item:items ( hsn_code )
+          )
+        `)
+        .eq('status', 'issued')
+        .gte('note_date', from)
+        .lte('note_date', to)
+        .order('note_date')
+        .order('debit_note_no')
         .order('id'))
       if (error) throw error
       return data
@@ -99,40 +134,49 @@ export default function PurchaseRegisterPage() {
   const [tab, setTab] = useState<Tab>('Register')
 
   const { data: bills, isLoading } = useBillsForPeriod(from, to)
+  const { data: notes } = useDebitNotesForPeriod(from, to)
   const { data: output } = useOutputTax(from, to)
   const rows = useMemo(() => bills ?? [], [bills])
+  const noteRows = useMemo(() => notes ?? [], [notes])
 
   // Input credit needs a registered supplier: a bill with no GSTIN carries none
   const eligible = rows.filter((b) => !!b.supplier_gstin)
   const ineligible = rows.filter((b) => !b.supplier_gstin)
+  const eligibleNotes = noteRows.filter((n) => !!n.supplier_gstin)
 
   const totals = {
-    taxable: sum(rows, (b) => b.taxable_value),
-    value: sum(rows, (b) => b.total_amount),
-    cgst: sum(eligible, (b) => b.cgst_amount),
-    sgst: sum(eligible, (b) => b.sgst_amount),
-    igst: sum(eligible, (b) => b.igst_amount),
+    taxable: r2(sum(rows, (b) => b.taxable_value) - sum(noteRows, (n) => n.taxable_value)),
+    value: r2(sum(rows, (b) => b.total_amount) - sum(noteRows, (n) => n.total_amount)),
+    cgst: r2(sum(eligible, (b) => b.cgst_amount) - sum(eligibleNotes, (n) => n.cgst_amount)),
+    sgst: r2(sum(eligible, (b) => b.sgst_amount) - sum(eligibleNotes, (n) => n.sgst_amount)),
+    igst: r2(sum(eligible, (b) => b.igst_amount) - sum(eligibleNotes, (n) => n.igst_amount)),
     noCredit: sum(ineligible, tax),
+    reversed: r2(sum(eligibleNotes, (n) => n.cgst_amount + n.sgst_amount + n.igst_amount)),
   }
   const itc = r2(totals.cgst + totals.sgst + totals.igst)
 
   const byRate = useMemo(() => {
     const map = new Map<string, { rate: string; taxable: number; cgst: number; sgst: number; igst: number }>()
-    for (const b of rows) {
-      for (const l of b.supplier_bill_lines) {
-        const row = map.get(l.gst_percent) ?? { rate: l.gst_percent, taxable: 0, cgst: 0, sgst: 0, igst: 0 }
-        row.taxable = r2(row.taxable + l.taxable_value)
-        if (b.is_interstate) row.igst = r2(row.igst + l.gst_amount)
-        else {
-          const half = r2(l.gst_amount / 2)
-          row.cgst = r2(row.cgst + half)
-          row.sgst = r2(row.sgst + l.gst_amount - half)
-        }
-        map.set(l.gst_percent, row)
+    const add = (
+      rate: string,
+      interstate: boolean,
+      l: { taxable_value: number; gst_amount: number },
+      sign: 1 | -1,
+    ) => {
+      const row = map.get(rate) ?? { rate, taxable: 0, cgst: 0, sgst: 0, igst: 0 }
+      row.taxable = r2(row.taxable + sign * l.taxable_value)
+      if (interstate) row.igst = r2(row.igst + sign * l.gst_amount)
+      else {
+        const half = r2(l.gst_amount / 2)
+        row.cgst = r2(row.cgst + sign * half)
+        row.sgst = r2(row.sgst + sign * (l.gst_amount - half))
       }
+      map.set(rate, row)
     }
+    for (const b of rows) for (const l of b.supplier_bill_lines) add(l.gst_percent, b.is_interstate, l, 1)
+    for (const n of noteRows) for (const l of n.debit_note_lines) add(l.gst_percent, n.is_interstate, l, -1)
     return [...map.values()].sort((a, b) => Number(a.rate) - Number(b.rate))
-  }, [rows])
+  }, [rows, noteRows])
 
   const bySupplier = useMemo(() => {
     const map = new Map<string, { id: string; name: string; gstin: string | null; bills: number; taxable: number; tax: number; value: number }>()
@@ -145,25 +189,36 @@ export default function PurchaseRegisterPage() {
       row.value = r2(row.value + b.total_amount)
       map.set(id, row)
     }
+    for (const n of noteRows) {
+      const id = n.supplier?.id ?? ''
+      const row = map.get(id) ?? { id, name: n.supplier?.name ?? '—', gstin: n.supplier_gstin, bills: 0, taxable: 0, tax: 0, value: 0 }
+      row.taxable = r2(row.taxable - n.taxable_value)
+      row.tax = r2(row.tax - (n.cgst_amount + n.sgst_amount + n.igst_amount))
+      row.value = r2(row.value - n.total_amount)
+      map.set(id, row)
+    }
     return [...map.values()].sort((a, b) => b.value - a.value)
-  }, [rows])
+  }, [rows, noteRows])
 
   const hsn = useMemo(() => {
     const map = new Map<string, { hsn: string; unit: string; rate: string; qty: number; taxable: number; tax: number }>()
-    for (const b of rows) {
-      for (const l of b.supplier_bill_lines) {
-        const code = l.item?.hsn_code || 'No HSN'
-        const unit = l.unit?.name ?? ''
-        const key = `${code}|${unit}|${l.gst_percent}`
-        const row = map.get(key) ?? { hsn: code, unit, rate: l.gst_percent, qty: 0, taxable: 0, tax: 0 }
-        row.qty += Number(l.qty)
-        row.taxable = r2(row.taxable + l.taxable_value)
-        row.tax = r2(row.tax + l.gst_amount)
-        map.set(key, row)
-      }
+    const add = (
+      l: { qty: number | null; gst_percent: string; taxable_value: number; gst_amount: number; unit?: { name: string } | null; item?: { hsn_code: string | null } | null },
+      sign: 1 | -1,
+    ) => {
+      const code = l.item?.hsn_code || 'No HSN'
+      const unit = l.unit?.name ?? ''
+      const key = `${code}|${unit}|${l.gst_percent}`
+      const row = map.get(key) ?? { hsn: code, unit, rate: l.gst_percent, qty: 0, taxable: 0, tax: 0 }
+      row.qty += sign * Number(l.qty ?? 0)
+      row.taxable = r2(row.taxable + sign * l.taxable_value)
+      row.tax = r2(row.tax + sign * l.gst_amount)
+      map.set(key, row)
     }
+    for (const b of rows) for (const l of b.supplier_bill_lines) add(l, 1)
+    for (const n of noteRows) for (const l of n.debit_note_lines) add(l, -1)
     return [...map.values()].sort((a, b) => a.hsn.localeCompare(b.hsn) || Number(a.rate) - Number(b.rate))
-  }, [rows])
+  }, [rows, noteRows])
 
   const outputTotal = output ? r2(output.cgst + output.sgst + output.igst) : 0
   const netPayable = r2(outputTotal - itc)
@@ -210,21 +265,56 @@ export default function PurchaseRegisterPage() {
           { header: 'Net', value: (r) => r2(r.out - r.inp) },
         ])
       default:
-        return downloadCsv(`purchase-register-${tag}`, rows, [
-          { header: 'Bill No', value: (b) => b.bill_no },
-          { header: 'GSTIN of Supplier', value: (b) => b.supplier_gstin },
-          { header: 'Supplier', value: (b) => b.supplier?.name },
-          { header: 'Invoice Number', value: (b) => b.supplier_invoice_no },
-          { header: 'Invoice Date', value: (b) => b.bill_date },
-          { header: 'Invoice Value', value: (b) => b.total_amount },
-          { header: 'Supply Type', value: (b) => (b.is_interstate ? 'Inter-State' : 'Intra-State') },
-          { header: 'Taxable Value', value: (b) => b.taxable_value },
-          { header: 'IGST', value: (b) => b.igst_amount },
-          { header: 'CGST', value: (b) => b.cgst_amount },
-          { header: 'SGST', value: (b) => b.sgst_amount },
-          { header: 'Round Off', value: (b) => b.round_off },
-          { header: 'Input Credit', value: (b) => (b.supplier_gstin ? 'Yes' : 'No - unregistered supplier') },
-        ])
+        return downloadCsv(
+          `purchase-register-${tag}`,
+          [
+            ...rows.map((b) => ({
+              doc: b.bill_no,
+              gstin: b.supplier_gstin,
+              supplier: b.supplier?.name,
+              inv: b.supplier_invoice_no,
+              date: b.bill_date,
+              value: b.total_amount,
+              kind: b.is_interstate ? 'Inter-State' : 'Intra-State',
+              taxable: b.taxable_value,
+              igst: b.igst_amount,
+              cgst: b.cgst_amount,
+              sgst: b.sgst_amount,
+              round: b.round_off,
+              credit: b.supplier_gstin ? 'Yes' : 'No - unregistered supplier',
+            })),
+            ...noteRows.map((n) => ({
+              doc: n.debit_note_no,
+              gstin: n.supplier_gstin,
+              supplier: n.supplier?.name,
+              inv: n.bill?.bill_no ?? '',
+              date: n.note_date,
+              value: -n.total_amount,
+              kind: n.is_interstate ? 'Inter-State' : 'Intra-State',
+              taxable: -n.taxable_value,
+              igst: -n.igst_amount,
+              cgst: -n.cgst_amount,
+              sgst: -n.sgst_amount,
+              round: 0,
+              credit: 'Debit note - credit reversed',
+            })),
+          ],
+          [
+            { header: 'Document', value: (r) => r.doc },
+            { header: 'GSTIN of Supplier', value: (r) => r.gstin },
+            { header: 'Supplier', value: (r) => r.supplier },
+            { header: 'Invoice / Bill', value: (r) => r.inv },
+            { header: 'Date', value: (r) => r.date },
+            { header: 'Value', value: (r) => r.value },
+            { header: 'Supply Type', value: (r) => r.kind },
+            { header: 'Taxable Value', value: (r) => r.taxable },
+            { header: 'IGST', value: (r) => r.igst },
+            { header: 'CGST', value: (r) => r.cgst },
+            { header: 'SGST', value: (r) => r.sgst },
+            { header: 'Round Off', value: (r) => r.round },
+            { header: 'Input Credit', value: (r) => r.credit },
+          ],
+        )
     }
   }
 
@@ -258,14 +348,24 @@ export default function PurchaseRegisterPage() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <StatCard label="Purchases (taxable)" value={formatCurrency(totals.taxable)} sub={`${rows.length} bills`} />
+        <StatCard
+          label="Purchases (taxable)"
+          value={formatCurrency(totals.taxable)}
+          sub={`${rows.length} bills${noteRows.length ? ` · ${noteRows.length} debit notes` : ''}`}
+        />
         <StatCard label="Input IGST" value={formatCurrency(totals.igst)} />
         <StatCard label="Input CGST" value={formatCurrency(totals.cgst)} />
         <StatCard label="Input SGST" value={formatCurrency(totals.sgst)} />
         <StatCard
           label="Input credit"
           value={formatCurrency(itc)}
-          sub={totals.noCredit > 0 ? `${formatCurrency(totals.noCredit)} more has no credit` : 'From registered suppliers'}
+          sub={
+            totals.reversed > 0
+              ? `after ${formatCurrency(totals.reversed)} reversed by debit notes`
+              : totals.noCredit > 0
+                ? `${formatCurrency(totals.noCredit)} more has no credit`
+                : 'From registered suppliers'
+          }
         />
       </div>
 
@@ -301,7 +401,28 @@ export default function PurchaseRegisterPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {rows.length === 0 && <Empty cols={7} />}
+                {rows.length === 0 && noteRows.length === 0 && <Empty cols={7} />}
+                {noteRows.map((n) => (
+                  <tr key={n.id} className="hover:bg-slate-50 bg-amber-50/30">
+                    <td className="px-4 py-3">
+                      <Link href={`/debit-notes/${n.id}` as Route} className="font-mono font-semibold text-blue-600 hover:underline">
+                        {n.debit_note_no}
+                      </Link>
+                      <div className="text-xs text-slate-400">
+                        {debitNoteReasonLabel(n.reason)} on {n.bill?.bill_no} · {formatDate(n.note_date)}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-slate-900">{n.supplier?.name}</div>
+                      <div className="text-xs text-amber-700">Input credit reversed</div>
+                    </td>
+                    <Num value={-n.taxable_value} />
+                    <Num value={-n.igst_amount} />
+                    <Num value={-n.cgst_amount} />
+                    <Num value={-n.sgst_amount} />
+                    <Num value={-n.total_amount} bold />
+                  </tr>
+                ))}
                 {rows.map((b) => (
                   <tr key={b.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3">
@@ -328,16 +449,16 @@ export default function PurchaseRegisterPage() {
                   </tr>
                 ))}
               </tbody>
-              {rows.length > 0 && (
+              {(rows.length > 0 || noteRows.length > 0) && (
                 <tfoot>
                   <tr className="bg-slate-50 border-t border-slate-200 font-semibold">
                     <td className="px-4 py-3" colSpan={2}>
-                      Total
+                      Net of debit notes
                     </td>
                     <Num value={totals.taxable} />
-                    <Num value={sum(rows, (b) => b.igst_amount)} />
-                    <Num value={sum(rows, (b) => b.cgst_amount)} />
-                    <Num value={sum(rows, (b) => b.sgst_amount)} />
+                    <Num value={r2(sum(rows, (b) => b.igst_amount) - sum(noteRows, (n) => n.igst_amount))} />
+                    <Num value={r2(sum(rows, (b) => b.cgst_amount) - sum(noteRows, (n) => n.cgst_amount))} />
+                    <Num value={r2(sum(rows, (b) => b.sgst_amount) - sum(noteRows, (n) => n.sgst_amount))} />
                     <Num value={totals.value} />
                   </tr>
                 </tfoot>

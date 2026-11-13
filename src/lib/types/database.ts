@@ -623,6 +623,235 @@ export type Database = {
           },
         ]
       }
+      debit_note_lines: {
+        Row: {
+          bill_line_id: string
+          debit_note_id: string
+          gst_amount: number
+          gst_percent: Database["public"]["Enums"]["gst_rate"]
+          id: string
+          item_id: string
+          line_total: number
+          org_id: string
+          qty: number | null
+          rate: number
+          sort_order: number
+          taxable_value: number
+          unit_id: string
+        }
+        Insert: {
+          bill_line_id: string
+          debit_note_id: string
+          gst_amount: number
+          gst_percent: Database["public"]["Enums"]["gst_rate"]
+          id?: string
+          item_id: string
+          line_total: number
+          org_id: string
+          qty?: number | null
+          rate: number
+          sort_order: number
+          taxable_value: number
+          unit_id: string
+        }
+        Update: {
+          bill_line_id?: string
+          debit_note_id?: string
+          gst_amount?: number
+          gst_percent?: Database["public"]["Enums"]["gst_rate"]
+          id?: string
+          item_id?: string
+          line_total?: number
+          org_id?: string
+          qty?: number | null
+          rate?: number
+          sort_order?: number
+          taxable_value?: number
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debit_note_lines_bill_line_id_fkey"
+            columns: ["bill_line_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_bill_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debit_note_lines_debit_note_id_fkey"
+            columns: ["debit_note_id"]
+            isOneToOne: false
+            referencedRelation: "debit_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debit_note_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debit_note_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_alerts"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "debit_note_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_levels"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "debit_note_lines_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debit_note_lines_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debit_notes: {
+        Row: {
+          bill_id: string
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cgst_amount: number
+          created_at: string
+          created_by: string | null
+          debit_note_no: string
+          financial_year: string
+          id: string
+          igst_amount: number
+          is_interstate: boolean
+          note_date: string
+          notes: string | null
+          org_id: string
+          reason: string
+          returned_stock: boolean
+          round_off: number
+          sgst_amount: number
+          status: string
+          supplier_gstin: string | null
+          supplier_id: string
+          taxable_value: number
+          total_amount: number
+        }
+        Insert: {
+          bill_id: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cgst_amount?: number
+          created_at?: string
+          created_by?: string | null
+          debit_note_no: string
+          financial_year: string
+          id?: string
+          igst_amount?: number
+          is_interstate?: boolean
+          note_date: string
+          notes?: string | null
+          org_id: string
+          reason: string
+          returned_stock?: boolean
+          round_off?: number
+          sgst_amount?: number
+          status?: string
+          supplier_gstin?: string | null
+          supplier_id: string
+          taxable_value?: number
+          total_amount?: number
+        }
+        Update: {
+          bill_id?: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cgst_amount?: number
+          created_at?: string
+          created_by?: string | null
+          debit_note_no?: string
+          financial_year?: string
+          id?: string
+          igst_amount?: number
+          is_interstate?: boolean
+          note_date?: string
+          notes?: string | null
+          org_id?: string
+          reason?: string
+          returned_stock?: boolean
+          round_off?: number
+          sgst_amount?: number
+          status?: string
+          supplier_gstin?: string | null
+          supplier_id?: string
+          taxable_value?: number
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debit_notes_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debit_notes_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "v_bill_ageing"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debit_notes_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debit_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debit_notes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debit_notes_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debit_notes_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payables"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
+      }
       delivery_challan_lines: {
         Row: {
           challan_id: string
@@ -2980,6 +3209,7 @@ export type Database = {
       }
       supplier_bills: {
         Row: {
+          amount_debited: number
           amount_paid: number
           balance_due: number | null
           bill_date: string
@@ -3007,6 +3237,7 @@ export type Database = {
           total_amount: number
         }
         Insert: {
+          amount_debited?: number
           amount_paid?: number
           balance_due?: number | null
           bill_date: string
@@ -3034,6 +3265,7 @@ export type Database = {
           total_amount?: number
         }
         Update: {
+          amount_debited?: number
           amount_paid?: number
           balance_due?: number | null
           bill_date?: string
@@ -3421,6 +3653,7 @@ export type Database = {
     Views: {
       v_bill_ageing: {
         Row: {
+          amount_debited: number | null
           amount_paid: number | null
           balance_due: number | null
           bill_date: string | null
@@ -3615,6 +3848,7 @@ export type Database = {
           advance: number | null
           billed: number | null
           credit_days: number | null
+          debited: number | null
           next_due: string | null
           not_due: number | null
           org_id: string | null
@@ -3670,6 +3904,10 @@ export type Database = {
         Returns: undefined
       }
       _recalc_so_advance: { Args: { p_so_id: string }; Returns: undefined }
+      _release_overpaid_bill: {
+        Args: { p_bill_id: string; p_incoming: number }
+        Returns: number
+      }
       _release_overpayment: {
         Args: { p_incoming: number; p_invoice_id: string }
         Returns: number
@@ -3707,6 +3945,10 @@ export type Database = {
       }
       cancel_customer_receipt: {
         Args: { p_reason: string; p_receipt_id: string }
+        Returns: Json
+      }
+      cancel_debit_note: {
+        Args: { p_debit_note_id: string; p_reason: string }
         Returns: Json
       }
       cancel_production_order: {
@@ -3763,6 +4005,17 @@ export type Database = {
           p_notes?: string
           p_reason: string
           p_restock?: boolean
+        }
+        Returns: Json
+      }
+      create_debit_note: {
+        Args: {
+          p_bill_id: string
+          p_lines: Json
+          p_note_date?: string
+          p_notes?: string
+          p_reason: string
+          p_return_stock?: boolean
         }
         Returns: Json
       }

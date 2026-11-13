@@ -34,6 +34,7 @@ import {
   FileSpreadsheet,
   FileMinus,
   ClipboardCheck,
+  Undo2,
 } from 'lucide-react'
 import type { Enums } from '@/lib/types/database'
 import { Route } from 'next'
@@ -130,6 +131,12 @@ const NAV: (NavItem | NavGroup)[] = [
         label: "Payables",
         href: "/payables",
         icon: Wallet,
+        roles: ["admin", "manager", "viewer"],
+      },
+      {
+        label: "Debit Notes",
+        href: "/debit-notes",
+        icon: Undo2,
         roles: ["admin", "manager", "viewer"],
       },
     ],

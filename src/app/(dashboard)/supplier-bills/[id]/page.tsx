@@ -12,11 +12,11 @@ import { Textarea } from '@/components/ui/input'
 import { PageLoader } from '@/components/ui/spinner'
 import { SupplierPaymentForm } from '@/components/payables/payment-form'
 import { paymentModeLabel } from '@/lib/hooks/use-finance'
-import { BILL_STATE, billState, useCancelSupplierBill, useSupplierBill } from '@/lib/hooks/use-payables'
+import { BILL_STATE, billState, debitNoteReasonLabel, useCancelSupplierBill, useSupplierBill } from '@/lib/hooks/use-payables'
 import { useCan } from '@/lib/hooks/use-profile'
 import { formatCurrency, formatDate, formatDateTime, formatQty, todayISO } from '@/lib/utils/format'
 import { toast } from 'sonner'
-import { ArrowLeft, Wallet, XCircle } from 'lucide-react'
+import { ArrowLeft, Undo2, Wallet, XCircle } from 'lucide-react'
 
 export default function SupplierBillDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -34,6 +34,8 @@ export default function SupplierBillDetailPage() {
   const st = BILL_STATE[state]
   const lines = [...bill.supplier_bill_lines].sort((a, b) => a.sort_order - b.sort_order)
   const payments = bill.supplier_payment_allocations.filter((a) => a.payment?.status === 'active')
+  const notes = [...(bill.debit_notes ?? [])].sort((a, b) => a.debit_note_no.localeCompare(b.debit_note_no))
+  const issuedNotes = notes.filter((n) => n.status === 'issued')
   const balance = bill.balance_due ?? 0
   const posted = bill.status === 'posted'
 
@@ -61,6 +63,14 @@ export default function SupplierBillDetailPage() {
             <Wallet className="w-4 h-4" />
             Record payment
           </Button>
+        )}
+        {posted && canManage && (
+          <Link href={`/debit-notes/new?bill=${bill.id}` as Route}>
+            <Button variant="outline" size="sm">
+              <Undo2 className="w-4 h-4" />
+              Raise debit note
+            </Button>
+          </Link>
         )}
         {posted && canManage && (
           <Button variant="outline" size="sm" className="text-red-600" onClick={() => setPanel(panel === 'cancel' ? null : 'cancel')}>
@@ -99,7 +109,9 @@ export default function SupplierBillDetailPage() {
             <p className="text-xs text-slate-500">
               {bill.amount_paid > 0
                 ? 'This bill has payments against it. Cancel those payments first.'
-                : 'The received goods become unbilled again. The bill number stays reserved.'}
+                : issuedNotes.length > 0
+                  ? `This bill has ${issuedNotes.map((n) => n.debit_note_no).join(', ')} against it. Cancel those first.`
+                  : 'The received goods become unbilled again. The bill number stays reserved.'}
             </p>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setPanel(null)}>
@@ -168,6 +180,38 @@ export default function SupplierBillDetailPage() {
 
           <Card>
             <CardHeader>
+              <h3 className="text-sm font-semibold text-slate-900">Debit notes</h3>
+            </CardHeader>
+            <CardBody className="p-0">
+              {notes.length === 0 ? (
+                <p className="px-5 py-6 text-sm text-slate-400">None against this bill.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <tbody className="divide-y divide-slate-50">
+                    {notes.map((n) => (
+                      <tr key={n.id} className={n.status === 'cancelled' ? 'opacity-60' : ''}>
+                        <td className="px-5 py-3">
+                          <Link href={`/debit-notes/${n.id}` as Route} className="font-mono text-blue-600 hover:underline">
+                            {n.debit_note_no}
+                          </Link>
+                          <div className="text-xs text-slate-400">{formatDate(n.note_date)}</div>
+                        </td>
+                        <td className="px-5 py-3 text-xs text-slate-500">
+                          {debitNoteReasonLabel(n.reason)}
+                          {n.returned_stock ? ' · stock sent back' : ''}
+                          {n.status === 'cancelled' ? ' · cancelled' : ''}
+                        </td>
+                        <td className="px-5 py-3 text-right tabular-nums font-medium">{formatCurrency(n.total_amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <h3 className="text-sm font-semibold text-slate-900">Payments</h3>
             </CardHeader>
             <CardBody className="p-0">
@@ -217,6 +261,7 @@ export default function SupplierBillDetailPage() {
                 <span>Bill total</span>
                 <span className="tabular-nums">{formatCurrency(bill.total_amount)}</span>
               </div>
+              {bill.amount_debited > 0 && <Line label="Debit notes" value={-bill.amount_debited} />}
               <Line label="Paid" value={bill.amount_paid} />
               {posted && (
                 <div className={`flex justify-between font-semibold ${balance > 0 ? 'text-slate-900' : 'text-teal-700'}`}>

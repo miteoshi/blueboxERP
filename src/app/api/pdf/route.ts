@@ -11,6 +11,7 @@ import { amountInWords } from '@/lib/gst'
 // GET /api/pdf?type=invoice&id=uuid[&copies=3]
 // GET /api/pdf?type=credit_note&id=uuid
 // GET /api/pdf?type=purchase_order&id=uuid
+// GET /api/pdf?type=debit_note&id=uuid
 //
 // Returns printable HTML — the browser auto-triggers window.print().
 // All document data is HTML-escaped (see lib/pdf/html.ts) and the page
@@ -93,6 +94,8 @@ export async function GET(request: NextRequest) {
         return printableResponse(await creditNotePage(supabase, id, org))
       case 'purchase_order':
         return printableResponse(await purchaseOrderPage(supabase, id, org))
+      case 'debit_note':
+        return printableResponse(await debitNotePage(supabase, id, org))
       default:
         return NextResponse.json({ error: 'Unknown document type' }, { status: 400 })
     }
@@ -604,6 +607,115 @@ async function purchaseOrderPage(supabase: Supabase, id: string, org: Organizati
 
   ${po.terms ? html`<div class="terms"><strong>Terms:</strong><br>${po.terms.split('\n').map((t) => html`${t}<br>`)}</div>` : ''}
   <div class="terms">Please quote our PO number on your challan and invoice. Goods are accepted subject to inspection.</div>
+
+  ${signatures('Prepared By', 'Authorised Signatory')}
+  `)
+}
+
+// ── Debit note (purchase return / post-billing adjustment) ────
+
+async function debitNotePage(supabase: Supabase, id: string, org: Organization | null) {
+  const { data: note, error } = await supabase
+    .from('debit_notes')
+    .select(`
+      *,
+      supplier:suppliers ( name, address, city, state, gst_number ),
+      bill:supplier_bills ( bill_no, supplier_invoice_no, bill_date ),
+      debit_note_lines (
+        *,
+        unit:units ( name ),
+        item:items ( item_code, name, hsn_code )
+      )
+    `)
+    .eq('id', id)
+    .single()
+
+  if (error || !note) throw new Error('Debit note not found')
+
+  const items = [...(note.debit_note_lines ?? [])].sort((a, b) => a.sort_order - b.sort_order)
+  const REASONS: Record<string, string> = {
+    purchase_return: 'Goods returned',
+    rate_difference: 'Rate difference',
+    discount: 'Discount agreed later',
+    deficiency: 'Short or damaged supply',
+    other: 'Other',
+  }
+  const title = note.status === 'cancelled' ? 'DEBIT NOTE (CANCELLED)' : 'DEBIT NOTE'
+
+  return document(note.debit_note_no, html`
+  ${header(org, title, note.debit_note_no)}
+
+  <div class="meta-grid">
+    <div class="meta-box">
+      <div class="meta-label">To (Supplier)</div>
+      <div class="meta-value">
+        <strong>${note.supplier?.name ?? '—'}</strong><br>
+        ${lines(
+          [note.supplier?.address, note.supplier?.city, note.supplier?.state].filter(Boolean).join(', '),
+          note.supplier?.gst_number && `GSTIN: ${note.supplier.gst_number}`,
+        )}
+      </div>
+    </div>
+
+    <div class="meta-box">
+      <div class="meta-label">Note Details</div>
+      <div class="meta-value">
+        <strong>Debit Note No.:</strong> ${note.debit_note_no}<br>
+        <strong>Date:</strong> ${dt(note.note_date)}<br>
+        <strong>Against Invoice:</strong> ${note.bill?.supplier_invoice_no ?? '—'}
+          ${note.bill?.bill_date ? html`of ${dt(note.bill.bill_date)}` : ''}<br>
+        <strong>Our Bill Ref:</strong> ${note.bill?.bill_no ?? '—'}<br>
+        <strong>Reason:</strong> ${REASONS[note.reason] ?? note.reason}
+      </div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:28px">#</th>
+        <th>Item</th>
+        <th style="width:60px">HSN</th>
+        <th class="r" style="width:70px">Qty</th>
+        <th class="c" style="width:40px">Unit</th>
+        <th class="r" style="width:85px">Rate (₹)</th>
+        <th class="c" style="width:38px">GST%</th>
+        <th class="r" style="width:95px">Amount (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${items.map((l, i) => html`<tr>
+        <td class="c">${i + 1}</td>
+        <td>
+          <strong>${l.item?.name ?? '—'}</strong>
+          <br><span class="mono">${l.item?.item_code ?? ''}</span>
+        </td>
+        <td>${l.item?.hsn_code ?? '—'}</td>
+        <td class="r">${l.qty ? qtyFmt(l.qty) : '—'}</td>
+        <td class="c">${l.unit?.name ?? '—'}</td>
+        <td class="r">${inr(l.rate)}</td>
+        <td class="c">${l.gst_percent}%</td>
+        <td class="r">${inr(l.taxable_value)}</td>
+      </tr>`)}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="totals-row"><span>Taxable value</span><span>${inr(note.taxable_value)}</span></div>
+    ${note.is_interstate
+      ? html`<div class="totals-row"><span>IGST</span><span>${inr(note.igst_amount)}</span></div>`
+      : html`<div class="totals-row"><span>CGST</span><span>${inr(note.cgst_amount)}</span></div>
+             <div class="totals-row"><span>SGST</span><span>${inr(note.sgst_amount)}</span></div>`}
+    ${note.round_off !== 0 ? html`<div class="totals-row"><span>Round off</span><span>${inr(note.round_off)}</span></div>` : ''}
+    <div class="totals-row bold"><span>Total debited</span><span>${inr(note.total_amount)}</span></div>
+  </div>
+  <div class="terms"><strong>Amount in words:</strong> ${amountInWords(note.total_amount)}</div>
+
+  ${note.notes ? html`<div class="terms">${note.notes}</div>` : ''}
+  <div class="terms">
+    This note reduces the amount payable against the invoice above${note.returned_stock ? ' and covers goods returned to you' : ''}.
+    Please issue your credit note for the same value and account for the tax accordingly.
+  </div>
 
   ${signatures('Prepared By', 'Authorised Signatory')}
   `)

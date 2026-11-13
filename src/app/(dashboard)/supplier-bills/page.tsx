@@ -37,8 +37,8 @@ export default function SupplierBillsPage() {
     return enriched.filter((b) => {
       const inTab =
         tab === 'all' ||
-        (tab === 'open' && b.state !== 'paid' && b.state !== 'cancelled') ||
-        (tab === 'paid' && b.state === 'paid') ||
+        (tab === 'open' && b.state !== 'paid' && b.state !== 'settled' && b.state !== 'cancelled') ||
+        (tab === 'paid' && (b.state === 'paid' || b.state === 'settled')) ||
         (tab === 'cancelled' && b.state === 'cancelled')
       return (
         inTab &&
@@ -51,7 +51,7 @@ export default function SupplierBillsPage() {
   }, [enriched, tab, search])
 
   const stats = useMemo(() => {
-    const open = enriched.filter((b) => b.state !== 'paid' && b.state !== 'cancelled')
+    const open = enriched.filter((b) => b.state !== 'paid' && b.state !== 'settled' && b.state !== 'cancelled')
     const week = new Date(`${today}T00:00:00Z`)
     week.setUTCDate(week.getUTCDate() + 7)
     const weekISO = week.toISOString().slice(0, 10)
@@ -83,6 +83,7 @@ export default function SupplierBillsPage() {
       { header: 'Taxable Value', value: (r) => r.taxable_value },
       { header: 'Total', value: (r) => r.total_amount },
       { header: 'Paid', value: (r) => r.amount_paid },
+      { header: 'Debited', value: (r) => r.amount_debited },
       { header: 'Balance', value: (r) => r.balance_due },
       { header: 'Status', value: (r) => BILL_STATE[r.state].label },
     ])
@@ -190,7 +191,12 @@ export default function SupplierBillsPage() {
                       <td className={`px-4 py-3 ${b.state === 'overdue' ? 'text-red-600 font-medium' : 'text-slate-600'}`}>
                         {formatDate(b.due_date)}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(b.total_amount)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums">
+                        {formatCurrency(b.total_amount)}
+                        {b.amount_debited > 0 && (
+                          <div className="text-xs text-slate-400">less {formatCurrency(b.amount_debited)} debited</div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
                         {b.state === 'cancelled' ? '—' : formatCurrency(b.balance_due)}
                       </td>

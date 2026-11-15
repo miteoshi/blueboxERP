@@ -60,6 +60,13 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "approvals_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
         ]
       }
       audit_logs: {
@@ -110,6 +117,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_logs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
         ]
       }
@@ -236,6 +250,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bom_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
             foreignKeyName: "bom_org_unit_fk"
             columns: ["org_id", "unit_id"]
             isOneToOne: false
@@ -312,6 +333,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "clients_state_code_fkey"
@@ -436,6 +464,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_note_lines_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
         ]
       }
@@ -572,6 +607,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "credit_notes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
             foreignKeyName: "credit_notes_place_of_supply_fkey"
             columns: ["place_of_supply"]
             isOneToOne: false
@@ -676,6 +718,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_receipts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "customer_receipts_so_id_fkey"
@@ -795,6 +844,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debit_note_lines_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "debit_note_lines_unit_id_fkey"
@@ -919,6 +975,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debit_notes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "debit_notes_supplier_id_fkey"
@@ -1122,6 +1185,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "delivery_challans_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
             foreignKeyName: "delivery_challans_so_id_fkey"
             columns: ["so_id"]
             isOneToOne: false
@@ -1173,6 +1243,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_requests_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
         ]
       }
@@ -1379,6 +1456,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "inbound_receipts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
             foreignKeyName: "inbound_receipts_po_id_fkey"
             columns: ["po_id"]
             isOneToOne: false
@@ -1440,6 +1524,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_balance_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "inventory_balance_org_item_fk"
@@ -1534,6 +1625,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "inventory_ops_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
             foreignKeyName: "inventory_ops_log_org_item_fk"
             columns: ["org_id", "item_id"]
             isOneToOne: false
@@ -1609,6 +1707,13 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "item_categories_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
         ]
       }
       item_prices: {
@@ -1671,6 +1776,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_prices_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "item_prices_org_item_fk"
@@ -1820,6 +1932,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
             foreignKeyName: "items_org_material_type_fk"
             columns: ["org_id", "material_type_id"]
             isOneToOne: false
@@ -1874,6 +1993,13 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "material_types_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
         ]
       }
       org_sequences: {
@@ -1899,6 +2025,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_sequences_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
         ]
       }
@@ -2169,6 +2302,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "production_orders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
             foreignKeyName: "production_orders_so_id_fkey"
             columns: ["so_id"]
             isOneToOne: false
@@ -2222,6 +2362,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
         ]
       }
@@ -2316,6 +2463,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "purchase_order_lines_po_id_fkey"
@@ -2434,6 +2588,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "purchase_orders_supplier_id_fkey"
@@ -2640,6 +2801,13 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "quotations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
         ]
       }
       receipt_allocations: {
@@ -2698,6 +2866,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipt_allocations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "receipt_allocations_receipt_id_fkey"
@@ -2845,6 +3020,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoice_lines_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "sales_invoice_lines_so_line_id_fkey"
@@ -3016,6 +3198,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoices_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "sales_invoices_place_of_supply_fkey"
@@ -3256,6 +3445,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sales_orders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
             foreignKeyName: "sales_orders_quotation_id_fkey"
             columns: ["quotation_id"]
             isOneToOne: false
@@ -3324,6 +3520,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "stock_movements_org_item_fk"
@@ -3425,6 +3628,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "stock_reservations_org_item_fk"
@@ -3574,6 +3784,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "supplier_bill_lines_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
             foreignKeyName: "supplier_bill_lines_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -3690,6 +3907,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "supplier_bills_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
             foreignKeyName: "supplier_bills_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
@@ -3761,6 +3985,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_allocations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "supplier_payment_allocations_payment_id_fkey"
@@ -3852,6 +4083,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "supplier_payments_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
             foreignKeyName: "supplier_payments_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
@@ -3934,6 +4172,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "suppliers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
             foreignKeyName: "suppliers_state_code_fkey"
             columns: ["state_code"]
             isOneToOne: false
@@ -3981,6 +4226,13 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "units_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
         ]
       }
       workers: {
@@ -4022,6 +4274,13 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "workers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
         ]
       }
     }
@@ -4050,6 +4309,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bills_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "supplier_bills_supplier_id_fkey"
@@ -4093,6 +4359,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
         ]
       }
@@ -4148,6 +4421,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoices_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "sales_invoices_so_id_fkey"
@@ -4216,6 +4496,13 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "bom_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
         ]
       }
       v_item_direct_cost: {
@@ -4232,6 +4519,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
         ]
       }
@@ -4275,6 +4569,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
             foreignKeyName: "items_org_unit_fk"
             columns: ["org_id", "unit_id"]
             isOneToOne: false
@@ -4282,6 +4583,23 @@ export type Database = {
             referencedColumns: ["org_id", "id"]
           },
         ]
+      }
+      v_setup_readiness: {
+        Row: {
+          can_invoice: boolean | null
+          challans_awaiting_invoice: number | null
+          clients_missing_state: number | null
+          clients_missing_state_sample: Json | null
+          company_name: string | null
+          has_address: boolean | null
+          has_bank_details: boolean | null
+          has_gstin: boolean | null
+          has_state_code: boolean | null
+          items_missing_hsn: number | null
+          items_missing_hsn_sample: Json | null
+          org_id: string | null
+        }
+        Relationships: []
       }
       v_so_pipeline: {
         Row: {
@@ -4340,6 +4658,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
             foreignKeyName: "items_org_unit_fk"
             columns: ["org_id", "unit_id"]
             isOneToOne: false
@@ -4380,6 +4705,13 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
         ]
       }
       v_supplier_payables: {
@@ -4408,6 +4740,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suppliers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
         ]
       }

@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import { useCan, useRole } from '@/lib/hooks/use-profile'
 import { FinanceSummary } from '@/components/finance/finance-summary'
+import { SetupChecklist } from '@/components/settings/setup-checklist'
 
 // ── Data hooks ────────────────────────────────────────────────
 
@@ -171,6 +172,9 @@ export default function DashboardPage() {
         title="Dashboard"
         description={`Good ${getGreeting()} — here's what's happening today`}
       />
+
+      {/* ── Setup gaps that stop an invoice being raised ── */}
+      {role && ['admin', 'manager'].includes(role) && <SetupChecklist />}
 
       {/* ── Finance (roles that can read invoices and receipts) ── */}
       {role && ['admin', 'manager', 'sales', 'viewer'].includes(role) && <FinanceSummary />}

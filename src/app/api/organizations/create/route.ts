@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { ORGANIZATION_TEMPLATES } from "@/lib/organization-templates";
+import { isValidGstin, normalizeGstin, stateCodeFromGstin } from "@/lib/gst";
 import * as XLSX from "xlsx";
 import fs from "fs/promises";
 import path from "path";
@@ -63,6 +64,21 @@ export async function POST(request: Request) {
     if (!orgName) {
       return NextResponse.json(
         { error: "Organization name is required" },
+        { status: 400 }
+      );
+    }
+
+    /*
+     * GSTIN is optional — a business below the GST threshold does not have
+     * one — but anything sent must be a real GSTIN, because it is printed on
+     * every tax invoice and its first two digits decide CGST/SGST or IGST.
+     * Checked again here rather than trusting the browser.
+     */
+    const gstin = body.gstin ? normalizeGstin(String(body.gstin)) : "";
+
+    if (gstin && !isValidGstin(gstin)) {
+      return NextResponse.json(
+        { error: "That GSTIN is not valid — check the 15 characters" },
         { status: 400 }
       );
     }
@@ -206,8 +222,58 @@ export async function POST(request: Request) {
       throw error;
     }
 
+    /*
+     * Save the GST identity onto the new organization. Done after creation
+     * rather than inside create_organization so the signup path stays
+     * unchanged for anyone who has no GSTIN to give. If this fails the
+     * organization still exists, and the dashboard setup checklist asks for
+     * the GSTIN again, so the user is never stranded.
+     */
+    let gstinSaved = !gstin;
+
+    if (gstin) {
+      const stateCode = stateCodeFromGstin(gstin);
+
+      const { data: state } = await supabase
+        .from("gst_states")
+        .select("name")
+        .eq("code", stateCode as string)
+        .maybeSingle();
+
+      /*
+       * The checksum can pass on a GSTIN whose first two digits are not a
+       * real state code. Saving one would decide CGST/SGST against IGST from
+       * a state that does not exist, so refuse it rather than guess.
+       */
+      if (!state) {
+        return NextResponse.json(
+          {
+            error: `The GSTIN starts with ${stateCode}, which is not a GST state code — check the first two digits`,
+            orgId,
+          },
+          { status: 400 }
+        );
+      }
+
+      const { error: gstError } = await supabase
+        .from("organizations")
+        .update({
+          gst_number: gstin,
+          state_code: stateCode,
+          state: state.name,
+        })
+        .eq("id", orgId as string);
+
+      if (gstError) {
+        console.error("Organization created but the GSTIN was not saved:", gstError);
+      } else {
+        gstinSaved = true;
+      }
+    }
+
     return NextResponse.json({
       orgId,
+      gstinSaved,
     });
   } catch (error: unknown) {
     console.error("Organization creation failed:", error);

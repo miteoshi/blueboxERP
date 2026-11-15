@@ -166,11 +166,39 @@ export type Database = {
             referencedColumns: ["org_id", "id"]
           },
           {
+            foreignKeyName: "bom_org_component_fk"
+            columns: ["org_id", "component_id"]
+            isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["org_id", "item_id"]
+          },
+          {
+            foreignKeyName: "bom_org_component_fk"
+            columns: ["org_id", "component_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
+            referencedColumns: ["org_id", "item_id"]
+          },
+          {
             foreignKeyName: "bom_org_finished_item_fk"
             columns: ["org_id", "finished_item_id"]
             isOneToOne: false
             referencedRelation: "items"
             referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "bom_org_finished_item_fk"
+            columns: ["org_id", "finished_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["org_id", "item_id"]
+          },
+          {
+            foreignKeyName: "bom_org_finished_item_fk"
+            columns: ["org_id", "finished_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
+            referencedColumns: ["org_id", "item_id"]
           },
           {
             foreignKeyName: "bom_org_id_fkey"
@@ -350,6 +378,13 @@ export type Database = {
             foreignKeyName: "credit_note_lines_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "credit_note_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
             referencedRelation: "v_reorder_alerts"
             referencedColumns: ["item_id"]
           },
@@ -358,6 +393,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "v_stock_levels"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "credit_note_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
             referencedColumns: ["item_id"]
           },
           {
@@ -695,6 +737,13 @@ export type Database = {
             foreignKeyName: "debit_note_lines_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "debit_note_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
             referencedRelation: "v_reorder_alerts"
             referencedColumns: ["item_id"]
           },
@@ -703,6 +752,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "v_stock_levels"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "debit_note_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
             referencedColumns: ["item_id"]
           },
           {
@@ -902,6 +958,13 @@ export type Database = {
             foreignKeyName: "delivery_challan_lines_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "delivery_challan_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
             referencedRelation: "v_reorder_alerts"
             referencedColumns: ["item_id"]
           },
@@ -910,6 +973,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "v_stock_levels"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "delivery_challan_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
             referencedColumns: ["item_id"]
           },
           {
@@ -1154,6 +1224,13 @@ export type Database = {
             foreignKeyName: "inbound_receipt_lines_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "inbound_receipt_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
             referencedRelation: "v_reorder_alerts"
             referencedColumns: ["item_id"]
           },
@@ -1162,6 +1239,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "v_stock_levels"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "inbound_receipt_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
             referencedColumns: ["item_id"]
           },
           {
@@ -1336,6 +1420,20 @@ export type Database = {
             referencedRelation: "items"
             referencedColumns: ["org_id", "id"]
           },
+          {
+            foreignKeyName: "inventory_balance_org_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["org_id", "item_id"]
+          },
+          {
+            foreignKeyName: "inventory_balance_org_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
+            referencedColumns: ["org_id", "item_id"]
+          },
         ]
       }
       inventory_ops_log: {
@@ -1399,6 +1497,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "items"
             referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "inventory_ops_log_org_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["org_id", "item_id"]
+          },
+          {
+            foreignKeyName: "inventory_ops_log_org_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
+            referencedColumns: ["org_id", "item_id"]
           },
         ]
       }
@@ -1510,6 +1622,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "items"
             referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "item_prices_org_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["org_id", "item_id"]
+          },
+          {
+            foreignKeyName: "item_prices_org_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
+            referencedColumns: ["org_id", "item_id"]
           },
           {
             foreignKeyName: "item_prices_org_unit_fk"
@@ -1874,6 +2000,13 @@ export type Database = {
             foreignKeyName: "production_order_items_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "production_order_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
             referencedRelation: "v_reorder_alerts"
             referencedColumns: ["item_id"]
           },
@@ -1882,6 +2015,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "v_stock_levels"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "production_order_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
             referencedColumns: ["item_id"]
           },
           {
@@ -2076,6 +2216,13 @@ export type Database = {
             foreignKeyName: "purchase_order_lines_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
             referencedRelation: "v_reorder_alerts"
             referencedColumns: ["item_id"]
           },
@@ -2084,6 +2231,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "v_stock_levels"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
             referencedColumns: ["item_id"]
           },
           {
@@ -2276,6 +2430,13 @@ export type Database = {
             foreignKeyName: "quotation_lines_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "quotation_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
             referencedRelation: "v_reorder_alerts"
             referencedColumns: ["item_id"]
           },
@@ -2284,6 +2445,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "v_stock_levels"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "quotation_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
             referencedColumns: ["item_id"]
           },
           {
@@ -2577,6 +2745,13 @@ export type Database = {
             foreignKeyName: "sales_invoice_lines_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "sales_invoice_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
             referencedRelation: "v_reorder_alerts"
             referencedColumns: ["item_id"]
           },
@@ -2585,6 +2760,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "v_stock_levels"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "sales_invoice_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
             referencedColumns: ["item_id"]
           },
           {
@@ -2850,6 +3032,13 @@ export type Database = {
             foreignKeyName: "sales_order_lines_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "sales_order_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
             referencedRelation: "v_reorder_alerts"
             referencedColumns: ["item_id"]
           },
@@ -2858,6 +3047,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "v_stock_levels"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "sales_order_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
             referencedColumns: ["item_id"]
           },
           {
@@ -3066,6 +3262,20 @@ export type Database = {
             referencedRelation: "items"
             referencedColumns: ["org_id", "id"]
           },
+          {
+            foreignKeyName: "stock_movements_org_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["org_id", "item_id"]
+          },
+          {
+            foreignKeyName: "stock_movements_org_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
+            referencedColumns: ["org_id", "item_id"]
+          },
         ]
       }
       stock_reservations: {
@@ -3138,6 +3348,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "items"
             referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_org_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["org_id", "item_id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_org_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
+            referencedColumns: ["org_id", "item_id"]
           },
         ]
       }
@@ -3220,6 +3444,13 @@ export type Database = {
             foreignKeyName: "supplier_bill_lines_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "supplier_bill_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
             referencedRelation: "v_reorder_alerts"
             referencedColumns: ["item_id"]
           },
@@ -3228,6 +3459,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "v_stock_levels"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "supplier_bill_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
             referencedColumns: ["item_id"]
           },
           {
@@ -3829,6 +4067,62 @@ export type Database = {
           },
         ]
       }
+      v_item_bom_cost: {
+        Row: {
+          bom_unresolved: boolean | null
+          components_without_cost: number | null
+          item_id: string | null
+          org_id: string | null
+          unit_cost: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bom_org_finished_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "bom_org_finished_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "v_item_direct_cost"
+            referencedColumns: ["org_id", "item_id"]
+          },
+          {
+            foreignKeyName: "bom_org_finished_item_fk"
+            columns: ["org_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_valuation"
+            referencedColumns: ["org_id", "item_id"]
+          },
+          {
+            foreignKeyName: "bom_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_item_direct_cost: {
+        Row: {
+          cost_basis: string | null
+          item_id: string | null
+          org_id: string | null
+          unit_cost: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_reorder_alerts: {
         Row: {
           balance_updated_at: string | null
@@ -3881,6 +4175,40 @@ export type Database = {
           unit_id: string | null
         }
         Relationships: []
+      }
+      v_stock_valuation: {
+        Row: {
+          category: string | null
+          category_id: string | null
+          cost_basis: string | null
+          cost_warning: string | null
+          is_manufactured: boolean | null
+          item_code: string | null
+          item_id: string | null
+          name: string | null
+          org_id: string | null
+          qty_on_hand: number | null
+          qty_reserved: number | null
+          stock_value: number | null
+          unit: string | null
+          unit_cost: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "items_org_category_fk"
+            columns: ["org_id", "category_id"]
+            isOneToOne: false
+            referencedRelation: "item_categories"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_supplier_payables: {
         Row: {

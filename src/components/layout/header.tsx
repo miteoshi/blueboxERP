@@ -28,6 +28,7 @@ const pageTitles: Record<string, string> = {
   '/receivables':  'Receivables',
   '/reports':      'GST Reports',
   '/reports/purchases': 'Purchase Register',
+  '/reports/stock-valuation': 'Stock Valuation',
   '/settings':     'Settings',
 }
 

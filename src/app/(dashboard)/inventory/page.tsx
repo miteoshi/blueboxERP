@@ -83,14 +83,17 @@ useEffect(() => {
   // Apply filters client-side
   const filtered = (stock ?? []).filter(item => {
     if (categoryId && item.category_id !== categoryId) return false;
-    if (showLowOnly && !item.below_reorder) return false
+    if (showLowOnly && !item.needs_ordering) return false
     return true
   })
 
   const totalItems    = stock?.length ?? 0
+  // What actually needs buying: short even after counting goods already on order
   const lowStockCount = alerts?.length ?? 0
-  const outOfStock    = (stock ?? []).filter(i => i.qty_available && i.qty_available <= 0).length
-  const healthyCount  = totalItems - lowStockCount
+  const outOfStock    = (stock ?? []).filter(i => (i.qty_available ?? 0) <= 0).length
+  // Short of its minimum, but an open purchase order already covers it
+  const onOrderCount  = (stock ?? []).filter(i => i.below_reorder && !i.needs_ordering).length
+  const untracked     = (stock ?? []).filter(i => !i.tracks_reorder).length
 
   return (
     <div>
@@ -118,23 +121,23 @@ useEffect(() => {
           icon={<Package className="w-5 h-5" />}
         />
         <StatCard
-          label="Healthy Stock"
-          value={healthyCount}
-          sub="above reorder level"
-          icon={<CheckCircle2 className="w-5 h-5 text-green-600" />}
-          className="border-green-100"
-        />
-        <StatCard
-          label="Low Stock"
+          label="Needs Ordering"
           value={lowStockCount}
-          sub="at or below reorder level"
+          sub="short after counting goods on order"
           icon={<AlertTriangle className="w-5 h-5 text-amber-600" />}
           className={lowStockCount > 0 ? "border-amber-200" : ""}
         />
         <StatCard
+          label="On Order"
+          value={onOrderCount}
+          sub="low, but a purchase order covers it"
+          icon={<CheckCircle2 className="w-5 h-5 text-green-600" />}
+          className={onOrderCount > 0 ? "border-green-100" : ""}
+        />
+        <StatCard
           label="Out of Stock"
           value={outOfStock}
-          sub="zero available qty"
+          sub="nothing available to give out"
           icon={<TrendingDown className="w-5 h-5 text-red-600" />}
           className={outOfStock > 0 ? "border-red-200" : ""}
         />
@@ -182,7 +185,7 @@ useEffect(() => {
             onClick={() => setShowLowOnly((v) => !v)}
           >
             <AlertTriangle className="w-3.5 h-3.5" />
-            Low Stock Only
+            Needs Ordering
             {lowStockCount > 0 && (
               <span
                 className={`
@@ -228,6 +231,9 @@ useEffect(() => {
                   <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     Available
                   </th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                    On Order
+                  </th>
                   <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     Status
                   </th>
@@ -237,7 +243,7 @@ useEffect(() => {
                 {filtered.length === 0 && (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className="text-center py-12 text-slate-400 text-sm"
                     >
                       No items found
@@ -245,8 +251,10 @@ useEffect(() => {
                   </tr>
                 )}
                 {filtered.map((item) => {
+                  const needsOrder = item.needs_ordering;
                   const isLow = item.below_reorder;
-                  const isZero = item.qty_available && item.qty_available <= 0;
+                  const isZero = (item.qty_available ?? 0) <= 0;
+                  const incoming = item.qty_incoming ?? 0;
 
                   return (
                     <tr
@@ -254,10 +262,10 @@ useEffect(() => {
                       className={`
                         hover:bg-slate-50 transition-colors
                         ${
-                          isZero
-                            ? "bg-red-50/30"
-                            : isLow
+                          needsOrder
                             ? "bg-amber-50/30"
+                            : isZero && item.tracks_reorder
+                            ? "bg-red-50/30"
                             : ""
                         }
                       `}
@@ -293,10 +301,10 @@ useEffect(() => {
                       <td className="px-4 py-3 text-right font-semibold tabular-nums">
                         <span
                           className={
-                            isZero
-                              ? "text-red-600"
-                              : isLow
+                            needsOrder
                               ? "text-amber-600"
+                              : isZero
+                              ? "text-red-500"
                               : "text-slate-900"
                           }
                         >
@@ -306,13 +314,30 @@ useEffect(() => {
                           )}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        {isZero ? (
-                          <Badge variant="danger">Out of Stock</Badge>
-                        ) : isLow ? (
-                          <Badge variant="warning">Low Stock</Badge>
+                      <td className="px-4 py-3 text-right tabular-nums">
+                        {incoming > 0 ? (
+                          <span className="text-blue-600 font-medium">
+                            {formatQty(incoming, item.unit ?? undefined)}
+                          </span>
                         ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {needsOrder ? (
+                          <Badge variant="warning">
+                            {item.suggested_order_qty
+                              ? `Order ${formatQty(item.suggested_order_qty, item.unit ?? undefined)}`
+                              : "Order now"}
+                          </Badge>
+                        ) : isLow ? (
+                          <Badge variant="info">On order</Badge>
+                        ) : isZero ? (
+                          <Badge variant="danger">Out of stock</Badge>
+                        ) : item.tracks_reorder ? (
                           <Badge variant="success">Healthy</Badge>
+                        ) : (
+                          <span className="text-xs text-slate-400">No minimum set</span>
                         )}
                       </td>
                     </tr>
@@ -321,6 +346,14 @@ useEffect(() => {
               </tbody>
             </table>
           </div>
+        )}
+
+        {untracked > 0 && (
+          <p className="px-5 py-3 text-xs text-slate-500 border-t border-slate-100">
+            {untracked} of {totalItems} items have no reorder level set, so they are never flagged here however
+            low they run. Set one on the items worth watching — edit the item and fill in its reorder level and
+            order quantity.
+          </p>
         )}
       </div>
     </div>

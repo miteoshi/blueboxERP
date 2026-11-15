@@ -180,7 +180,7 @@ export default function DashboardPage() {
         <StatCard
           label="Low Stock Alerts"
           value={alertCount}
-          sub="items below reorder level"
+          sub="items to order, net of goods on order"
           icon={<AlertTriangle className="w-5 h-5" />}
           className={alertCount > 0 ? 'border-amber-200' : ''}
         />

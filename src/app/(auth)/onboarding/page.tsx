@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, Zap, Building2, LogOut } from "lucide-react";
+import { gstinError, normalizeGstin, stateCodeFromGstin } from "@/lib/gst";
+import { useGstStates } from "@/lib/hooks/use-finance";
 
 type OrganizationTemplate = {
   id: string;
@@ -16,8 +18,10 @@ export default function OnboardingPage() {
   const router = useRouter();
   const supabase = createClient();
   const queryClient = useQueryClient();
+  const { data: gstStates } = useGstStates();
 
   const [orgName, setOrgName] = useState("");
+  const [gstin, setGstin] = useState("");
 
   const [template, setTemplate] = useState("");
   const [templates, setTemplates] = useState<OrganizationTemplate[]>([]);
@@ -99,6 +103,20 @@ export default function OnboardingPage() {
       return;
     }
 
+    // Empty is allowed — a business below the GST threshold has no GSTIN.
+    // A half-typed one is not: it would be saved onto every invoice.
+    if (gstinError(gstin)) {
+      toast.error(gstinError(gstin) as string);
+      return;
+    }
+
+    if (gstStateUnknown) {
+      toast.error(
+        `This GSTIN starts with ${gstState}, which is not a GST state code`
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -113,6 +131,7 @@ export default function OnboardingPage() {
         },
         body: JSON.stringify({
           orgName: orgName.trim(),
+          gstin: normalizeGstin(gstin) || null,
           template: template || null,
           includeSapDefaults,
         }),
@@ -121,6 +140,21 @@ export default function OnboardingPage() {
       const result = await response.json();
 
       if (!response.ok) {
+        // The organization is created before the GSTIN is saved, so a refused
+        // GSTIN can leave one behind. Say so instead of letting the user
+        // create a second company.
+        if (result.orgId) {
+          toast.error(
+            `${result.error} — your organization was created, so add the GSTIN under Settings → Company`
+          );
+          await Promise.all([
+            queryClient.refetchQueries({ queryKey: ["tenant-context"] }),
+            queryClient.refetchQueries({ queryKey: ["profile"] }),
+          ]);
+          router.push("/");
+          router.refresh();
+          return;
+        }
         throw new Error(result.error || "Failed to create organization");
       }
 
@@ -139,7 +173,13 @@ export default function OnboardingPage() {
         }
       }
 
-      toast.success("Organization created successfully!");
+      if (gstin && result.gstinSaved === false) {
+        toast.warning(
+          "Organization created, but the GSTIN was not saved — add it under Settings → Company"
+        );
+      } else {
+        toast.success("Organization created successfully!");
+      }
 
       // Await refetch before navigating so the fresh organization is ready in cache
       await Promise.all([
@@ -157,6 +197,15 @@ export default function OnboardingPage() {
       setLoading(false);
     }
   }
+
+  const gstinErr = gstinError(gstin);
+  const gstState = stateCodeFromGstin(gstin);
+  const gstStateName = gstState
+    ? gstStates?.find((st) => st.code === gstState)?.name ?? null
+    : null;
+  // A GSTIN can pass its checksum and still start with digits that are not a
+  // state code, which would decide the tax split from a state that does not exist
+  const gstStateUnknown = !!gstState && !!gstStates && !gstStateName;
 
   async function handleSignOut() {
     try {
@@ -489,6 +538,43 @@ export default function OnboardingPage() {
                   required
                   placeholder="e.g. Apex Electrical Industries"
                 />
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label className="field-label">
+                  GSTIN <span style={{ color: "#64748b" }}>(optional)</span>
+                </label>
+
+                <input
+                  className="field-input"
+                  type="text"
+                  value={gstin}
+                  onChange={(e) => setGstin(e.target.value.toUpperCase())}
+                  placeholder="e.g. 24AAPFU0939F1Z1"
+                  maxLength={15}
+                  style={{ fontFamily: "ui-monospace, monospace" }}
+                />
+
+                <p
+                  style={{
+                    margin: "6px 0 0",
+                    fontSize: 12,
+                    color:
+                      gstinErr || gstStateUnknown
+                        ? "#f87171"
+                        : gstState
+                        ? "#4ade80"
+                        : "#64748b",
+                  }}
+                >
+                  {gstinErr
+                    ? gstinErr
+                    : gstStateUnknown
+                    ? `This GSTIN starts with ${gstState}, which is not a GST state code — check the first two digits`
+                    : gstState
+                    ? `${gstStateName ?? "State " + gstState} — your state is taken from the GSTIN`
+                    : "Needed on every GST tax invoice. Add it now and you can bill straight away; leave it blank and you can still record orders and challans, but not raise tax invoices."}
+                </p>
               </div>
 
               <div style={{ marginBottom: 20 }}>

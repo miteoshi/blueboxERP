@@ -217,6 +217,12 @@ const NAV: (NavItem | NavGroup)[] = [
         icon: FileSpreadsheet,
         roles: ["admin", "manager", "viewer"],
       },
+      {
+        label: "Stock Valuation",
+        href: "/reports/stock-valuation",
+        icon: FileSpreadsheet,
+        roles: ["admin", "manager", "store", "viewer"],
+      },
     ],
   },
 

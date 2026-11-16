@@ -11,6 +11,7 @@ import { formatCurrency, formatDate, isPastDate } from '@/lib/utils/format'
 import { Plus, Search, CheckCircle, XCircle, Eye } from 'lucide-react'
 import Link from 'next/link'
 import type { Enums } from '@/lib/types/database'
+import { ListCard, ListCards } from '@/components/ui/list-card'
 
 type DocumentStatus = Enums<'document_status'>
 
@@ -107,7 +108,42 @@ export default function QuotationsPage() {
         {isLoading ? (
           <TableLoader />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ListCards count={quotations?.length ?? 0} empty="No quotations found">
+            {quotations?.map((q) => (
+              <ListCard
+                key={q.id}
+                href={`/quotations/${q.id}`}
+                title={q.quotation_no}
+                badge={
+                  q.status === 'converted' ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-teal-100 text-teal-700">
+                      Converted
+                    </span>
+                  ) : (
+                    <DocumentStatusBadge status={q.status} />
+                  )
+                }
+                subtitle={q.client?.name}
+                meta={[
+                  formatDate(q.quotation_date),
+                  q.valid_until && (
+                    <span className={isPastDate(q.valid_until) && q.status === 'draft' ? 'text-red-500' : undefined}>
+                      Valid until {formatDate(q.valid_until)}
+                    </span>
+                  ),
+                  q.creator?.full_name,
+                ]}
+                right={
+                  <>
+                    <div className="font-semibold tabular-nums text-slate-900">{formatCurrency(q.total_amount)}</div>
+                    <div className="text-xs text-slate-400">+GST {formatCurrency(q.gst_amount)}</div>
+                  </>
+                }
+              />
+            ))}
+          </ListCards>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
@@ -215,6 +251,7 @@ export default function QuotationsPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

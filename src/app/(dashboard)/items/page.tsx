@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { useItemCategories } from "@/lib/hooks/use-items";
 import { ilikeAny } from '@/lib/utils/search'
 import { allRows } from "@/lib/utils/all-rows"
+import { ListCard, ListCards } from '@/components/ui/list-card'
 
 // Fetch items with their current prices joined
 function useItemsWithPrices(
@@ -193,7 +194,41 @@ export default function ItemsPage() {
         {isLoading ? (
           <TableLoader />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ListCards count={items?.length ?? 0} empty="No items found">
+            {items?.map((item) => (
+              <ListCard
+                key={item.id}
+                href={`/items/${item.id}`}
+                title={item.item_code}
+                subtitle={item.name}
+                badge={
+                  <>
+                    {item.is_traded && <Badge variant="info">Traded</Badge>}
+                    {item.is_manufactured && <Badge variant="purple">Mfg</Badge>}
+                    {item.is_raw_material && <Badge variant="teal">Raw</Badge>}
+                  </>
+                }
+                meta={[
+                  item.category_id ? categoryNameById.get(item.category_id) : null,
+                  item.material_type?.name,
+                  item.unit?.name,
+                  item.size_spec,
+                ]}
+                right={
+                  <>
+                    <div className="font-semibold tabular-nums text-slate-900">
+                      {item.price?.selling_rate ? formatCurrency(item.price.selling_rate) : '—'}
+                    </div>
+                    {item.price?.purchase_rate ? (
+                      <div className="text-xs text-slate-400">buy {formatCurrency(item.price.purchase_rate)}</div>
+                    ) : null}
+                  </>
+                }
+              />
+            ))}
+          </ListCards>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
@@ -323,6 +358,7 @@ export default function ItemsPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

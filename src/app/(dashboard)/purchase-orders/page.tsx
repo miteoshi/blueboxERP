@@ -13,6 +13,7 @@ import { useCan } from '@/lib/hooks/use-profile'
 import { formatCurrency, formatDate, isPastDate, todayISO } from '@/lib/utils/format'
 import { downloadCsv } from '@/lib/utils/csv'
 import { AlertTriangle, ClipboardList, Download, FilePen, Plus, Search, Truck } from 'lucide-react'
+import { ListCard, ListCards } from '@/components/ui/list-card'
 
 const TABS = [
   { value: 'open', label: 'Open' },
@@ -165,7 +166,32 @@ export default function PurchaseOrdersPage() {
         {isLoading ? (
           <TableLoader />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ListCards count={rows.length} empty="No purchase orders found">
+            {rows.map((o) => {
+              const st = poStatus(o.status)
+              return (
+                <ListCard
+                  key={o.id}
+                  href={`/purchase-orders/${o.id}`}
+                  title={o.po_no}
+                  badge={<Badge variant={st.variant}>{st.label}</Badge>}
+                  subtitle={o.supplier?.name}
+                  meta={[
+                    formatDate(o.po_date),
+                    o.expected_date && (
+                      <span className={o.overdue ? 'text-amber-700 font-medium' : undefined}>
+                        Expected {formatDate(o.expected_date)}{o.overdue ? ' · overdue' : ''}
+                      </span>
+                    ),
+                    `${Math.round(o.progress * 100)}% received`,
+                  ]}
+                  right={<span className="font-semibold tabular-nums text-slate-900">{formatCurrency(o.total_amount)}</span>}
+                />
+              )
+            })}
+          </ListCards>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
@@ -227,6 +253,7 @@ export default function PurchaseOrdersPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

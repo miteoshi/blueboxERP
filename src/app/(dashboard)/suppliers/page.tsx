@@ -15,6 +15,7 @@ import { Plus, Search, X } from 'lucide-react'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import { ilikeAny } from '@/lib/utils/search'
 import { allRows } from '@/lib/utils/all-rows'
+import { ListCard, ListCards } from '@/components/ui/list-card'
 
 function useSuppliers(search: string, orgId: string | null) {
   const supabase = createClient();
@@ -216,7 +217,41 @@ export default function SuppliersPage() {
       {/* Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         {isLoading ? <TableLoader /> : (
-          <div className="overflow-x-auto">
+          <>
+          <ListCards count={suppliers?.length ?? 0} empty="No suppliers found">
+            {suppliers?.map((s) => (
+              <ListCard
+                key={s.id}
+                mono={false}
+                title={s.name}
+                tone={s.is_active ? undefined : 'muted'}
+                badge={<Badge variant={s.is_active ? 'success' : 'default'}>{s.is_active ? 'Active' : 'Inactive'}</Badge>}
+                subtitle={s.contact_person}
+                meta={[
+                  s.phone,
+                  s.email,
+                  [s.city, s.state].filter(Boolean).join(', '),
+                  s.gst_number && <span className="font-mono">{s.gst_number}</span>,
+                  s.payment_terms,
+                ]}
+              >
+                <div className="flex items-center gap-2 mt-2 -ml-2">
+                  <Button variant="ghost" size="sm" onClick={() => openEdit(s)}>
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleToggle(s.id, s.is_active)}
+                    className={s.is_active ? 'text-red-500 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}
+                  >
+                    {s.is_active ? 'Deactivate' : 'Activate'}
+                  </Button>
+                </div>
+              </ListCard>
+            ))}
+          </ListCards>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
@@ -278,6 +313,7 @@ export default function SuppliersPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

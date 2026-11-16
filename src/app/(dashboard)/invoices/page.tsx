@@ -13,6 +13,7 @@ import { useCanBill } from '@/lib/hooks/use-profile'
 import { formatCurrency, formatDate, todayISO } from '@/lib/utils/format'
 import { downloadCsv } from '@/lib/utils/csv'
 import { Plus, Search, Download, Receipt, AlertTriangle, IndianRupee } from 'lucide-react'
+import { ListCard, ListCards } from '@/components/ui/list-card'
 
 const FILTERS: { label: string; value: 'all' | PaymentState | 'open' }[] = [
   { label: 'All', value: 'all' },
@@ -136,7 +137,37 @@ export default function InvoicesPage() {
         {isLoading ? (
           <TableLoader />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ListCards
+            count={rows.length}
+            empty={invoices?.length ? 'No invoices match this filter' : 'No invoices yet — raise one from a delivered challan'}
+          >
+            {rows.map((inv) => (
+              <ListCard
+                key={inv.id}
+                href={`/invoices/${inv.id}`}
+                title={inv.invoice_no}
+                badge={<InvoiceStatusBadge invoice={inv} />}
+                subtitle={inv.buyer_name}
+                meta={[
+                  formatDate(inv.invoice_date),
+                  inv.due_date && `Due ${formatDate(inv.due_date)}`,
+                  inv.is_interstate ? 'IGST' : 'CGST + SGST',
+                ]}
+                right={
+                  <>
+                    <div className="font-semibold tabular-nums text-slate-900">{formatCurrency(inv.total_amount)}</div>
+                    {inv.status === 'cancelled' ? null : (inv.balance_due ?? 0) > 0 ? (
+                      <div className="text-xs text-amber-600 font-medium">{formatCurrency(inv.balance_due)} due</div>
+                    ) : (
+                      <div className="text-xs text-green-600">Nil due</div>
+                    )}
+                  </>
+                }
+              />
+            ))}
+          </ListCards>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
@@ -199,6 +230,7 @@ export default function InvoicesPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

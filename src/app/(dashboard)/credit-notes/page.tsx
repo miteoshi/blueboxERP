@@ -14,6 +14,7 @@ import { formatCurrency, formatDate, todayISO } from '@/lib/utils/format'
 import { financialYear } from '@/lib/gst'
 import { downloadCsv } from '@/lib/utils/csv'
 import { Download, FileMinus, PackageCheck, Plus, Search } from 'lucide-react'
+import { ListCard, ListCards } from '@/components/ui/list-card'
 
 export default function CreditNotesPage() {
   const canManage = useCanManageFinance()
@@ -111,7 +112,27 @@ export default function CreditNotesPage() {
         {isLoading ? (
           <TableLoader />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ListCards count={rows.length} empty="No credit notes found">
+            {rows.map((n) => (
+              <ListCard
+                key={n.id}
+                href={`/credit-notes/${n.id}`}
+                title={n.credit_note_no}
+                tone={n.status === 'cancelled' ? 'muted' : undefined}
+                badge={n.status === 'cancelled' ? <Badge variant="default">Cancelled</Badge> : undefined}
+                subtitle={n.client?.name}
+                meta={[
+                  formatDate(n.note_date),
+                  n.invoice && `Against ${n.invoice.invoice_no}`,
+                  creditNoteReasonLabel(n.reason),
+                  n.restocked && 'Restocked',
+                ]}
+                right={<span className="font-semibold tabular-nums text-slate-900">{formatCurrency(n.total_amount)}</span>}
+              />
+            ))}
+          </ListCards>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
@@ -175,6 +196,7 @@ export default function CreditNotesPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

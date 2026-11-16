@@ -19,6 +19,7 @@ import { useGstStates } from '@/lib/hooks/use-finance'
 import { gstinError, normalizeGstin, stateCodeFromGstin } from '@/lib/gst'
 import { ilikeAny } from '@/lib/utils/search'
 import { allRows } from "@/lib/utils/all-rows"
+import { ListCard, ListCards } from '@/components/ui/list-card'
 
 function useClients(search: string, orgId: string | null) {
   const supabase = createClient();
@@ -399,7 +400,44 @@ async function handleSave() {
       {/* Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         {isLoading ? <TableLoader /> : (
-          <div className="overflow-x-auto">
+          <>
+          <ListCards count={clients?.length ?? 0} empty="No clients found">
+            {clients?.map((client) => (
+              <ListCard
+                key={client.id}
+                mono={false}
+                title={client.name}
+                tone={client.is_active ? undefined : 'muted'}
+                badge={<Badge variant={client.is_active ? 'success' : 'default'}>{client.is_active ? 'Active' : 'Inactive'}</Badge>}
+                subtitle={client.contact_person}
+                meta={[
+                  client.phone,
+                  client.email,
+                  [client.city, client.state].filter(Boolean).join(', '),
+                  client.gst_number && <span className="font-mono">{client.gst_number}</span>,
+                  (client.credit_limit ?? 0) > 0 ? `Credit ${formatCurrency(client.credit_limit)}` : 'No credit',
+                  (client.credit_days ?? 0) > 0 ? `${client.credit_days} days` : 'Advance',
+                ]}
+              >
+                {canEdit && (
+                  <div className="flex items-center gap-2 mt-2 -ml-2">
+                    <Button variant="ghost" size="sm" onClick={() => openEdit(client)}>
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleToggleActive(client.id, client.is_active)}
+                      className={client.is_active ? 'text-red-500 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}
+                    >
+                      {client.is_active ? 'Deactivate' : 'Activate'}
+                    </Button>
+                  </div>
+                )}
+              </ListCard>
+            ))}
+          </ListCards>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
@@ -481,6 +519,7 @@ async function handleSave() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

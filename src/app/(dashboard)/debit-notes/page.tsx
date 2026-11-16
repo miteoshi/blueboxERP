@@ -13,6 +13,7 @@ import { useCan } from '@/lib/hooks/use-profile'
 import { formatCurrency, formatDate, todayISO } from '@/lib/utils/format'
 import { downloadCsv } from '@/lib/utils/csv'
 import { Download, PackageX, Plus, Search, Undo2 } from 'lucide-react'
+import { ListCard, ListCards } from '@/components/ui/list-card'
 
 export default function DebitNotesPage() {
   const canManage = useCan('managePayables')
@@ -112,7 +113,27 @@ export default function DebitNotesPage() {
         {isLoading ? (
           <TableLoader />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ListCards count={rows.length} empty="No debit notes found">
+            {rows.map((n) => (
+              <ListCard
+                key={n.id}
+                href={`/debit-notes/${n.id}`}
+                title={n.debit_note_no}
+                tone={n.status === 'cancelled' ? 'muted' : undefined}
+                badge={n.status === 'cancelled' ? <Badge variant="default">Cancelled</Badge> : undefined}
+                subtitle={n.supplier?.name}
+                meta={[
+                  formatDate(n.note_date),
+                  n.bill?.bill_no && `Against ${n.bill.bill_no}`,
+                  debitNoteReasonLabel(n.reason),
+                  n.returned_stock && 'Stock sent back',
+                ]}
+                right={<span className="font-semibold tabular-nums text-slate-900">{formatCurrency(n.total_amount)}</span>}
+              />
+            ))}
+          </ListCards>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
@@ -170,6 +191,7 @@ export default function DebitNotesPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

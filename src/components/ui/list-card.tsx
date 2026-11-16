@@ -16,6 +16,7 @@ export function ListCard({
   meta,
   right,
   tone,
+  mono = true,
   children,
 }: {
   href?: string
@@ -25,7 +26,9 @@ export function ListCard({
   /** Short facts shown small, in order; empty ones are skipped */
   meta?: (React.ReactNode | null | undefined | false)[]
   right?: React.ReactNode
-  tone?: 'warning' | 'danger'
+  tone?: 'warning' | 'danger' | 'muted'
+  /** Document numbers and codes are set in the fixed-width face; names are not */
+  mono?: boolean
   children?: React.ReactNode
 }) {
   const facts = (meta ?? []).filter(Boolean)
@@ -33,7 +36,7 @@ export function ListCard({
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="font-mono text-sm font-semibold text-slate-900 break-all">{title}</span>
+          <span className={cn('text-sm font-semibold text-slate-900', mono ? 'font-mono break-all' : 'break-words')}>{title}</span>
           {badge}
         </div>
         {subtitle && <div className="text-sm text-slate-700 mt-0.5 break-words">{subtitle}</div>}
@@ -53,6 +56,7 @@ export function ListCard({
     'block px-4 py-3',
     tone === 'warning' && 'bg-amber-50/40',
     tone === 'danger' && 'bg-red-50/40',
+    tone === 'muted' && 'opacity-60',
     href && 'active:bg-slate-50'
   )
   return href ? (

@@ -13,6 +13,7 @@ import { useCan } from '@/lib/hooks/use-profile'
 import { formatCurrency, formatDate, todayISO } from '@/lib/utils/format'
 import { downloadCsv } from '@/lib/utils/csv'
 import { AlertTriangle, Download, FileClock, IndianRupee, Plus, Search } from 'lucide-react'
+import { ListCard, ListCards } from '@/components/ui/list-card'
 
 const TABS = [
   { value: 'open', label: 'To pay' },
@@ -155,7 +156,37 @@ export default function SupplierBillsPage() {
         {isLoading ? (
           <TableLoader />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ListCards count={rows.length} empty="No supplier bills found">
+            {rows.map((b) => {
+              const st = BILL_STATE[b.state]
+              return (
+                <ListCard
+                  key={b.id}
+                  href={`/supplier-bills/${b.id}`}
+                  title={b.bill_no}
+                  badge={<Badge variant={st.variant}>{st.label}</Badge>}
+                  subtitle={b.supplier?.name}
+                  meta={[
+                    `Inv ${b.supplier_invoice_no}`,
+                    formatDate(b.bill_date),
+                    <span key="due" className={b.state === 'overdue' ? 'text-red-600 font-medium' : undefined}>
+                      Due {formatDate(b.due_date)}
+                    </span>,
+                  ]}
+                  right={
+                    <>
+                      <div className="font-semibold tabular-nums text-slate-900">
+                        {b.state === 'cancelled' ? '—' : formatCurrency(b.balance_due)}
+                      </div>
+                      <div className="text-xs text-slate-400">of {formatCurrency(b.total_amount)}</div>
+                    </>
+                  }
+                />
+              )
+            })}
+          </ListCards>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
@@ -209,6 +240,7 @@ export default function SupplierBillsPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

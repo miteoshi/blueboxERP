@@ -177,7 +177,7 @@ function NewGrnPageContent() {
         </Button>
       </PageHeader>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 *:min-w-0">
         {/* ── Left: Header ── */}
         <div className="space-y-4">
           <Card>

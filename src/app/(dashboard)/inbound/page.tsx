@@ -12,6 +12,7 @@ import { formatCurrency, formatDate } from '@/lib/utils/format'
 import { Plus, Search, Eye } from 'lucide-react'
 import Link from 'next/link'
 import { Route } from 'next'
+import { ListCard, ListCards } from '@/components/ui/list-card'
 
 function useInboundReceipts(search: string, orgId: string | null) {
   const supabase = createClient();
@@ -86,7 +87,7 @@ export default function InboundPage() {
       </PageHeader>
 
       {/* Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
           <p className="text-sm text-slate-500">Total GRNs</p>
           <p className="text-2xl font-bold text-slate-900 mt-1">
@@ -138,7 +139,28 @@ export default function InboundPage() {
         {isLoading ? (
           <TableLoader />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ListCards count={receipts?.length ?? 0} empty="No GRNs found">
+            {receipts?.map((r) => (
+              <ListCard
+                key={r.id}
+                href={`/inbound/${r.id}`}
+                title={r.receipt_no}
+                badge={<Badge variant={STATUS_COLORS[r.status] ?? "default"}>{r.status}</Badge>}
+                subtitle={r.supplier?.name}
+                meta={[
+                  formatDate(r.receipt_date),
+                  r.po?.po_no,
+                  r.challan_no && `Challan ${r.challan_no}`,
+                  r.invoice_no && `Invoice ${r.invoice_no}`,
+                  r.vehicle_no,
+                  `${r.inbound_receipt_lines?.length ?? 0} line${(r.inbound_receipt_lines?.length ?? 0) === 1 ? "" : "s"}`,
+                ]}
+                right={<span className="font-semibold tabular-nums text-slate-900">{formatCurrency(r.total_amount)}</span>}
+              />
+            ))}
+          </ListCards>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
@@ -252,6 +274,7 @@ export default function InboundPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

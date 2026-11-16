@@ -49,7 +49,7 @@ const { data: reservations } = useQuery({
 
     const { data, error } = await supabase
       .from("stock_reservations")
-      .select("id, item_id, qty_reserved, qty_consumed, status")
+      .select("id, item_id, qty_reserved, qty_consumed, status, item:items ( item_code, name )")
       .eq("ref_type", "sales_order")
       .eq("ref_id", id)
       .in("status", ["active", "partially_consumed"]);
@@ -331,7 +331,7 @@ const { data: reservations } = useQuery({
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 *:min-w-0">
 
         {/* ── Left column ── */}
         <div className="space-y-4">
@@ -470,9 +470,11 @@ const { data: reservations } = useQuery({
               </CardHeader>
               <CardBody className="space-y-2 text-sm">
                 {reservations?.map((r) => (
-                  <div key={r.id} className="flex justify-between items-center">
-                    <span className="text-slate-600 text-xs truncate max-w-[140px]">{r.item_id}</span>
-                    <span className="font-medium text-teal-700">{r.qty_reserved} reserved</span>
+                  <div key={r.id} className="flex justify-between items-center gap-3">
+                    <span className="text-slate-600 text-xs min-w-0 break-words">
+                      {r.item ? `${r.item.item_code} · ${r.item.name}` : 'Item'}
+                    </span>
+                    <span className="font-medium text-teal-700 shrink-0">{r.qty_reserved} reserved</span>
                   </div>
                 ))}
                 <p className="text-xs text-slate-400 pt-1 border-t border-slate-100">

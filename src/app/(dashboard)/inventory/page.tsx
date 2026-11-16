@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useStockLevels, useReorderAlerts } from '@/lib/hooks/use-stock'
+import { useStockLevels, useReorderAlerts, type StockLevel } from '@/lib/hooks/use-stock'
 import { PageHeader } from '@/components/layout/page-header'
 import { StatCard } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -17,8 +17,26 @@ import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import { useQuery } from "@tanstack/react-query";
+import { ListCard, ListCards } from '@/components/ui/list-card'
 
 
+
+// What to do about an item's stock, in the order it matters
+function StockStatus({ item }: { item: StockLevel }) {
+  if (item.needs_ordering) {
+    return (
+      <Badge variant="warning">
+        {item.suggested_order_qty
+          ? `Order ${formatQty(item.suggested_order_qty, item.unit ?? undefined)}`
+          : "Order now"}
+      </Badge>
+    )
+  }
+  if (item.below_reorder) return <Badge variant="info">On order</Badge>
+  if ((item.qty_available ?? 0) <= 0) return <Badge variant="danger">Out of stock</Badge>
+  if (item.tracks_reorder) return <Badge variant="success">Healthy</Badge>
+  return <span className="text-xs text-slate-400">No minimum set</span>
+}
 
 export default function InventoryPage() {
   const [search, setSearch]     = useState('')
@@ -209,7 +227,32 @@ useEffect(() => {
         {isLoading ? (
           <TableLoader />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ListCards count={filtered.length} empty="No items found">
+            {filtered.map((item) => (
+              <ListCard
+                key={item.item_id}
+                title={item.item_code}
+                badge={<StockStatus item={item} />}
+                subtitle={item.name}
+                tone={item.needs_ordering ? 'warning' : undefined}
+                meta={[
+                  item.category,
+                  (item.qty_reserved ?? 0) > 0 && `${formatQty(item.qty_reserved, item.unit ?? undefined)} reserved`,
+                  (item.qty_incoming ?? 0) > 0 && `${formatQty(item.qty_incoming, item.unit ?? undefined)} on order`,
+                ]}
+                right={
+                  <>
+                    <div className="font-semibold tabular-nums text-slate-900">
+                      {formatQty(item.qty_available, item.unit ?? undefined)}
+                    </div>
+                    <div className="text-xs text-slate-400">available</div>
+                  </>
+                }
+              />
+            ))}
+          </ListCards>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
@@ -252,7 +295,6 @@ useEffect(() => {
                 )}
                 {filtered.map((item) => {
                   const needsOrder = item.needs_ordering;
-                  const isLow = item.below_reorder;
                   const isZero = (item.qty_available ?? 0) <= 0;
                   const incoming = item.qty_incoming ?? 0;
 
@@ -324,21 +366,7 @@ useEffect(() => {
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {needsOrder ? (
-                          <Badge variant="warning">
-                            {item.suggested_order_qty
-                              ? `Order ${formatQty(item.suggested_order_qty, item.unit ?? undefined)}`
-                              : "Order now"}
-                          </Badge>
-                        ) : isLow ? (
-                          <Badge variant="info">On order</Badge>
-                        ) : isZero ? (
-                          <Badge variant="danger">Out of stock</Badge>
-                        ) : item.tracks_reorder ? (
-                          <Badge variant="success">Healthy</Badge>
-                        ) : (
-                          <span className="text-xs text-slate-400">No minimum set</span>
-                        )}
+                        <StockStatus item={item} />
                       </td>
                     </tr>
                   );
@@ -346,6 +374,7 @@ useEffect(() => {
               </tbody>
             </table>
           </div>
+          </>
         )}
 
         {untracked > 0 && (

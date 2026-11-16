@@ -260,8 +260,8 @@ export default function TasksPage() {
                   className={isOverdue ? 'border-red-200' : ''}
                 >
                   <CardHeader>
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-center gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className={`
                           w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0
                           ${isPending    ? 'bg-slate-100' : ''}
@@ -274,8 +274,8 @@ export default function TasksPage() {
                             ${isOnHold     ? 'text-amber-600' : ''}
                           `} />
                         </div>
-                        <div>
-                          <div className="font-semibold text-slate-900 flex items-center gap-2">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-slate-900 flex flex-wrap items-center gap-2">
                             <Link
                               href={`/production/${task.id}`}
                               className="hover:text-blue-600 font-mono"
@@ -287,7 +287,7 @@ export default function TasksPage() {
                               <Badge variant="danger">Overdue</Badge>
                             )}
                           </div>
-                          <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-3">
+                          <div className="text-xs text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                             {task.target_date && (
                               <span className={`flex items-center gap-1 ${isOverdue ? 'text-red-500' : ''}`}>
                                 <Calendar className="w-3 h-3" />
@@ -305,7 +305,7 @@ export default function TasksPage() {
                       </div>
 
                       {/* Action buttons */}
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0">
                         {/* Start — pending orders only */}
                         {isPending && (
                           <Button

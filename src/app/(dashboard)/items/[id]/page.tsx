@@ -100,7 +100,7 @@ export default async function ItemDetailPage({ params }: Props) {
         <ItemActions item={item} />
       </PageHeader>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 *:min-w-0">
         {/* ── Left column: Details + Stock ── */}
         <div className="space-y-6">
           {/* Item details */}

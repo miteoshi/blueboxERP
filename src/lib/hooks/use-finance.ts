@@ -236,6 +236,29 @@ export function useCancelInvoice() {
   })
 }
 
+// Record, correct or (with an empty number) remove the e-way bill number
+export function useSetInvoiceEwayBill() {
+  const supabase = createClient()
+  const invalidate = useInvalidateFinance()
+
+  return useMutation({
+    mutationFn: async ({ id, ewayBillNo, ewayBillDate }: { id: string; ewayBillNo: string; ewayBillDate?: string }) => {
+      const { data, error } = await supabase.rpc('set_invoice_eway_bill', {
+        p_invoice_id: id,
+        p_eway_bill_no: ewayBillNo,
+        p_eway_bill_date: ewayBillDate || undefined,
+      })
+      if (error) throw rpcError(error, 'Could not save the e-way bill number')
+      return data as { id: string; invoice_no: string; eway_bill_no: string | null; eway_bill_date: string | null }
+    },
+    onSuccess: (data) => {
+      invalidate()
+      toast.success(data.eway_bill_no ? 'E-way bill number saved' : 'E-way bill number removed')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
 // ── Receipts ─────────────────────────────────────────────────
 
 export function useReceipts(filters?: { clientId?: string; from?: string; to?: string }) {

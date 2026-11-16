@@ -808,6 +808,7 @@ async function invoicePage(supabase: Supabase, id: string, org: Organization | n
         <div style="font-family:monospace;font-size:13px;font-weight:bold">${inv.invoice_no}</div>
         <div><span class="lbl">Date</span> ${dt(inv.invoice_date)}</div>
         <div><span class="lbl">Due</span> ${dt(inv.due_date)}</div>
+        ${inv.eway_bill_no ? html`<div><span class="lbl">E-way Bill No.</span> <strong>${inv.eway_bill_no}</strong>${inv.eway_bill_date ? html` · ${dt(inv.eway_bill_date)}` : ''}</div>` : ''}
       </div>
     </div>
 

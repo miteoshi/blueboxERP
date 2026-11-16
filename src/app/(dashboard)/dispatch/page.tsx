@@ -13,6 +13,7 @@ import { formatCurrency, formatDate } from '@/lib/utils/format'
 import { Plus, Search, Eye } from 'lucide-react'
 import Link from 'next/link'
 import { Route } from 'next'
+import { ListCard, ListCards } from '@/components/ui/list-card'
 
 function useDeliveryChallans(search: string, orgId: string | null) {
   const supabase = createClient();
@@ -96,7 +97,7 @@ export default function DispatchPage() {
       </PageHeader>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
           <p className="text-sm text-slate-500">In Transit</p>
           <p className="text-2xl font-bold text-amber-600 mt-1">
@@ -141,7 +142,27 @@ export default function DispatchPage() {
         {isLoading ? (
           <TableLoader />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ListCards count={challans?.length ?? 0} empty="No challans found">
+            {challans?.map((c) => (
+              <ListCard
+                key={c.id}
+                href={`/dispatch/${c.id}`}
+                title={c.challan_no}
+                badge={<Badge variant={STATUS_COLORS[c.status] ?? "default"}>{c.status}</Badge>}
+                subtitle={c.client?.name}
+                meta={[
+                  formatDate(c.challan_date),
+                  c.sales_order?.so_number,
+                  TRANSPORT_LABELS[c.transport_mode] ?? c.transport_mode,
+                  c.vehicle_no,
+                  `${c.delivery_challan_lines?.length ?? 0} line${(c.delivery_challan_lines?.length ?? 0) === 1 ? "" : "s"}`,
+                ]}
+                right={<span className="font-semibold tabular-nums text-slate-900">{formatCurrency(c.total_amount)}</span>}
+              />
+            ))}
+          </ListCards>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
@@ -246,6 +267,7 @@ export default function DispatchPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

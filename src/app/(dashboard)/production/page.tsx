@@ -24,6 +24,7 @@ const STATUS_TABS: { label: string; value: ProductionStatus | '' }[] = [
 ]
 
 import { useOrgId } from '@/lib/hooks/use-tenant'
+import { ListCard, ListCards } from '@/components/ui/list-card'
 
 export default function ProductionPage() {
   const [status, setStatus] = useState<ProductionStatus | ''>('')
@@ -116,7 +117,53 @@ export default function ProductionPage() {
         {isLoading ? (
           <TableLoader />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ListCards count={filtered.length} empty="No production orders found">
+            {filtered.map((order) => {
+              const items = order.production_order_items ?? []
+              const assignments = order.production_assignments ?? []
+              const isOverdue = order.target_date &&
+                isPastDate(order.target_date) &&
+                !['completed', 'cancelled'].includes(order.status)
+              return (
+                <ListCard
+                  key={order.id}
+                  href={`/production/${order.id}`}
+                  title={order.po_number}
+                  badge={<ProductionStatusBadge status={order.status} />}
+                  tone={isOverdue ? 'danger' : undefined}
+                  // Sales order and client are commercial data the production role does not see
+                  subtitle={!isProduction ? order.so?.client?.name : undefined}
+                  meta={[
+                    !isProduction && order.so?.so_number,
+                    order.target_date && (
+                      <span className={isOverdue ? 'text-red-600 font-medium' : undefined}>
+                        Due {formatDate(order.target_date)}{isOverdue ? ' ⚠' : ''}
+                      </span>
+                    ),
+                    assignments.length > 0
+                      ? assignments.slice(0, 3).map((a) => a.worker?.name?.split(' ')[0]).filter(Boolean).join(', ') +
+                        (assignments.length > 3 ? ` +${assignments.length - 3}` : '')
+                      : 'Unassigned',
+                  ]}
+                >
+                  <div className="mt-1.5 space-y-0.5">
+                    {items.slice(0, 2).map((item) => (
+                      <div key={item.id} className="text-xs text-slate-600">
+                        <span className="font-mono text-slate-400 mr-1">{item.item?.item_code}</span>
+                        {formatQty(item.qty_required, item.unit?.name)}
+                        {item.qty_produced > 0 && (
+                          <span className="text-green-600 ml-1">({formatQty(item.qty_produced)} done)</span>
+                        )}
+                      </div>
+                    ))}
+                    {items.length > 2 && <div className="text-xs text-slate-400">+{items.length - 2} more</div>}
+                  </div>
+                </ListCard>
+              )
+            })}
+          </ListCards>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
@@ -279,6 +326,7 @@ export default function ProductionPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

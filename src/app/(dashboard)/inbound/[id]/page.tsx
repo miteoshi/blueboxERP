@@ -115,7 +115,7 @@ export default async function GrnDetailPage({ params }: Props) {
         </a>
       </PageHeader>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 *:min-w-0">
 
         {/* ── Left ── */}
         <div className="space-y-4">

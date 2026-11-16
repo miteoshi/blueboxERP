@@ -168,7 +168,7 @@ const { data: workers = [] } = useWorkers(orgId);
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 *:min-w-0">
         {/* ── Left: Details + Workers ── */}
         <div className="space-y-4">
           {/* Status card */}

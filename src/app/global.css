@@ -68,6 +68,12 @@
 }
 
 @layer components {
+  /* A dropdown never grows wider than the space it sits in, however long
+     its longest option is */
+  select {
+    max-width: 100%;
+  }
+
   /* Phones and tablets: a table keeps each column readable and scrolls
      sideways inside its own box, instead of crushing every column until
      names break one word to a line and amounts split across two. */

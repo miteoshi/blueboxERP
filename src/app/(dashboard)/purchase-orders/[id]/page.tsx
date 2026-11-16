@@ -189,7 +189,7 @@ export default function PurchaseOrderDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="stack w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                     <th className="text-left px-4 py-3">#</th>
@@ -206,8 +206,8 @@ export default function PurchaseOrderDetailPage() {
                     const pending = Math.max(Number(l.qty) - Number(l.qty_received), 0)
                     return (
                       <tr key={l.id}>
-                        <td className="px-4 py-3 text-slate-400">{i + 1}</td>
-                        <td className="px-4 py-3">
+                        <td data-hide className="px-4 py-3 text-slate-400">{i + 1}</td>
+                        <td data-main className="px-4 py-3">
                           <div className="font-medium text-slate-900">{l.item?.name}</div>
                           <div className="text-xs text-slate-400 font-mono">
                             {l.item?.item_code}
@@ -215,20 +215,20 @@ export default function PurchaseOrderDetailPage() {
                           </div>
                           {l.notes && <div className="text-xs text-slate-500">{l.notes}</div>}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums">{formatQty(l.qty, l.unit?.name)}</td>
-                        <td className="px-4 py-3 text-right tabular-nums">{formatQty(l.qty_received)}</td>
-                        <td
+                        <td data-label="Ordered" className="px-4 py-3 text-right tabular-nums">{formatQty(l.qty, l.unit?.name)}</td>
+                        <td data-label="Received" className="px-4 py-3 text-right tabular-nums">{formatQty(l.qty_received)}</td>
+                        <td data-label="Pending"
                           className={`px-4 py-3 text-right tabular-nums ${
                             pending > 0 && isOpen ? 'text-amber-700 font-medium' : 'text-slate-400'
                           }`}
                         >
                           {pending > 0 ? formatQty(pending) : '—'}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums">
+                        <td data-label="Rate" className="px-4 py-3 text-right tabular-nums">
                           {formatCurrency(l.rate)}
                           <div className="text-xs text-slate-400">GST {l.gst_percent}%</div>
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums font-medium">{formatCurrency(l.line_total)}</td>
+                        <td data-label="Amount" className="px-4 py-3 text-right tabular-nums font-medium">{formatCurrency(l.line_total)}</td>
                       </tr>
                     )
                   })}
@@ -404,7 +404,7 @@ function ReceiveForm({
       </CardHeader>
       <CardBody className="space-y-4">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="stack w-full text-sm">
             <thead>
               <tr className="text-xs font-semibold text-slate-500 border-b border-slate-100">
                 <th className="text-left py-2">Item</th>
@@ -415,12 +415,12 @@ function ReceiveForm({
             <tbody className="divide-y divide-slate-50">
               {open.map((l) => (
                 <tr key={l.id}>
-                  <td className="py-2">
+                  <td data-main className="py-2">
                     <div className="font-medium text-slate-900">{l.name}</div>
                     <div className="text-xs text-slate-400 font-mono">{l.code}</div>
                   </td>
-                  <td className="py-2 text-right tabular-nums text-slate-600">{formatQty(l.outstanding, l.unit)}</td>
-                  <td className="py-2">
+                  <td data-label="Still on order" className="py-2 text-right tabular-nums text-slate-600">{formatQty(l.outstanding, l.unit)}</td>
+                  <td data-label="Received now" className="py-2">
                     <input
                       type="number"
                       min="0"

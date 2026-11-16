@@ -471,7 +471,7 @@ function ReservedMaterialsCard({
         </h3>
       </CardHeader>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="stack w-full text-sm">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-100">
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
@@ -491,7 +491,7 @@ function ReservedMaterialsCard({
           <tbody className="divide-y divide-slate-50">
             {reservations.map((r) => (
               <tr key={r.id}>
-                <td className="px-4 py-2.5">
+                <td data-main className="px-4 py-2.5">
                   <span className="font-mono text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded mr-2">
                     {r.item?.item_code}
                   </span>
@@ -499,10 +499,10 @@ function ReservedMaterialsCard({
                     {r.item?.name}
                   </span>
                 </td>
-                <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-slate-900">
+                <td data-label="Reserved" className="px-4 py-2.5 text-right tabular-nums font-semibold text-slate-900">
                   {formatQty(r.qty_reserved, r.item?.unit?.name)}
                 </td>
-                <td className="px-4 py-2.5 text-right tabular-nums">
+                <td data-label="Consumed" className="px-4 py-2.5 text-right tabular-nums">
                   <span
                     className={
                       r.qty_consumed > 0
@@ -513,7 +513,7 @@ function ReservedMaterialsCard({
                     {formatQty(r.qty_consumed, r.item?.unit?.name)}
                   </span>
                 </td>
-                <td className="px-4 py-2.5 text-center">
+                <td data-label="Status" className="px-4 py-2.5 text-center">
                   <Badge variant={statusColors[r.status] ?? "default"}>
                     {r.status.replace("_", " ")}
                   </Badge>

@@ -93,3 +93,84 @@
     }
   }
 }
+
+/* Phones: a line-item table (class "stack") is read one line at a time.
+   Each row becomes a block: the item on top, then one "label … value"
+   line per column, with the label taken from data-label. Left outside
+   the layers on purpose so it wins over the cell's own spacing classes. */
+@media (max-width: 767px) {
+  table.stack,
+  table.stack tbody,
+  table.stack tfoot {
+    display: block;
+  }
+  table.stack thead {
+    display: none;
+  }
+  table.stack tr {
+    display: block;
+    padding: 0.75rem 1rem;
+  }
+  table.stack td {
+    display: block;
+    width: auto;
+    padding: 0;
+    text-align: left;
+    white-space: normal;
+  }
+  table.stack td[data-label] {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: 1rem;
+    align-items: center;
+    padding-top: 0.375rem;
+    text-align: right;
+  }
+  table.stack td[data-label]::before {
+    content: attr(data-label);
+    text-align: left;
+    grid-column: 1;
+    grid-row: 1 / span 6;
+    font-size: 0.75rem;
+    color: #64748b;
+  }
+  table.stack td[data-label] > * {
+    grid-column: 2;
+    justify-self: end;
+    text-align: right;
+  }
+  table.stack td[data-label] > input:not([type="checkbox"]),
+  table.stack td[data-label] > select {
+    width: 9rem;
+    max-width: 100%;
+  }
+  table.stack td[data-hide],
+  table.stack td:empty {
+    display: none;
+  }
+  table.stack td:last-child:not([data-label]):not([data-main]):not([colspan]) {
+    padding-top: 0.375rem;
+    text-align: right;
+  }
+  /* A tick box that leads the row sits beside the item, not above it */
+  table.stack td:first-child:not([data-label]):not([data-main]):not([colspan]) {
+    float: left;
+    margin-right: 0.75rem;
+    padding-top: 0.125rem;
+  }
+  table.stack td:first-child:not([data-label]):not([data-main]):not([colspan]) + td[data-main] {
+    overflow: hidden;
+  }
+  /* Totals under the lines: label on the left, amount on the right */
+  table.stack tfoot tr {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem 1rem;
+  }
+  table.stack tfoot td:last-child,
+  table.stack tfoot td:nth-last-child(2) {
+    text-align: right;
+  }
+}

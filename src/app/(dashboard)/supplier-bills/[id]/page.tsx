@@ -129,7 +129,7 @@ export default function SupplierBillDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="stack w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                     <th className="text-left px-4 py-3">Item</th>
@@ -146,27 +146,27 @@ export default function SupplierBillDetailPage() {
                     const variance = grnRate != null && Number(grnRate) !== Number(l.rate)
                     return (
                       <tr key={l.id}>
-                        <td className="px-4 py-3">
+                        <td data-main className="px-4 py-3">
                           <div className="font-medium text-slate-900">{l.item?.name}</div>
                           <div className="text-xs text-slate-400 font-mono">
                             {l.item?.item_code}
                             {l.item?.hsn_code ? ` · HSN ${l.item.hsn_code}` : ''}
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td data-label="GRN" className="px-4 py-3">
                           {l.grn_line?.receipt && (
                             <Link href={`/inbound/${l.grn_line.receipt.id}` as Route} className="font-mono text-xs text-blue-600 hover:underline">
                               {l.grn_line.receipt.receipt_no}
                             </Link>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums">{formatQty(l.qty, l.unit?.name)}</td>
-                        <td className="px-4 py-3 text-right tabular-nums">
+                        <td data-label="Qty" className="px-4 py-3 text-right tabular-nums">{formatQty(l.qty, l.unit?.name)}</td>
+                        <td data-label="Rate" className="px-4 py-3 text-right tabular-nums">
                           {formatCurrency(l.rate)}
                           {variance && <div className="text-xs text-amber-700">GRN {formatCurrency(grnRate)}</div>}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(l.taxable_value)}</td>
-                        <td className="px-4 py-3 text-right tabular-nums">
+                        <td data-label="Taxable" className="px-4 py-3 text-right tabular-nums">{formatCurrency(l.taxable_value)}</td>
+                        <td data-label="GST" className="px-4 py-3 text-right tabular-nums">
                           {formatCurrency(l.gst_amount)}
                           <div className="text-xs text-slate-400">{l.gst_percent}%</div>
                         </td>

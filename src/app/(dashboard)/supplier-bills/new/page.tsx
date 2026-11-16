@@ -248,7 +248,7 @@ function NewSupplierBill() {
                 </p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="stack w-full text-sm">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500">
                         <th className="w-8 px-3 py-2.5" />
@@ -273,7 +273,7 @@ function NewSupplierBill() {
                                 className="h-4 w-4 rounded border-slate-300"
                               />
                             </td>
-                            <td className="px-3 py-2">
+                            <td data-main className="px-3 py-2">
                               <div className="font-medium text-slate-900">{r.line.item?.name}</div>
                               <div className="text-xs text-slate-400">
                                 <span className="font-mono">{r.grn.receipt_no}</span> · {formatDate(r.grn.receipt_date)}
@@ -282,7 +282,7 @@ function NewSupplierBill() {
                               </div>
                               <div className="text-xs text-slate-400">{formatQty(r.remaining, r.line.unit?.name)} unbilled</div>
                             </td>
-                            <td className="px-3 py-2">
+                            <td data-label="Qty" className="px-3 py-2">
                               <input
                                 type="number"
                                 min="0"
@@ -294,7 +294,7 @@ function NewSupplierBill() {
                                 className="w-full px-2 py-1.5 text-xs rounded border border-slate-200 text-right disabled:bg-slate-50 disabled:text-slate-400 focus:outline-none focus:ring-1 focus:ring-teal-500"
                               />
                             </td>
-                            <td className="px-3 py-2">
+                            <td data-label="Rate (₹)" className="px-3 py-2">
                               <input
                                 type="number"
                                 min="0"
@@ -308,7 +308,7 @@ function NewSupplierBill() {
                                 <div className="mt-1 text-[11px] text-amber-700 text-right">GRN rate {formatCurrency(r.line.rate)}</div>
                               )}
                             </td>
-                            <td className="px-3 py-2">
+                            <td data-label="GST" className="px-3 py-2">
                               <select
                                 disabled={!r.edit.selected}
                                 value={r.edit.gst}
@@ -322,7 +322,7 @@ function NewSupplierBill() {
                                 ))}
                               </select>
                             </td>
-                            <td className="px-3 py-2 text-right tabular-nums">
+                            <td data-label="Amount" className="px-3 py-2 text-right tabular-nums">
                               {r.edit.selected ? (
                                 <>
                                   <div className="text-xs font-semibold text-slate-900">{formatCurrency(r.taxable)}</div>

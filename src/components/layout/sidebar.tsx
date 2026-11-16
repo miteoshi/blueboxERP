@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTenant } from '@/lib/hooks/use-tenant'
 import { toast } from 'sonner'
+import { clearOfflineData } from '@/lib/offline/storage'
 import { useState } from 'react'
 import {
   LayoutDashboard,
@@ -373,6 +374,8 @@ export function Sidebar() {
       })
       await supabase.auth.signOut()
       queryClient.clear()
+      // Nothing of this user's is left on the device for the next person
+      await clearOfflineData()
       toast.success('Signed out')
       router.push('/login')
     } catch (err) {

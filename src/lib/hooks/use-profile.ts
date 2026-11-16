@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import type { Tables, Enums } from '@/lib/types/database'
+import { isConnectionError } from '@/lib/offline/connection'
 
 export type Profile = Tables<'profiles'>
 export type UserRole = Enums<'user_role'>
@@ -35,6 +36,8 @@ export function useProfile() {
     queryKey: ['profile', orgId],
     queryFn: async () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
+      // No connection is not "signed out": fail, and keep the profile already held
+      if (userError && isConnectionError(userError)) throw userError
       if (userError || !user || !orgId) return null
 
       const { data, error } = await supabase

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsRestoring, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import type { Tables, Enums } from "@/lib/types/database";
@@ -9,6 +9,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { PageLoader } from "@/components/ui/spinner";
 import { AlertTriangle, LogOut, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isConnectionError } from "@/lib/offline/connection";
+import { claimOfflineData, clearOfflineData } from "@/lib/offline/storage";
 
 export type Profile = Tables<"profiles">;
 export type Organization = Tables<"organizations">;
@@ -54,6 +56,9 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
    *      ↓
    * organizations.id
    */
+  // Data saved for offline use is read back asynchronously on load
+  const isRestoring = useIsRestoring();
+
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["tenant-context"],
 
@@ -62,6 +67,12 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         data: { user },
         error: userError,
       } = await supabase.auth.getUser();
+
+      // No connection is not "signed out". Failing here keeps the tenant
+      // already held, so the app stays usable on what it last loaded.
+      if (userError && isConnectionError(userError)) {
+        throw userError;
+      }
 
       if (userError || !user) {
         return {
@@ -190,7 +201,11 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
    * Redirect guards for unauthenticated or un-onboarded users.
    */
   useEffect(() => {
-    if (isLoading) return;
+    // Until saved data has been read back there is no user to judge by
+    if (isLoading || isRestoring) return;
+
+    // A failed lookup says nothing about whether the user is signed in
+    if (isError) return;
 
     if (
       !user &&
@@ -210,7 +225,22 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     ) {
       router.push("/onboarding");
     }
-  }, [isLoading, user, profile, orgId, pathname, router]);
+  }, [isLoading, isRestoring, isError, user, profile, orgId, pathname, router]);
+
+  /*
+   * Data kept on this device for offline use belongs to one person. If
+   * someone else is now signed in, drop it before any of it is shown.
+   */
+  const userId = user?.id ?? null;
+  useEffect(() => {
+    if (!userId) return;
+    if (claimOfflineData(userId)) {
+      queryClient.removeQueries({
+        predicate: (query) => query.queryKey[0] !== "tenant-context",
+      });
+      void clearOfflineData().then(() => claimOfflineData(userId));
+    }
+  }, [userId, queryClient]);
 
   async function handleSignOut() {
     try {
@@ -222,6 +252,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       });
       await supabase.auth.signOut();
       queryClient.clear();
+      await clearOfflineData();
       router.push("/login");
     } catch (signOutError) {
       console.error("Failed to sign out:", signOutError);
@@ -232,7 +263,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   /*
    * 1. Tenant context is being resolved.
    */
-  if (isLoading || (isFetching && !organization && !!user)) {
+  if (isLoading || isRestoring || (isFetching && !organization && !!user)) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
         <PageLoader />
@@ -244,7 +275,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
    * 2. Unauthenticated user on a protected route.
    * Render PageLoader while Next.js transitions to /login.
    */
-  if (!user) {
+  if (!user && !isError) {
     if (pathname.startsWith("/login") || pathname.startsWith("/auth")) {
       return <>{children}</>;
     }
@@ -261,7 +292,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
    *
    * Do not treat a database/network error as "no organization".
    */
-  if (isError && !isFetching) {
+  if (isError && !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-900 p-6">
         <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-800 p-8 text-center shadow-xl">

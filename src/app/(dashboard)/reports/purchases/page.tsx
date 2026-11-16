@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { TableLoader } from '@/components/ui/spinner'
 import { formatCurrency, formatDate, formatQty } from '@/lib/utils/format'
 import { debitNoteReasonLabel } from '@/lib/hooks/use-payables'
+import { setOffInputCredit } from '@/lib/gst'
 import { allRows } from '@/lib/utils/all-rows'
 import { monthRange, reportPeriods } from '@/lib/utils/periods'
 import { downloadCsv } from '@/lib/utils/csv'
@@ -132,6 +133,7 @@ export default function PurchaseRegisterPage() {
   const [from, setFrom] = useState(thisMonth.from)
   const [to, setTo] = useState(thisMonth.to)
   const [tab, setTab] = useState<Tab>('Register')
+  const [opening, setOpening] = useState({ igst: '', cgst: '', sgst: '' })
 
   const { data: bills, isLoading } = useBillsForPeriod(from, to)
   const { data: notes } = useDebitNotesForPeriod(from, to)
@@ -221,12 +223,31 @@ export default function PurchaseRegisterPage() {
   }, [rows, noteRows])
 
   const outputTotal = output ? r2(output.cgst + output.sgst + output.igst) : 0
-  const netPayable = r2(outputTotal - itc)
-  const position = [
-    { head: 'IGST', out: output?.igst ?? 0, inp: totals.igst },
-    { head: 'CGST', out: output?.cgst ?? 0, inp: totals.cgst },
-    { head: 'SGST', out: output?.sgst ?? 0, inp: totals.sgst },
-  ]
+  // Credit left over from earlier periods, typed in from the credit ledger
+  const brought = {
+    igst: Math.max(0, Number(opening.igst) || 0),
+    cgst: Math.max(0, Number(opening.cgst) || 0),
+    sgst: Math.max(0, Number(opening.sgst) || 0),
+  }
+  const out = { igst: output?.igst ?? 0, cgst: output?.cgst ?? 0, sgst: output?.sgst ?? 0 }
+  const setOff = setOffInputCredit(out, {
+    igst: brought.igst + totals.igst,
+    cgst: brought.cgst + totals.cgst,
+    sgst: brought.sgst + totals.sgst,
+  })
+  const position = (['igst', 'cgst', 'sgst'] as const).map((k) => ({
+    key: k,
+    head: k.toUpperCase(),
+    out: out[k],
+    brought: brought[k],
+    inp: totals[k],
+    setOff: setOff.setOff[k],
+    cash: setOff.cash[k],
+    carried: setOff.carriedForward[k],
+  }))
+  const cashTotal = r2(sum(position, (r) => r.cash))
+  const carriedTotal = r2(sum(position, (r) => r.carried))
+  const negativeOutput = position.filter((r) => r.out < 0).map((r) => r.head)
 
   function exportTab() {
     const tag = `${from}_${to}`
@@ -261,8 +282,11 @@ export default function PurchaseRegisterPage() {
         return downloadCsv(`gst-position-${tag}`, position, [
           { header: 'Tax', value: (r) => r.head },
           { header: 'Output tax (sales)', value: (r) => r.out },
+          { header: 'Credit brought forward', value: (r) => r.brought },
           { header: 'Input credit (purchases)', value: (r) => r.inp },
-          { header: 'Net', value: (r) => r2(r.out - r.inp) },
+          { header: 'Set off by credit', value: (r) => r.setOff },
+          { header: 'Pay in cash', value: (r) => r.cash },
+          { header: 'Credit carried forward', value: (r) => r.carried },
         ])
       default:
         return downloadCsv(
@@ -553,44 +577,82 @@ export default function PurchaseRegisterPage() {
         ) : (
           <div>
             <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="stack w-full text-sm">
               <thead>
                 <tr className={HEAD}>
                   <th className="text-left px-4 py-3">Tax</th>
                   <th className="text-right px-4 py-3">Output tax (sales)</th>
+                  <th className="text-right px-4 py-3">Credit brought forward</th>
                   <th className="text-right px-4 py-3">Input credit (purchases)</th>
-                  <th className="text-right px-4 py-3">Net</th>
+                  <th className="text-right px-4 py-3">Set off by credit</th>
+                  <th className="text-right px-4 py-3">Pay in cash</th>
+                  <th className="text-right px-4 py-3">Credit carried forward</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {position.map((r) => (
                   <tr key={r.head}>
-                    <td className="px-4 py-3 font-medium">{r.head}</td>
-                    <Num value={r.out} />
-                    <Num value={r.inp} />
-                    <Num value={r2(r.out - r.inp)} />
+                    <td data-main className="px-4 py-3 font-medium">{r.head}</td>
+                    <td data-label="Output tax (sales)" className="px-4 py-3 text-right tabular-nums">
+                      {r.out ? formatCurrency(r.out) : '—'}
+                    </td>
+                    <td data-label="Credit brought forward" className="px-4 py-2">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        inputMode="decimal"
+                        placeholder="0.00"
+                        aria-label={`${r.head} credit brought forward`}
+                        value={opening[r.key]}
+                        onChange={(e) => setOpening((prev) => ({ ...prev, [r.key]: e.target.value }))}
+                        className="w-28 ml-auto block px-2 py-1.5 text-sm text-right tabular-nums rounded-lg border border-slate-300"
+                      />
+                    </td>
+                    <td data-label="Input credit (purchases)" className="px-4 py-3 text-right tabular-nums">
+                      {r.inp ? formatCurrency(r.inp) : '—'}
+                    </td>
+                    <td data-label="Set off by credit" className="px-4 py-3 text-right tabular-nums">
+                      {r.setOff ? formatCurrency(r.setOff) : '—'}
+                    </td>
+                    <td data-label="Pay in cash" className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
+                      {r.cash ? formatCurrency(r.cash) : '—'}
+                    </td>
+                    <td data-label="Credit carried forward" className="px-4 py-3 text-right tabular-nums text-teal-700">
+                      {r.carried ? formatCurrency(r.carried) : '—'}
+                    </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="bg-slate-50 border-t border-slate-200 font-semibold">
                   <td className="px-4 py-3">Total</td>
-                  <Num value={outputTotal} />
-                  <Num value={itc} />
-                  <td className={`px-4 py-3 text-right tabular-nums ${netPayable > 0 ? 'text-slate-900' : 'text-teal-700'}`}>
-                    {netPayable >= 0
-                      ? `${formatCurrency(netPayable)} payable`
-                      : `${formatCurrency(-netPayable)} credit carried forward`}
+                  <td data-hide className="px-4 py-3 text-right tabular-nums">{outputTotal ? formatCurrency(outputTotal) : '—'}</td>
+                  <td data-hide />
+                  <td data-hide className="px-4 py-3 text-right tabular-nums">{itc ? formatCurrency(itc) : '—'}</td>
+                  <td data-hide />
+                  <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(cashTotal)} in cash</td>
+                  <td data-hide className="px-4 py-3 text-right tabular-nums text-teal-700">
+                    {carriedTotal ? formatCurrency(carriedTotal) : '—'}
                   </td>
                 </tr>
               </tfoot>
             </table>
             </div>
+            {negativeOutput.length > 0 && (
+              <p className="px-4 py-3 text-xs text-amber-700 border-t border-slate-100">
+                Credit notes are more than invoices for {negativeOutput.join(' and ')} in this period, so nothing is due
+                under that head here; the excess is adjusted in a later return.
+              </p>
+            )}
             <p className="px-4 py-3 text-xs text-slate-500 border-t border-slate-100">
-              An estimate from the books, before any opening credit balance. Output tax is issued invoices less credit notes;
-              input credit is bills from registered suppliers. The credit you can actually claim is what shows in GSTR-2B
-              once the supplier files, and IGST credit can also be set against CGST and SGST — confirm with your accountant
-              before filing GSTR-3B.
+              An estimate from the books. Output tax is issued invoices less credit notes; input credit is bills from
+              registered suppliers less debit notes. Credit is set off in the order the law requires: IGST credit first
+              (against IGST, then CGST and SGST), then CGST credit against CGST and IGST, then SGST credit against SGST
+              and IGST. CGST credit cannot pay SGST or the other way round, which is why one tax can be payable in cash
+              while another carries credit forward. Enter the credit left from earlier periods from your electronic
+              credit ledger. The credit you can actually claim is what shows in GSTR-2B once the supplier files —
+              confirm with your accountant before filing GSTR-3B.
             </p>
           </div>
         )}

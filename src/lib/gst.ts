@@ -109,3 +109,70 @@ export function financialYear(date: string) {
     to: `${start + 1}-03-31`,
   }
 }
+
+// ── Setting input tax credit against output tax ───────────────
+export type TaxHeads = { igst: number; cgst: number; sgst: number }
+
+/**
+ * How much of a period's output tax the available credit covers, head by
+ * head, and what is left to pay in cash — section 49(5) with rule 88A:
+ *
+ *   1. IGST credit goes against IGST first, then against CGST and SGST in
+ *      any order, and has to be used up before CGST or SGST credit is touched.
+ *   2. CGST credit goes against CGST, then IGST. Never against SGST.
+ *   3. SGST credit goes against SGST, then IGST. Never against CGST.
+ *
+ * Because of rule 3 and 2 the total is not simply output less credit: spare
+ * CGST credit cannot pay SGST, so one head can be payable in cash while
+ * another carries credit forward.
+ *
+ * Where the law leaves the order open (left-over IGST credit between CGST
+ * and SGST) it is put where there would otherwise be cash to pay, which
+ * gives the lowest cash payment. A head whose credit is negative (returns
+ * to suppliers exceed purchases) is a reversal and is added to the tax
+ * due; a head whose output is negative has nothing due this period.
+ */
+export function setOffInputCredit(output: TaxHeads, credit: TaxHeads): {
+  due: TaxHeads
+  setOff: TaxHeads
+  cash: TaxHeads
+  carriedForward: TaxHeads
+} {
+  // Whole paise, so the sums cannot drift
+  const paise = (n: number) => Math.round((Number(n) || 0) * 100)
+  const heads = ['igst', 'cgst', 'sgst'] as const
+  const due = { igst: 0, cgst: 0, sgst: 0 }
+  const left = { igst: 0, cgst: 0, sgst: 0 } // credit not yet used
+  for (const h of heads) {
+    const c = paise(credit[h])
+    due[h] = Math.max(0, paise(output[h])) + Math.max(0, -c)
+    left[h] = Math.max(0, c)
+  }
+  const owed = { ...due } // tax not yet covered
+  const apply = (from: keyof TaxHeads, against: keyof TaxHeads, limit = Infinity) => {
+    const amount = Math.max(0, Math.min(left[from], owed[against], limit))
+    left[from] -= amount
+    owed[against] -= amount
+  }
+
+  apply('igst', 'igst')
+  // Left-over IGST credit: first where the head's own credit falls short…
+  apply('igst', 'cgst', Math.max(0, owed.cgst - left.cgst))
+  apply('igst', 'sgst', Math.max(0, owed.sgst - left.sgst))
+  // …then the rest, because it must be exhausted before CGST or SGST credit is used
+  apply('igst', 'cgst')
+  apply('igst', 'sgst')
+
+  apply('cgst', 'cgst')
+  apply('cgst', 'igst')
+  apply('sgst', 'sgst')
+  apply('sgst', 'igst')
+
+  const rupees = (v: TaxHeads): TaxHeads => ({ igst: v.igst / 100, cgst: v.cgst / 100, sgst: v.sgst / 100 })
+  return {
+    due: rupees(due),
+    setOff: rupees({ igst: due.igst - owed.igst, cgst: due.cgst - owed.cgst, sgst: due.sgst - owed.sgst }),
+    cash: rupees(owed),
+    carriedForward: rupees(left),
+  }
+}

@@ -2,6 +2,15 @@ import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { html, raw, printScript, printableResponse, type SafeHtml } from '@/lib/pdf/html'
 import { amountInWords } from '@/lib/gst'
+import { allRows } from '@/lib/utils/all-rows'
+import {
+  balanceSide,
+  statementDetail,
+  statementKindLabel,
+  statementTotals,
+  type StatementParty,
+  type StatementRow,
+} from '@/lib/statement'
 
 // ─────────────────────────────────────────────────────────────
 // PDF Generation Route
@@ -12,6 +21,8 @@ import { amountInWords } from '@/lib/gst'
 // GET /api/pdf?type=credit_note&id=uuid
 // GET /api/pdf?type=purchase_order&id=uuid
 // GET /api/pdf?type=debit_note&id=uuid
+// GET /api/pdf?type=client_statement&id=uuid&from=YYYY-MM-DD&to=YYYY-MM-DD
+// GET /api/pdf?type=supplier_statement&id=uuid&from=YYYY-MM-DD&to=YYYY-MM-DD
 //
 // Returns printable HTML — the browser auto-triggers window.print().
 // All document data is HTML-escaped (see lib/pdf/html.ts) and the page
@@ -37,6 +48,7 @@ type Organization = {
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -96,12 +108,22 @@ export async function GET(request: NextRequest) {
         return printableResponse(await purchaseOrderPage(supabase, id, org))
       case 'debit_note':
         return printableResponse(await debitNotePage(supabase, id, org))
+      case 'client_statement':
+      case 'supplier_statement': {
+        const from = searchParams.get('from') ?? ''
+        const to = searchParams.get('to') ?? ''
+        if (!DATE_RE.test(from) || !DATE_RE.test(to) || from > to) {
+          return NextResponse.json({ error: 'from and to must be dates, from on or before to' }, { status: 400 })
+        }
+        const party: StatementParty = type === 'client_statement' ? 'client' : 'supplier'
+        return printableResponse(await statementPage(supabase, party, id, org, from, to))
+      }
       default:
         return NextResponse.json({ error: 'Unknown document type' }, { status: 400 })
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Internal server error'
-    const status = message.endsWith('not found') ? 404 : 500
+    const status = message.endsWith('not found') ? 404 : message.startsWith('Unauthorized') ? 403 : 500
     return NextResponse.json({ error: message }, { status })
   }
 }
@@ -1067,4 +1089,118 @@ async function creditNotePage(supabase: Supabase, id: string, org: Organization 
 </div>
 ${printScript}
 </body></html>`
+}
+
+// ── Statement of account ──────────────────────────────────────
+
+async function statementPage(
+  supabase: Supabase,
+  party: StatementParty,
+  id: string,
+  org: Organization | null,
+  from: string,
+  to: string
+) {
+  const { data: account, error: accountError } = await supabase
+    .from(party === 'client' ? 'clients' : 'suppliers')
+    .select('name, address, city, state, gst_number')
+    .eq('id', id)
+    .single()
+
+  if (accountError || !account) throw new Error(party === 'client' ? 'Client not found' : 'Supplier not found')
+
+  // A long account can run past the API's 1,000-row page
+  const { data, error } = await allRows<StatementRow>(
+    party === 'client'
+      ? supabase.rpc('client_statement', { p_client_id: id, p_from: from, p_to: to }).order('seq')
+      : supabase.rpc('supplier_statement', { p_supplier_id: id, p_from: from, p_to: to }).order('seq')
+  )
+  // The function's own message says why (role, period, account)
+  if (error) throw new Error(error.message)
+
+  const rows = (data ?? []).map((r) => ({
+    ...r,
+    debit: Number(r.debit),
+    credit: Number(r.credit),
+    balance: Number(r.balance),
+  }))
+  const totals = statementTotals(rows)
+  const signed = (amount: number) => {
+    const side = balanceSide(party, amount)
+    return `${inr(Math.abs(amount))}${side ? ` ${side}` : ''}`
+  }
+  const address = [account.address, account.city, account.state].filter(Boolean).join(', ')
+  // The printed copy is read by the other side, so it names the account instead of saying "you"
+  const closingLine =
+    Math.abs(totals.closing) < 0.005
+      ? 'The account is settled.'
+      : `${
+          party === 'client'
+            ? totals.closing > 0 ? 'Amount due from' : 'Advance held for'
+            : totals.closing > 0 ? 'Amount payable to' : 'Advance lying with'
+        } ${account.name}: ${inr(Math.abs(totals.closing))}.`
+
+  return document(`Statement - ${account.name}`, html`
+  ${header(org, 'STATEMENT OF ACCOUNT', `${dt(from)} to ${dt(to)}`)}
+  <div class="meta-grid">
+    <div class="meta-box">
+      <div class="meta-label">${party === 'client' ? 'Customer' : 'Supplier'}</div>
+      <div class="meta-value">
+        <strong>${account.name}</strong><br>
+        ${lines(address, account.gst_number && `GSTIN: ${account.gst_number}`)}
+      </div>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">Summary</div>
+      <div class="meta-value">
+        Opening balance: ${signed(totals.opening)}<br>
+        Debits: ${inr(totals.debit)}<br>
+        Credits: ${inr(totals.credit)}<br>
+        <strong>Closing balance: ${signed(totals.closing)}</strong>
+      </div>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Document</th>
+        <th>Particulars</th>
+        <th class="r">Debit</th>
+        <th class="r">Credit</th>
+        <th class="r">Balance</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows.map((r) => r.kind === 'opening' ? html`
+      <tr>
+        <td style="white-space:nowrap">${dt(r.entry_date)}</td>
+        <td colspan="2"><strong>Opening balance</strong> brought forward</td>
+        <td class="r">${r.debit ? inr(r.debit) : ''}</td>
+        <td class="r">${r.credit ? inr(r.credit) : ''}</td>
+        <td class="r" style="white-space:nowrap">${signed(r.balance)}</td>
+      </tr>` : html`
+      <tr>
+        <td style="white-space:nowrap">${dt(r.entry_date)}</td>
+        <td><span class="mono" style="white-space:nowrap">${r.doc_no ?? ''}</span><br><span style="font-size:9px;color:#64748B">${statementKindLabel(r.kind)}</span></td>
+        <td>${statementDetail(r)}</td>
+        <td class="r">${r.debit ? inr(r.debit) : ''}</td>
+        <td class="r">${r.credit ? inr(r.credit) : ''}</td>
+        <td class="r" style="white-space:nowrap">${signed(r.balance)}</td>
+      </tr>`)}
+      ${totals.count === 0 ? html`
+      <tr><td colspan="6" class="c">Nothing was recorded on this account in the period.</td></tr>` : ''}
+      <tr>
+        <td colspan="3"><strong>Closing balance as on ${dt(to)}</strong></td>
+        <td class="r"><strong>${inr(totals.debit)}</strong></td>
+        <td class="r"><strong>${inr(totals.credit)}</strong></td>
+        <td class="r" style="white-space:nowrap"><strong>${signed(totals.closing)}</strong></td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="terms">
+    ${closingLine} Cancelled documents are left out.
+  </div>
+  ${signatures(`For ${org?.name ?? 'Blue Box ERP'}`)}
+  `)
 }

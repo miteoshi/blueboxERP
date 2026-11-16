@@ -9,6 +9,7 @@ import { formatCurrency, formatDate, isPastDate } from '@/lib/utils/format'
 import { Search, Eye, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import type { Enums } from '@/lib/types/database'
+import { ListCard, ListCards } from '@/components/ui/list-card'
 
 type OrderStatus = Enums<'order_status'>
 
@@ -94,7 +95,50 @@ export default function SalesOrdersPage() {
       {/* Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         {isLoading ? <TableLoader /> : (
-          <div className="overflow-x-auto">
+          <>
+          <ListCards count={orders?.length ?? 0} empty="No sales orders found">
+            {orders?.map((order) => {
+              const isOverdue = isPastDate(order.delivery_date) && !['delivered', 'cancelled'].includes(order.status)
+              return (
+                <ListCard
+                  key={order.id}
+                  href={`/sales-orders/${order.id}`}
+                  title={order.so_number}
+                  tone={isOverdue ? 'danger' : undefined}
+                  badge={
+                    order.status === 'ready' ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-teal-100 text-teal-700">
+                        Reserved
+                      </span>
+                    ) : (
+                      <OrderStatusBadge status={order.status} />
+                    )
+                  }
+                  subtitle={order.client?.name}
+                  meta={[
+                    formatDate(order.order_date),
+                    order.delivery_date && (
+                      <span className={isOverdue ? 'text-red-600 font-medium' : undefined}>
+                        Deliver by {formatDate(order.delivery_date)}{isOverdue ? ' ⚠' : ''}
+                      </span>
+                    ),
+                    order.quotation?.quotation_no,
+                  ]}
+                  right={
+                    <>
+                      <div className="font-semibold tabular-nums text-slate-900">{formatCurrency(order.total_amount)}</div>
+                      {(order.balance_due ?? 0) > 0 ? (
+                        <div className="text-xs text-amber-600 font-medium">{formatCurrency(order.balance_due)} due</div>
+                      ) : (
+                        <div className="text-xs text-green-600 font-medium">Paid ✓</div>
+                      )}
+                    </>
+                  }
+                />
+              )
+            })}
+          </ListCards>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
@@ -198,6 +242,7 @@ export default function SalesOrdersPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

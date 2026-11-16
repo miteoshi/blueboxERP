@@ -173,7 +173,7 @@ export default function PurchaseOrderDetailPage() {
 
       {panel === 'receive' && (
         <ReceiveForm
-          po={{ id: po.id, po_date: po.po_date }}
+          po={{ id: po.id, po_no: po.po_no, po_date: po.po_date }}
           lines={lines.map((l) => ({
             id: l.id,
             name: l.item?.name ?? '',
@@ -347,7 +347,7 @@ function ReceiveForm({
   lines,
   onDone,
 }: {
-  po: { id: string; po_date: string }
+  po: { id: string; po_no: string; po_date: string }
   lines: { id: string; name: string; code: string; unit: string; outstanding: number }[]
   onDone: () => void
 }) {
@@ -388,6 +388,7 @@ function ReceiveForm({
         challanNo,
         invoiceNo,
         notes,
+        summary: `${po.po_no} · ${entries.length} line${entries.length === 1 ? '' : 's'} · ${receiptDate}`,
       },
       { onSuccess: onDone },
     )

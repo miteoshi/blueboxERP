@@ -2,11 +2,12 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { useOrgId } from '@/lib/hooks/use-tenant'
+import { useOrgId, useTenant } from '@/lib/hooks/use-tenant'
+import { QUEUED_MESSAGE, saveOrQueue } from '@/lib/offline/outbox'
 import { allRows } from '@/lib/utils/all-rows'
 import { toast } from 'sonner'
 import { useRequestId } from '@/lib/hooks/use-request-id'
-import { isAlreadySaved, rpcFailure } from '@/lib/utils/rpc'
+import { isAlreadySaved } from '@/lib/utils/rpc'
 import type { Enums, Tables } from '@/lib/types/database'
 
 export type PurchaseOrder = Tables<'purchase_orders'>
@@ -298,9 +299,9 @@ export function useClosePurchaseOrder() {
 }
 
 export function useReceivePurchaseOrder() {
-  const supabase = createClient()
   const invalidate = useInvalidatePurchasing()
   const requestId = useRequestId()
+  const { user } = useTenant()
 
   return useMutation({
     mutationFn: async (input: {
@@ -313,24 +314,38 @@ export function useReceivePurchaseOrder() {
       challanNo?: string
       invoiceNo?: string
       notes?: string
+      /** One line describing this receipt, shown if it has to wait for a connection */
+      summary?: string
     }) => {
-      const { data, error } = await supabase.rpc('receive_purchase_order', {
-        p_po_id: input.id,
-        p_lines: input.lines,
-        p_receipt_date: input.receiptDate || undefined,
-        p_transport_mode: input.transportMode,
-        p_vehicle_no: input.vehicleNo || undefined,
-        p_driver_name: input.driverName || undefined,
-        p_challan_no: input.challanNo || undefined,
-        p_invoice_no: input.invoiceNo || undefined,
-        p_notes: input.notes || undefined,
-        p_request_id: requestId.get(),
+      // With no connection the receipt is kept on this device and sent later
+      const outcome = await saveOrQueue({
+        kind: 'po_receipt',
+        id: requestId.get(),
+        userId: user?.id,
+        summary: input.summary ?? 'Purchase order receipt',
+        params: {
+          poId: input.id,
+          lines: input.lines,
+          receiptDate: input.receiptDate,
+          transportMode: input.transportMode,
+          vehicleNo: input.vehicleNo,
+          driverName: input.driverName,
+          challanNo: input.challanNo,
+          invoiceNo: input.invoiceNo,
+          notes: input.notes,
+          requestId: requestId.get(),
+        },
       })
-      if (error) throw rpcFailure(error, 'Could not record the receipt')
-      return data as { id: string; receipt_no: string; po_no: string; po_status: PurchaseOrderStatus }
+      return outcome.queued
+        ? { queued: true as const }
+        : { queued: false as const, ...outcome.data, po_status: outcome.data.po_status as PurchaseOrderStatus }
     },
     onSuccess: (data) => {
       requestId.clear()
+      if (data.queued) {
+        toast.success(QUEUED_MESSAGE)
+        return
+      }
       invalidate()
       toast.success(`${data.receipt_no} recorded — stock updated${data.po_status === 'received' ? `; ${data.po_no} fully received` : ''}`)
     },

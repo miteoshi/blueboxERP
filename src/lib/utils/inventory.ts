@@ -341,6 +341,39 @@ export async function createInboundReceipt(params: {
   }
 }
 
+// ── receive_purchase_order ───────────────────────────────────
+// A goods receipt against a purchase order: GRN + stock in + the order's
+// received quantities and status, in one transaction.
+export async function receivePurchaseOrder(params: {
+  poId:           string
+  lines:          Array<{ po_line_id: string; qty: number; notes?: string }>
+  receiptDate?:   string
+  transportMode?: Enums<'transport_mode'>
+  vehicleNo?:     string
+  driverName?:    string
+  challanNo?:     string
+  invoiceNo?:     string
+  notes?:         string
+  // Sent again on a retry so the database refuses a duplicate receipt
+  requestId?:     string
+}) {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc('receive_purchase_order', {
+    p_po_id:          params.poId,
+    p_lines:          params.lines,
+    p_receipt_date:   params.receiptDate || undefined,
+    p_transport_mode: params.transportMode,
+    p_vehicle_no:     params.vehicleNo  || undefined,
+    p_driver_name:    params.driverName || undefined,
+    p_challan_no:     params.challanNo  || undefined,
+    p_invoice_no:     params.invoiceNo  || undefined,
+    p_notes:          params.notes      || undefined,
+    p_request_id:     params.requestId,
+  })
+  if (error) throw rpcFailure(error, 'Could not record the receipt')
+  return data as { id: string; receipt_no: string; po_no: string; po_status: string }
+}
+
 // ── convert_quotation_to_sales_order ──────────────────────────
 // Creates the SO + lines and marks the quotation 'converted'.
 // Refuses double conversion.

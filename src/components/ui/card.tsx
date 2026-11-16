@@ -65,7 +65,7 @@ export function StatCard({ label, value, sub, icon, className }: StatCardProps) 
           {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
         </div>
         {icon && (
-          <div className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+          <div className="hidden sm:flex w-10 h-10 flex-shrink-0 rounded-lg bg-blue-50 items-center justify-center text-blue-600">
             {icon}
           </div>
         )}

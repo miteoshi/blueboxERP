@@ -329,17 +329,17 @@ export default function InvoiceDetailPage() {
               <CardBody className="text-sm text-slate-400">No payments applied yet.</CardBody>
             ) : (
               <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="stack w-full text-sm">
                 <tbody className="divide-y divide-slate-50">
                   {payments.map((a) => (
                     <tr key={a.id}>
-                      <td className="px-5 py-3 font-mono text-xs">{a.receipt?.receipt_no}</td>
+                      <td data-main className="px-5 py-3 font-mono text-xs">{a.receipt?.receipt_no}</td>
                       <td className="px-5 py-3 text-slate-600">{formatDate(a.receipt?.receipt_date)}</td>
                       <td className="px-5 py-3 text-slate-600">
                         {paymentModeLabel(a.receipt?.mode ?? '')}
                         {a.receipt?.reference ? ` · ${a.receipt.reference}` : ''}
                       </td>
-                      <td className="px-5 py-3 text-right tabular-nums font-medium">{formatCurrency(a.amount)}</td>
+                      <td data-label="Amount" className="px-5 py-3 text-right tabular-nums font-medium">{formatCurrency(a.amount)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -354,11 +354,11 @@ export default function InvoiceDetailPage() {
                 <h3 className="font-semibold text-slate-900">Credit notes</h3>
               </CardHeader>
               <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="stack w-full text-sm">
                 <tbody className="divide-y divide-slate-50">
                   {creditNotes.map((n) => (
                     <tr key={n.id} className={n.status === 'cancelled' ? 'opacity-50' : undefined}>
-                      <td className="px-5 py-3">
+                      <td data-main className="px-5 py-3">
                         <Link href={`/credit-notes/${n.id}` as Route} className="font-mono text-xs text-blue-600 hover:underline">
                           {n.credit_note_no}
                         </Link>
@@ -369,7 +369,7 @@ export default function InvoiceDetailPage() {
                         {n.restocked ? ' · restocked' : ''}
                         {n.status === 'cancelled' ? ' · cancelled' : ''}
                       </td>
-                      <td className="px-5 py-3 text-right tabular-nums font-medium">{formatCurrency(n.total_amount)}</td>
+                      <td data-label="Amount" className="px-5 py-3 text-right tabular-nums font-medium">{formatCurrency(n.total_amount)}</td>
                     </tr>
                   ))}
                 </tbody>

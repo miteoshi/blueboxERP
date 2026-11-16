@@ -132,7 +132,7 @@ export default function PayablesPage() {
           <TableLoader />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="stack w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                   <th className="text-left px-4 py-3">Supplier</th>
@@ -158,7 +158,7 @@ export default function PayablesPage() {
                   return (
                     <Fragment key={r.supplier_id}>
                       <tr className="hover:bg-slate-50 cursor-pointer" onClick={() => setOpen(expanded ? null : r.supplier_id)}>
-                        <td className="px-4 py-3">
+                        <td data-main className="px-4 py-3">
                           <div className="flex items-center gap-2 font-medium text-slate-900">
                             {expanded ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
                             {r.supplier_name}
@@ -174,10 +174,11 @@ export default function PayablesPage() {
                             <div className="text-xs text-teal-600 ml-6">{formatCurrency(r.advance)} advance paid</div>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums font-semibold">{money(r.outstanding)}</td>
+                        <td data-label="Outstanding" className="px-4 py-3 text-right tabular-nums font-semibold">{money(r.outstanding)}</td>
                         {BUCKETS.map((b) => (
                           <td
                             key={b.key}
+                            data-label={b.label}
                             className={`px-4 py-3 text-right tabular-nums ${
                               b.key === 'overdue_90_plus' && (r[b.key] ?? 0) > 0
                                 ? 'text-red-600 font-medium'
@@ -189,7 +190,7 @@ export default function PayablesPage() {
                             {money(r[b.key])}
                           </td>
                         ))}
-                        <td className="px-4 py-3 text-right text-xs text-slate-600">{r.next_due ? formatDate(r.next_due) : '—'}</td>
+                        <td data-label="Next due" className="px-4 py-3 text-right text-xs text-slate-600">{r.next_due ? formatDate(r.next_due) : '—'}</td>
                       </tr>
                       {expanded && (
                         <tr>
@@ -208,7 +209,7 @@ export default function PayablesPage() {
                     <td className="px-4 py-3">Total</td>
                     <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(totals.outstanding)}</td>
                     {BUCKETS.map((b) => (
-                      <td key={b.key} className="px-4 py-3 text-right tabular-nums">
+                      <td key={b.key} data-hide className="px-4 py-3 text-right tabular-nums">
                         {money(totals.buckets[b.key])}
                       </td>
                     ))}
@@ -226,7 +227,7 @@ export default function PayablesPage() {
           <h3 className="text-sm font-semibold text-slate-900">Payments made</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="stack w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                 <th className="text-left px-4 py-3">Payment</th>
@@ -251,16 +252,16 @@ export default function PayablesPage() {
                 return (
                   <Fragment key={p.id}>
                     <tr className={active ? '' : 'opacity-60'}>
-                      <td className="px-4 py-3">
+                      <td data-main className="px-4 py-3">
                         <span className="font-mono font-semibold text-slate-900">{p.payment_no}</span>
                         <div className="text-xs text-slate-400">{formatDate(p.payment_date)}</div>
                       </td>
-                      <td className="px-4 py-3 text-slate-900">{p.supplier?.name}</td>
-                      <td className="px-4 py-3 text-xs text-slate-600">
+                      <td data-label="Supplier" className="px-4 py-3 text-slate-900">{p.supplier?.name}</td>
+                      <td data-label="Mode" className="px-4 py-3 text-xs text-slate-600">
                         {paymentModeLabel(p.mode)}
                         {p.reference && <div className="text-slate-400">{p.reference}</div>}
                       </td>
-                      <td className="px-4 py-3 text-xs">
+                      <td data-label="Applied to" className="px-4 py-3 text-xs">
                         {!active ? (
                           <span className="text-slate-500">Cancelled{p.cancel_reason ? ` — ${p.cancel_reason}` : ''}</span>
                         ) : (
@@ -277,7 +278,7 @@ export default function PayablesPage() {
                           </>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums font-semibold">{formatCurrency(p.amount)}</td>
+                      <td data-label="Amount" className="px-4 py-3 text-right tabular-nums font-semibold">{formatCurrency(p.amount)}</td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         {active && canManage && (
                           <>
@@ -345,11 +346,11 @@ function SupplierOpenBills({ supplierId }: { supplierId: string }) {
   if (!data?.length) return <p className="text-xs text-slate-500">No open bills — only an advance.</p>
   return (
     <div className="overflow-x-auto">
-    <table className="w-full text-xs">
+    <table className="stack w-full text-xs">
       <tbody>
         {data.map((b) => (
           <tr key={b.id}>
-            <td className="py-1">
+            <td data-main className="py-1">
               <Link href={`/supplier-bills/${b.id}` as Route} className="font-mono text-blue-600 hover:underline">
                 {b.bill_no}
               </Link>
@@ -359,8 +360,8 @@ function SupplierOpenBills({ supplierId }: { supplierId: string }) {
             <td className={`py-1 ${(b.days_overdue ?? 0) > 0 ? 'text-red-600' : 'text-slate-500'}`}>
               {(b.days_overdue ?? 0) > 0 ? `${b.days_overdue} days overdue` : 'not due'}
             </td>
-            <td className="py-1 text-right tabular-nums">{formatCurrency(b.total_amount)}</td>
-            <td className="py-1 text-right tabular-nums font-medium">{formatCurrency(b.balance_due)}</td>
+            <td data-label="Total" className="py-1 text-right tabular-nums">{formatCurrency(b.total_amount)}</td>
+            <td data-label="Balance" className="py-1 text-right tabular-nums font-medium">{formatCurrency(b.balance_due)}</td>
           </tr>
         ))}
       </tbody>

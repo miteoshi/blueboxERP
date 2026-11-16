@@ -152,7 +152,7 @@ export default function StockValuationPage() {
             <h3 className="text-sm font-semibold text-slate-900">Where the cost comes from</h3>
           </div>
           <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="stack w-full text-sm">
             <tbody className="divide-y divide-slate-50">
               {byBasis.length === 0 && (
                 <tr>
@@ -161,12 +161,12 @@ export default function StockValuationPage() {
               )}
               {byBasis.map((r) => (
                 <tr key={r.basis}>
-                  <td className="px-5 py-3">
+                  <td data-main className="px-5 py-3">
                     <Badge variant={basisVariant(r.basis)}>{COST_BASIS_LABEL[r.basis as CostBasis] ?? r.basis}</Badge>
                     <div className="text-xs text-slate-400 mt-1">{COST_BASIS_HINT[r.basis as CostBasis]}</div>
                   </td>
-                  <td className="px-5 py-3 text-right tabular-nums text-slate-600">{r.items} items</td>
-                  <td className="px-5 py-3 text-right tabular-nums font-semibold text-slate-900">{formatCurrency(r.value)}</td>
+                  <td data-label="Items" className="px-5 py-3 text-right tabular-nums text-slate-600">{r.items} items</td>
+                  <td data-label="Value" className="px-5 py-3 text-right tabular-nums font-semibold text-slate-900">{formatCurrency(r.value)}</td>
                 </tr>
               ))}
             </tbody>
@@ -179,7 +179,7 @@ export default function StockValuationPage() {
             <h3 className="text-sm font-semibold text-slate-900">By category</h3>
           </div>
           <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="stack w-full text-sm">
             <tbody className="divide-y divide-slate-50">
               {byCategory.length === 0 && (
                 <tr>
@@ -188,10 +188,10 @@ export default function StockValuationPage() {
               )}
               {byCategory.slice(0, 8).map((r) => (
                 <tr key={r.category}>
-                  <td className="px-5 py-3 text-slate-900">{r.category}</td>
-                  <td className="px-5 py-3 text-right tabular-nums text-slate-500">{r.items} items</td>
-                  <td className="px-5 py-3 text-right tabular-nums font-medium">{formatCurrency(r.value)}</td>
-                  <td className="px-5 py-3 text-right tabular-nums text-xs text-slate-400">
+                  <td data-main className="px-5 py-3 text-slate-900">{r.category}</td>
+                  <td data-label="Items" className="px-5 py-3 text-right tabular-nums text-slate-500">{r.items} items</td>
+                  <td data-label="Value" className="px-5 py-3 text-right tabular-nums font-medium">{formatCurrency(r.value)}</td>
+                  <td data-label="Share" className="px-5 py-3 text-right tabular-nums text-xs text-slate-400">
                     {stats.total ? `${Math.round((r.value / stats.total) * 100)}%` : '—'}
                   </td>
                 </tr>
@@ -235,7 +235,7 @@ export default function StockValuationPage() {
           <TableLoader />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="stack w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                   <th className="text-left px-4 py-3">Item</th>
@@ -255,7 +255,7 @@ export default function StockValuationPage() {
                 )}
                 {visible.map((r) => (
                   <tr key={r.item_id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3">
+                    <td data-main className="px-4 py-3">
                       <Link href={`/items/${r.item_id}` as Route} className="font-medium text-slate-900 hover:text-blue-600">
                         {r.name}
                       </Link>
@@ -266,21 +266,21 @@ export default function StockValuationPage() {
                       </div>
                       {r.cost_warning && <div className="text-xs text-amber-700 mt-0.5">{r.cost_warning}</div>}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums">
+                    <td data-label="On hand" className="px-4 py-3 text-right tabular-nums">
                       {formatQty(r.qty_on_hand, r.unit ?? undefined)}
                       {Number(r.qty_reserved) > 0 && (
                         <div className="text-xs text-slate-400">{formatQty(r.qty_reserved)} reserved</div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums">
+                    <td data-label="Unit cost" className="px-4 py-3 text-right tabular-nums">
                       {r.unit_cost != null ? formatCurrency(r.unit_cost) : <span className="text-slate-300">—</span>}
                     </td>
-                    <td className="px-4 py-3">
+                    <td data-label="Basis" className="px-4 py-3">
                       <Badge variant={basisVariant(r.cost_basis ?? 'none')}>
                         {COST_BASIS_LABEL[(r.cost_basis ?? 'none') as CostBasis] ?? r.cost_basis}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
+                    <td data-label="Value" className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
                       {Number(r.stock_value) > 0 ? formatCurrency(r.stock_value) : <span className="text-slate-300">—</span>}
                     </td>
                   </tr>

@@ -1,7 +1,7 @@
 // Saves made with no connection, kept on the device until they can be sent.
 //
-// Only three kinds of save are held this way: a stock adjustment, a goods
-// receipt and a delivery challan. Each already carries an id the database
+// Only these saves are held this way: a stock adjustment, a goods receipt
+// (direct, or against a purchase order) and a delivery challan. Each already carries an id the database
 // uses to refuse a second copy, so sending one again after an uncertain
 // first attempt can never create a duplicate. Everything else, tax invoices
 // above all, still needs a connection.
@@ -10,13 +10,19 @@
 // or the user discarded it. A save the server refuses stays, with the
 // reason, until someone deals with it.
 
-import { adjustInventory, createDeliveryChallan, createInboundReceipt } from '@/lib/utils/inventory'
+import {
+  adjustInventory,
+  createDeliveryChallan,
+  createInboundReceipt,
+  receivePurchaseOrder,
+} from '@/lib/utils/inventory'
 import { isAlreadySaved } from '@/lib/utils/rpc'
 import { isConnectionError } from '@/lib/offline/connection'
 
 const SENDERS = {
   stock_adjustment: (params: Parameters<typeof adjustInventory>[0]) => adjustInventory(params),
   goods_receipt: (params: Parameters<typeof createInboundReceipt>[0]) => createInboundReceipt(params),
+  po_receipt: (params: Parameters<typeof receivePurchaseOrder>[0]) => receivePurchaseOrder(params),
   delivery_challan: (params: Parameters<typeof createDeliveryChallan>[0]) => createDeliveryChallan(params),
 }
 
@@ -27,6 +33,7 @@ type ResultOf<K extends OutboxKind> = Awaited<ReturnType<(typeof SENDERS)[K]>>
 export const OUTBOX_KIND_LABEL: Record<OutboxKind, string> = {
   stock_adjustment: 'Stock adjustment',
   goods_receipt: 'Goods receipt',
+  po_receipt: 'Receipt against a purchase order',
   delivery_challan: 'Delivery challan',
 }
 

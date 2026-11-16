@@ -23,7 +23,7 @@ import {
   useRecordReceipt,
   type PaymentMode,
 } from '@/lib/hooks/use-finance'
-import { useCanBill, useCanManageFinance } from '@/lib/hooks/use-profile'
+import { useCan, useCanBill, useCanManageFinance } from '@/lib/hooks/use-profile'
 import { formatCurrency, formatDate, formatDateTime, formatQty, todayISO } from '@/lib/utils/format'
 import { amountInWords } from '@/lib/gst'
 import { toast } from 'sonner'
@@ -33,6 +33,10 @@ export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const canBill = useCanBill()
+  // Matches set_invoice_eway_bill(): whoever raises the invoice or sends the goods out
+  const canSell = useCan('sell')
+  const canDispatch = useCan('dispatch')
+  const canRecordEwayBill = canSell || canDispatch
   const canManage = useCanManageFinance()
   const { data: inv, isLoading } = useInvoice(id)
   const { data: gstStates } = useGstStates()
@@ -165,6 +169,10 @@ export default function InvoiceDetailPage() {
 
       {inv.status === 'issued' && (
         <EwayBillExport
+          invoiceId={inv.id}
+          ewayBillNo={inv.eway_bill_no}
+          ewayBillDate={inv.eway_bill_date}
+          canRecord={canRecordEwayBill}
           invoice={{ ...inv, lines: [...inv.sales_invoice_lines].sort((a, b) => a.sort_order - b.sort_order) }}
           from={{ address: company?.address ?? null, city: company?.city ?? null, pincode: company?.pincode ?? null }}
           to={{ address: inv.client?.address ?? null, city: inv.client?.city ?? null, pincode: inv.client?.pincode ?? null }}

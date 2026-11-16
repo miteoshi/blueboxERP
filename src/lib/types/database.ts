@@ -3061,6 +3061,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           due_date: string
+          eway_bill_date: string | null
+          eway_bill_no: string | null
           financial_year: string
           id: string
           igst_amount: number
@@ -3098,6 +3100,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           due_date: string
+          eway_bill_date?: string | null
+          eway_bill_no?: string | null
           financial_year: string
           id?: string
           igst_amount?: number
@@ -3135,6 +3139,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           due_date?: string
+          eway_bill_date?: string | null
+          eway_bill_no?: string | null
           financial_year?: string
           id?: string
           igst_amount?: number
@@ -5172,6 +5178,14 @@ export type Database = {
       }
       reserve_sales_order: {
         Args: { p_expiry_hours?: number; p_so_id: string }
+        Returns: Json
+      }
+      set_invoice_eway_bill: {
+        Args: {
+          p_eway_bill_date?: string
+          p_eway_bill_no: string
+          p_invoice_id: string
+        }
         Returns: Json
       }
       set_item_price: {

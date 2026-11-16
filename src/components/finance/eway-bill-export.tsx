@@ -11,24 +11,36 @@ import {
   type EwayInvoice,
   type EwayParty,
 } from '@/lib/eway-bill'
-import { formatCurrency } from '@/lib/utils/format'
-import { AlertTriangle, Download, Truck } from 'lucide-react'
+import { useSetInvoiceEwayBill } from '@/lib/hooks/use-finance'
+import { formatCurrency, formatDate, todayISO } from '@/lib/utils/format'
+import { AlertTriangle, CheckCircle2, Download, Truck } from 'lucide-react'
+
+// Shown in groups of four, the way the portal prints it
+const spaced = (no: string) => no.replace(/(\d{4})(?=\d)/g, '$1 ')
 
 /**
- * Prepares the JSON file for "Generate Bulk" on the e-way bill portal.
- * Nothing is sent anywhere: the user uploads the file themselves and the
- * portal issues the e-way bill number.
+ * Prepares the JSON file for "Generate Bulk" on the e-way bill portal, and
+ * keeps the number the portal answers with on the invoice. Nothing is sent
+ * anywhere: the user uploads the file themselves.
  */
 export function EwayBillExport({
+  invoiceId,
   invoice,
   from,
   to,
   defaultVehicleNo,
+  ewayBillNo,
+  ewayBillDate,
+  canRecord,
 }: {
+  invoiceId: string
   invoice: EwayInvoice
   from: EwayParty
   to: EwayParty
   defaultVehicleNo?: string | null
+  ewayBillNo: string | null
+  ewayBillDate: string | null
+  canRecord: boolean
 }) {
   const overThreshold = Number(invoice.total_amount) > EWAY_BILL_THRESHOLD
   const [open, setOpen] = useState(false)
@@ -36,6 +48,13 @@ export function EwayBillExport({
   const [vehicleNo, setVehicleNo] = useState(defaultVehicleNo ?? '')
   const [transporterId, setTransporterId] = useState('')
   const [transporterName, setTransporterName] = useState('')
+  const [number, setNumber] = useState(ewayBillNo ?? '')
+  const [numberDate, setNumberDate] = useState(ewayBillDate ?? todayISO())
+  const saveNumber = useSetInvoiceEwayBill()
+
+  const digits = number.replace(/\s/g, '')
+  const numberError = digits && !/^[0-9]{12}$/.test(digits) ? 'An e-way bill number has 12 digits' : undefined
+  const numberChanged = digits !== (ewayBillNo ?? '') || (!!digits && numberDate !== (ewayBillDate ?? ''))
 
   const transport = useMemo(
     () => ({ distanceKm: Number(distance), vehicleNo, transporterId, transporterName }),
@@ -51,6 +70,21 @@ export function EwayBillExport({
     a.download = `eway-bill-${invoice.invoice_no.replace(/[^A-Za-z0-9]+/g, '-')}.json`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  if (!open && ewayBillNo) {
+    return (
+      <div className="mb-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 flex flex-wrap items-center gap-3">
+        <CheckCircle2 className="w-4 h-4 shrink-0" />
+        <span className="flex-1 min-w-[220px]">
+          E-way bill <span className="font-mono font-semibold">{spaced(ewayBillNo)}</span>
+          {ewayBillDate ? ` · ${formatDate(ewayBillDate)}` : ''}
+        </span>
+        <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+          {canRecord ? 'Change' : 'E-way bill file'}
+        </Button>
+      </div>
+    )
   }
 
   if (!open) {
@@ -129,6 +163,55 @@ export function EwayBillExport({
             Upload it under e-Waybill → Generate Bulk. The portal checks the file again and issues the e-way bill number.
           </span>
         </div>
+
+        {canRecord && (
+          <div className="pt-4 border-t border-slate-100">
+            <p className="text-sm font-medium text-slate-900">E-way bill number</p>
+            <p className="text-xs text-slate-500 mt-0.5 mb-3">
+              Enter the number the portal gives you. It is printed on the invoice that travels with the goods.
+            </p>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="w-56">
+                <Input
+                  label="Number"
+                  inputMode="numeric"
+                  placeholder="12 digits"
+                  value={number}
+                  onChange={(e) => setNumber(e.target.value.replace(/[^0-9\s]/g, ''))}
+                  error={numberError}
+                />
+              </div>
+              <div className="w-44">
+                <Input
+                  label="Dated"
+                  type="date"
+                  min={invoice.invoice_date}
+                  max={todayISO()}
+                  value={numberDate}
+                  onChange={(e) => setNumberDate(e.target.value)}
+                />
+              </div>
+              <Button
+                loading={saveNumber.isPending}
+                disabled={!digits || !!numberError || !numberDate || !numberChanged}
+                onClick={() => saveNumber.mutate({ id: invoiceId, ewayBillNo: digits, ewayBillDate: numberDate })}
+              >
+                Save number
+              </Button>
+              {ewayBillNo && (
+                <Button
+                  variant="outline"
+                  loading={saveNumber.isPending}
+                  onClick={() =>
+                    saveNumber.mutate({ id: invoiceId, ewayBillNo: '' }, { onSuccess: () => setNumber('') })
+                  }
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
       </CardBody>
     </Card>
   )

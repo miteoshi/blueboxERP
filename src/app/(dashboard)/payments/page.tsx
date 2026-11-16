@@ -400,6 +400,7 @@ function RecordPaymentForm({ onClose }: { onClose: () => void }) {
                 No open invoices — the full amount is kept on account and applied to the next invoice.
               </p>
             ) : (
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <tbody className="divide-y divide-slate-50">
                   {invoices.map((i) => (
@@ -431,6 +432,7 @@ function RecordPaymentForm({ onClose }: { onClose: () => void }) {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
             {value > 0 && (
               <p className="px-4 py-2 text-xs text-slate-500 border-t border-slate-100">

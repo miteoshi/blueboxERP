@@ -300,7 +300,7 @@ export default function GstReportsPage() {
         />
       </div>
 
-      <div className="flex gap-1 mb-4 bg-slate-100 p-1 rounded-lg w-fit">
+      <div className="flex gap-1 mb-4 bg-slate-100 p-1 rounded-lg w-fit max-w-full overflow-x-auto *:shrink-0 *:whitespace-nowrap">
         {TABS.map((t) => (
           <button
             key={t}
@@ -318,6 +318,7 @@ export default function GstReportsPage() {
         {isLoading ? (
           <TableLoader />
         ) : tab === 'Summary' ? (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
@@ -350,9 +351,11 @@ export default function GstReportsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         ) : tab === 'B2B' || tab === 'B2CL' ? (
           <InvoiceTable rows={tab === 'B2B' ? b2b : b2cl} stateLabel={stateLabel} />
         ) : tab === 'B2CS' ? (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
@@ -378,7 +381,9 @@ export default function GstReportsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         ) : tab === 'CDNR' || tab === 'CDNUR' ? (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
@@ -419,10 +424,12 @@ export default function GstReportsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         ) : tab === 'HSN' ? (
           loadingHsn ? (
             <TableLoader />
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
@@ -454,8 +461,10 @@ export default function GstReportsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
@@ -483,6 +492,7 @@ export default function GstReportsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
       <p className="text-xs text-slate-400 mt-3">
@@ -524,6 +534,7 @@ function InvoiceTable({
   stateLabel: (code: string | null) => string
 }) {
   return (
+    <div className="overflow-x-auto">
     <table className="w-full text-sm">
       <thead>
         <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
@@ -559,5 +570,6 @@ function InvoiceTable({
         ))}
       </tbody>
     </table>
+    </div>
   )
 }

@@ -369,7 +369,7 @@ export default function PurchaseRegisterPage() {
         />
       </div>
 
-      <div className="flex gap-1 mb-4 bg-slate-100 p-1 rounded-lg w-fit">
+      <div className="flex gap-1 mb-4 bg-slate-100 p-1 rounded-lg w-fit max-w-full overflow-x-auto *:shrink-0 *:whitespace-nowrap">
         {TABS.map((t) => (
           <button
             key={t}
@@ -466,6 +466,7 @@ export default function PurchaseRegisterPage() {
             </table>
           </div>
         ) : tab === 'By rate' ? (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className={HEAD}>
@@ -489,7 +490,9 @@ export default function PurchaseRegisterPage() {
               ))}
             </tbody>
           </table>
+          </div>
         ) : tab === 'By supplier' ? (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className={HEAD}>
@@ -520,7 +523,9 @@ export default function PurchaseRegisterPage() {
               ))}
             </tbody>
           </table>
+          </div>
         ) : tab === 'HSN' ? (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className={HEAD}>
@@ -544,8 +549,10 @@ export default function PurchaseRegisterPage() {
               ))}
             </tbody>
           </table>
+          </div>
         ) : (
           <div>
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className={HEAD}>
@@ -578,6 +585,7 @@ export default function PurchaseRegisterPage() {
                 </tr>
               </tfoot>
             </table>
+            </div>
             <p className="px-4 py-3 text-xs text-slate-500 border-t border-slate-100">
               An estimate from the books, before any opening credit balance. Output tax is issued invoices less credit notes;
               input credit is bills from registered suppliers. The credit you can actually claim is what shows in GSTR-2B

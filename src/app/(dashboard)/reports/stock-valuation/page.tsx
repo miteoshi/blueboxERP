@@ -151,6 +151,7 @@ export default function StockValuationPage() {
           <div className="px-5 py-3 border-b border-slate-100">
             <h3 className="text-sm font-semibold text-slate-900">Where the cost comes from</h3>
           </div>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <tbody className="divide-y divide-slate-50">
               {byBasis.length === 0 && (
@@ -170,12 +171,14 @@ export default function StockValuationPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-slate-100">
             <h3 className="text-sm font-semibold text-slate-900">By category</h3>
           </div>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <tbody className="divide-y divide-slate-50">
               {byCategory.length === 0 && (
@@ -195,12 +198,13 @@ export default function StockValuationPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
         <div className="px-5 py-4 flex flex-wrap items-center gap-3 border-b border-slate-100">
-          <div className="flex rounded-lg border border-slate-200 p-0.5 text-xs">
+          <div className="flex rounded-lg border border-slate-200 p-0.5 text-xs max-w-full overflow-x-auto *:shrink-0 *:whitespace-nowrap">
             {TABS.map((t) => (
               <button
                 key={t.value}

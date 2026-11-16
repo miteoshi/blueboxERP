@@ -337,6 +337,7 @@ function SupplierOpenBills({ supplierId }: { supplierId: string }) {
   if (isLoading) return <p className="text-xs text-slate-400">Loading…</p>
   if (!data?.length) return <p className="text-xs text-slate-500">No open bills — only an advance.</p>
   return (
+    <div className="overflow-x-auto">
     <table className="w-full text-xs">
       <tbody>
         {data.map((b) => (
@@ -357,5 +358,6 @@ function SupplierOpenBills({ supplierId }: { supplierId: string }) {
         ))}
       </tbody>
     </table>
+    </div>
   )
 }

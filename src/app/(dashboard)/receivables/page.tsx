@@ -193,6 +193,7 @@ function ClientInvoices({ clientId }: { clientId: string }) {
   if (isLoading) return <p className="text-xs text-slate-400">Loading…</p>
   if (!data?.length) return <p className="text-xs text-slate-500">No open invoices — only unapplied credit.</p>
   return (
+    <div className="overflow-x-auto">
     <table className="w-full text-xs">
       <tbody>
         {data.map((i) => (
@@ -213,5 +214,6 @@ function ClientInvoices({ clientId }: { clientId: string }) {
         ))}
       </tbody>
     </table>
+    </div>
   )
 }

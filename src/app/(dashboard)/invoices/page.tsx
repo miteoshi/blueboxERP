@@ -107,7 +107,7 @@ export default function InvoicesPage() {
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
         <div className="px-5 py-4 flex flex-wrap items-center gap-3 border-b border-slate-100">
-          <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+          <div className="flex gap-1 bg-slate-100 p-1 rounded-lg max-w-full overflow-x-auto *:shrink-0 *:whitespace-nowrap">
             {FILTERS.map((f) => (
               <button
                 key={f.value}

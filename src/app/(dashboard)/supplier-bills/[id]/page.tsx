@@ -186,6 +186,7 @@ export default function SupplierBillDetailPage() {
               {notes.length === 0 ? (
                 <p className="px-5 py-6 text-sm text-slate-400">None against this bill.</p>
               ) : (
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <tbody className="divide-y divide-slate-50">
                     {notes.map((n) => (
@@ -206,6 +207,7 @@ export default function SupplierBillDetailPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </CardBody>
           </Card>
@@ -218,6 +220,7 @@ export default function SupplierBillDetailPage() {
               {payments.length === 0 ? (
                 <p className="px-5 py-6 text-sm text-slate-400">No payments yet.</p>
               ) : (
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <tbody className="divide-y divide-slate-50">
                     {payments.map((a) => (
@@ -235,6 +238,7 @@ export default function SupplierBillDetailPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </CardBody>
           </Card>

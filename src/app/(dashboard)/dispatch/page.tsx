@@ -96,7 +96,7 @@ export default function DispatchPage() {
       </PageHeader>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
           <p className="text-sm text-slate-500">In Transit</p>
           <p className="text-2xl font-bold text-amber-600 mt-1">

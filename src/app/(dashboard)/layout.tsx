@@ -46,14 +46,16 @@ export default async function DashboardLayout({
     <TenantProvider>
       <div className="flex min-h-screen bg-slate-50">
 
-        {/* Fixed sidebar */}
+        {/* Fixed sidebar on a desktop; a drawer under a top bar on a phone */}
         <Sidebar />
 
-        {/* Main content — offset by sidebar width */}
-        <div className="flex-1 flex flex-col ml-64">
+        {/* Main content — offset by the sidebar on a desktop, by the top bar
+            on a phone. min-w-0 keeps a wide table scrolling inside its own
+            box instead of stretching the whole page sideways. */}
+        <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
 
           {/* Page content */}
-          <main className="flex-1 p-6 animate-fade-in">
+          <main className="flex-1 px-4 pb-4 pt-[4.5rem] lg:p-6 lg:pt-6 animate-fade-in">
             {children}
           </main>
 

@@ -66,3 +66,24 @@
     to   { opacity: 1; transform: translateY(0); }
   }
 }
+
+@layer components {
+  /* Phones and tablets: a table keeps each column readable and scrolls
+     sideways inside its own box, instead of crushing every column until
+     names break one word to a line and amounts split across two. */
+  @media (max-width: 1023px) {
+    .overflow-x-auto > table th,
+    .overflow-x-auto > table td {
+      white-space: nowrap;
+    }
+    /* A cell that was given a width limit is meant to wrap or truncate */
+    .overflow-x-auto > table td[class*="max-w-"] {
+      white-space: normal;
+    }
+    /* Boxes typed into inside a table stay wide enough to use */
+    .overflow-x-auto > table input:not([type="checkbox"]):not([type="radio"]),
+    .overflow-x-auto > table select {
+      min-width: 5rem;
+    }
+  }
+}

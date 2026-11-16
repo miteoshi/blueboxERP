@@ -57,15 +57,15 @@ interface StatCardProps {
 
 export function StatCard({ label, value, sub, icon, className }: StatCardProps) {
   return (
-    <Card className={cn('p-5', className)}>
-      <div className="flex items-start justify-between">
-        <div>
+    <Card className={cn('p-4 sm:p-5', className)}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
           <p className="text-sm text-slate-500 font-medium">{label}</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{value}</p>
+          <p className="text-xl sm:text-2xl font-bold text-slate-900 mt-1 break-words">{value}</p>
           {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
         </div>
         {icon && (
-          <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
             {icon}
           </div>
         )}

@@ -247,7 +247,7 @@ function NewInvoice() {
                   <h3 className="font-semibold text-slate-900">2. Preview</h3>
                 </CardHeader>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="stack w-full text-sm">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                         <th className="text-left px-4 py-2">Item</th>
@@ -262,18 +262,18 @@ function NewInvoice() {
                     <tbody className="divide-y divide-slate-50">
                       {preview.lines.map((l) => (
                         <tr key={l.key}>
-                          <td className="px-4 py-2">
+                          <td data-main className="px-4 py-2">
                             <div className="text-slate-900">{l.name}</div>
                             <div className="text-xs text-slate-400 font-mono">{l.challan}</div>
                           </td>
-                          <td className="px-4 py-2 font-mono text-xs">
+                          <td data-label="HSN" className="px-4 py-2 font-mono text-xs">
                             {l.hsn ?? <span className="text-amber-600">missing</span>}
                           </td>
-                          <td className="px-4 py-2 text-right tabular-nums">{formatQty(l.qty)}</td>
-                          <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(l.rate)}</td>
-                          <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(l.taxable)}</td>
-                          <td className="px-4 py-2 text-right tabular-nums">{l.gstRate}%</td>
-                          <td className="px-4 py-2 text-right tabular-nums">
+                          <td data-label="Qty" className="px-4 py-2 text-right tabular-nums">{formatQty(l.qty)}</td>
+                          <td data-label="Rate" className="px-4 py-2 text-right tabular-nums">{formatCurrency(l.rate)}</td>
+                          <td data-label="Taxable" className="px-4 py-2 text-right tabular-nums">{formatCurrency(l.taxable)}</td>
+                          <td data-label="GST" className="px-4 py-2 text-right tabular-nums">{l.gstRate}%</td>
+                          <td data-label={interstate ? 'IGST' : 'CGST + SGST'} className="px-4 py-2 text-right tabular-nums">
                             {formatCurrency(interstate ? l.igst : l.cgst + l.sgst)}
                           </td>
                         </tr>

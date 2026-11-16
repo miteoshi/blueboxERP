@@ -285,7 +285,7 @@ function NewDebitNote() {
                 </p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="stack w-full text-sm">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500">
                         <th className="w-8 px-3 py-2.5" />
@@ -310,7 +310,7 @@ function NewDebitNote() {
                                 className="h-4 w-4 rounded border-slate-300"
                               />
                             </td>
-                            <td className="px-3 py-2">
+                            <td data-main className="px-3 py-2">
                               <div className="font-medium text-slate-900">{r.line.item?.name}</div>
                               <div className="text-xs text-slate-400 font-mono">{r.line.item?.item_code}</div>
                               {isReturn && returnStock && (
@@ -319,7 +319,7 @@ function NewDebitNote() {
                                 </div>
                               )}
                             </td>
-                            <td className="px-3 py-2 text-right tabular-nums text-slate-600">
+                            <td data-label="Still on the bill" className="px-3 py-2 text-right tabular-nums text-slate-600">
                               {formatQty(r.leftQty, r.line.unit?.name)}
                               <div className="text-xs text-slate-400">
                                 {formatCurrency(r.leftAmount)} @ {formatCurrency(r.line.rate)}
@@ -330,7 +330,7 @@ function NewDebitNote() {
                                 </div>
                               )}
                             </td>
-                            <td className="px-3 py-2">
+                            <td data-label={isReturn ? 'Returning' : 'Debit (₹)'} className="px-3 py-2">
                               <input
                                 type="number"
                                 min="0"
@@ -346,7 +346,7 @@ function NewDebitNote() {
                                 }`}
                               />
                             </td>
-                            <td className="px-3 py-2 text-right tabular-nums">
+                            <td data-label="Amount" className="px-3 py-2 text-right tabular-nums">
                               {r.edit.selected ? (
                                 <>
                                   <div className="text-xs font-semibold text-slate-900">{formatCurrency(r.taxable)}</div>

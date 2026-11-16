@@ -283,7 +283,7 @@ export default function InvoiceDetailPage() {
 
           <Card>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="stack w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                     <th className="text-left px-4 py-3">#</th>
@@ -299,13 +299,13 @@ export default function InvoiceDetailPage() {
                 <tbody className="divide-y divide-slate-50">
                   {lines.map((l, i) => (
                     <tr key={l.id}>
-                      <td className="px-4 py-3 text-slate-400">{i + 1}</td>
-                      <td className="px-4 py-3 text-slate-900">{l.description}</td>
-                      <td className="px-4 py-3 font-mono text-xs">{l.hsn_code ?? '—'}</td>
-                      <td className="px-4 py-3 text-right tabular-nums">{formatQty(l.qty, l.unit_name)}</td>
-                      <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(l.rate)}</td>
-                      <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(l.taxable_value)}</td>
-                      <td className="px-4 py-3 text-right tabular-nums text-xs text-slate-500">
+                      <td data-hide className="px-4 py-3 text-slate-400">{i + 1}</td>
+                      <td data-main className="px-4 py-3 text-slate-900">{l.description}</td>
+                      <td data-label="HSN" className="px-4 py-3 font-mono text-xs">{l.hsn_code ?? '—'}</td>
+                      <td data-label="Qty" className="px-4 py-3 text-right tabular-nums">{formatQty(l.qty, l.unit_name)}</td>
+                      <td data-label="Rate" className="px-4 py-3 text-right tabular-nums">{formatCurrency(l.rate)}</td>
+                      <td data-label="Taxable" className="px-4 py-3 text-right tabular-nums">{formatCurrency(l.taxable_value)}</td>
+                      <td data-label="GST" className="px-4 py-3 text-right tabular-nums text-xs text-slate-500">
                         {l.gst_rate}%
                         <div>
                           {inv.is_interstate
@@ -313,7 +313,7 @@ export default function InvoiceDetailPage() {
                             : `${formatCurrency(l.cgst_amount)} + ${formatCurrency(l.sgst_amount)}`}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums font-medium">{formatCurrency(l.line_total)}</td>
+                      <td data-label="Amount" className="px-4 py-3 text-right tabular-nums font-medium">{formatCurrency(l.line_total)}</td>
                     </tr>
                   ))}
                 </tbody>

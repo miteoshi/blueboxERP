@@ -849,7 +849,7 @@ const { data: rawItems } = useRawMaterialItems(orgId);
 
                 <div className="overflow-x-auto">
 
-                  <table className="w-full text-sm">
+                  <table className="stack w-full text-sm">
 
                     <thead>
 
@@ -883,7 +883,7 @@ const { data: rawItems } = useRawMaterialItems(orgId);
 
                         >
 
-                          <td className="px-4 py-3">
+                          <td data-main className="px-4 py-3">
 
                             <span className="font-mono text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded mr-2">
 
@@ -899,7 +899,7 @@ const { data: rawItems } = useRawMaterialItems(orgId);
 
                           {/* Per-unit column — editable for manual, read-only for BOM */}
 
-                          <td className="px-4 py-3 text-right tabular-nums">
+                          <td data-label="Per Unit" className="px-4 py-3 text-right tabular-nums">
 
                             {raw.source === 'manual' ? (
 
@@ -937,7 +937,7 @@ const { data: rawItems } = useRawMaterialItems(orgId);
 
                           {/* Total needed = qty_per_unit × finishQty — always computed, never editable */}
 
-                          <td className="px-4 py-3 text-right tabular-nums">
+                          <td data-label="Total (×)" className="px-4 py-3 text-right tabular-nums">
 
                             <span className="font-semibold text-slate-900">
 
@@ -949,7 +949,7 @@ const { data: rawItems } = useRawMaterialItems(orgId);
 
 
 
-                          <td className="px-4 py-3 text-right tabular-nums">
+                          <td data-label="Available" className="px-4 py-3 text-right tabular-nums">
 
                             <span className={raw.sufficient ? 'text-green-600 font-medium' : 'text-red-600 font-bold'}>
 
@@ -959,7 +959,7 @@ const { data: rawItems } = useRawMaterialItems(orgId);
 
                           </td>
 
-                          <td className="px-4 py-3 text-center">
+                          <td data-label="Status" className="px-4 py-3 text-center">
 
                             {raw.sufficient ? (
 

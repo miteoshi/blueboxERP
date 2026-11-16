@@ -365,7 +365,7 @@ export default function QuotationDetailPage() {
             </CardHeader>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="stack w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">#</th>
@@ -384,8 +384,8 @@ export default function QuotationDetailPage() {
                     const lineTotal = lineSubtotal + lineGst
                     return (
                       <tr key={line.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 text-slate-400 text-xs">{i + 1}</td>
-                        <td className="px-4 py-3">
+                        <td data-hide className="px-4 py-3 text-slate-400 text-xs">{i + 1}</td>
+                        <td data-main className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
                               {line.item?.item_code}
@@ -400,20 +400,20 @@ export default function QuotationDetailPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums">
+                        <td data-label="Qty" className="px-4 py-3 text-right tabular-nums">
                           {formatQty(line.qty, line.unit?.name)}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums">
+                        <td data-label="Rate" className="px-4 py-3 text-right tabular-nums">
                           {formatCurrency(line.unit_rate)}
                           <div className="text-xs text-slate-400">/{line.unit?.name}</div>
                         </td>
-                        <td className="px-4 py-3 text-center text-slate-600">
+                        <td data-label="GST" className="px-4 py-3 text-center text-slate-600">
                           {line.gst_percent}%
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-slate-700">
+                        <td data-label="Subtotal" className="px-4 py-3 text-right tabular-nums text-slate-700">
                           {formatCurrency(lineSubtotal)}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
+                        <td data-label="Total" className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
                           {formatCurrency(lineTotal)}
                         </td>
                       </tr>

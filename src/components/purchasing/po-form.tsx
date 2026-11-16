@@ -289,7 +289,7 @@ export function PoForm({ initial, intro }: { initial?: PoFormValues; intro?: Rea
             </CardHeader>
             <CardBody className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="stack w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500">
                       <th className="text-left px-3 py-2.5">Item</th>
@@ -307,7 +307,7 @@ export function PoForm({ initial, intro }: { initial?: PoFormValues; intro?: Rea
                       const due = onOrder?.get(line.item_id) ?? 0
                       return (
                         <tr key={line.key} className="align-top">
-                          <td className="px-3 py-2">
+                          <td data-main className="px-3 py-2">
                             <select
                               value={line.item_id}
                               onChange={(e) => selectItem(line.key, e.target.value)}
@@ -335,7 +335,7 @@ export function PoForm({ initial, intro }: { initial?: PoFormValues; intro?: Rea
                               className="mt-1 w-full px-2 py-1 text-xs rounded border border-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
                             />
                           </td>
-                          <td className="px-3 py-2">
+                          <td data-label="Qty" className="px-3 py-2">
                             <input
                               type="number"
                               min="0"
@@ -346,7 +346,7 @@ export function PoForm({ initial, intro }: { initial?: PoFormValues; intro?: Rea
                             />
                             <div className="mt-1 text-[11px] text-slate-400 text-right">{item?.unit?.name ?? ''}</div>
                           </td>
-                          <td className="px-3 py-2">
+                          <td data-label="Rate (₹)" className="px-3 py-2">
                             <input
                               type="number"
                               min="0"
@@ -356,7 +356,7 @@ export function PoForm({ initial, intro }: { initial?: PoFormValues; intro?: Rea
                               className="w-full px-2 py-1.5 text-xs rounded border border-slate-200 text-right focus:outline-none focus:ring-1 focus:ring-teal-500"
                             />
                           </td>
-                          <td className="px-3 py-2">
+                          <td data-label="GST" className="px-3 py-2">
                             <select
                               value={line.gst_percent}
                               onChange={(e) => updateLine(line.key, { gst_percent: e.target.value as GstRate })}
@@ -369,7 +369,7 @@ export function PoForm({ initial, intro }: { initial?: PoFormValues; intro?: Rea
                               ))}
                             </select>
                           </td>
-                          <td className="px-3 py-2 text-right tabular-nums">
+                          <td data-label="Amount" className="px-3 py-2 text-right tabular-nums">
                             <div className="text-xs font-semibold text-slate-900">{formatCurrency(computed[i].taxable)}</div>
                             <div className="text-[11px] text-slate-400">+{formatCurrency(computed[i].gst)} GST</div>
                           </td>

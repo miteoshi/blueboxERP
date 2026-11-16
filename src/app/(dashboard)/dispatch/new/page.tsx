@@ -443,7 +443,7 @@ const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
             ) : (
               <CardBody className="p-0">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="stack w-full text-sm">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-100">
                         <th className="text-left px-3 py-2.5 text-xs font-semibold text-slate-500">Item</th>
@@ -460,16 +460,16 @@ const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
                     <tbody className="divide-y divide-slate-50">
                       {lines.map((line, i) => (
                         <tr key={i} className="group">
-                          <td className="px-3 py-2.5">
+                          <td data-main className="px-3 py-2.5">
                             <span className="font-mono text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded mr-2">
                               {line.item_code}
                             </span>
                             <span className="font-medium text-slate-900 text-sm">{line.item_name}</span>
                           </td>
-                          <td className="px-3 py-2.5 text-right tabular-nums text-slate-400 text-xs">
+                          <td data-label="Remaining" className="px-3 py-2.5 text-right tabular-nums text-slate-400 text-xs">
                             {formatQty(line.max_qty, line.unit)}
                           </td>
-                          <td className="px-3 py-2.5">
+                          <td data-label="Dispatch Qty" className="px-3 py-2.5">
                             <input
                               type="number" min="0.0001" max={line.max_qty} step="any"
                               value={line.qty}
@@ -477,19 +477,19 @@ const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
                               className="w-full px-2 py-1.5 text-xs rounded border border-slate-200 text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                           </td>
-                          <td className="px-3 py-2.5 font-mono text-xs text-slate-500 text-center">{line.unit}</td>
-                          <td className="px-3 py-2.5">
+                          <td data-label="Unit" className="px-3 py-2.5 font-mono text-xs text-slate-500 text-center">{line.unit}</td>
+                          <td data-label="Rate (₹)" className="px-3 py-2.5">
                             {/* The order's approved rate; the database uses it regardless.
                                 Price corrections after dispatch go through a credit note. */}
                             <div className="px-2 py-1.5 text-xs text-right tabular-nums text-slate-600">
                               {formatCurrency(line.rate)}
                             </div>
                           </td>
-                          <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-slate-900 text-xs">
+                          <td data-label="Line Total" className="px-3 py-2.5 text-right tabular-nums font-semibold text-slate-900 text-xs">
                             {formatCurrency(line.qty * line.rate)}
                           </td>
                           {/* ── Reserved / Available indicator ── */}
-                          <td className="px-3 py-2.5 text-center">
+                          <td data-label="Stock" className="px-3 py-2.5 text-center">
                             {hasReservation(line) ? (
                               <span style={{ fontSize: 10, fontWeight: 600, background: 'rgba(20,184,166,0.12)', color: '#0d9488', padding: '2px 7px', borderRadius: 5 }}>
                                 Reserved
@@ -503,7 +503,7 @@ const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
                           <td className="px-2 py-2">
                             <button
                               onClick={() => removeLine(i)}
-                              className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all"
+                              className="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>

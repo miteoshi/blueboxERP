@@ -227,7 +227,7 @@ export default async function ItemDetailPage({ params }: Props) {
               </h3>
             </CardHeader>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="stack w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
@@ -270,30 +270,30 @@ export default async function ItemDetailPage({ params }: Props) {
                         key={price.id}
                         className={isActive ? "bg-green-50/40" : ""}
                       >
-                        <td className="px-4 py-2.5 text-slate-600">
+                        <td data-main className="px-4 py-2.5 text-slate-600">
                           {price.supplier?.name ?? (
                             <span className="text-slate-400">General</span>
                           )}
                         </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums">
+                        <td data-label="Purchase Rate" className="px-4 py-2.5 text-right tabular-nums">
                           {formatCurrency(price.purchase_rate)}
                           <span className="text-xs text-slate-400 font-normal ml-1">
                             /{item.unit?.name ?? "—"}
                           </span>
                         </td>
-                        <td className="px-4 py-2.5 text-right font-semibold tabular-nums">
+                        <td data-label="Selling Rate" className="px-4 py-2.5 text-right font-semibold tabular-nums">
                           {formatCurrency(price.selling_rate)}
                           <span className="text-xs text-slate-400 font-normal ml-1">
                             /{item.unit?.name ?? "—"}
                           </span>
                         </td>
-                        <td className="px-4 py-2.5 text-center text-slate-600">
+                        <td data-label="GST" className="px-4 py-2.5 text-center text-slate-600">
                           {price.gst_percent}%
                         </td>
-                        <td className="px-4 py-2.5 text-slate-600">
+                        <td data-label="Effective From" className="px-4 py-2.5 text-slate-600">
                           {formatDate(price.effective_from)}
                         </td>
-                        <td className="px-4 py-2.5">
+                        <td data-label="Status" className="px-4 py-2.5">
                           {isActive ? (
                             <Badge variant="success">Active</Badge>
                           ) : (
@@ -321,7 +321,7 @@ export default async function ItemDetailPage({ params }: Props) {
                 </h3>
               </CardHeader>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="stack w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-100">
                       <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
@@ -348,7 +348,7 @@ export default async function ItemDetailPage({ params }: Props) {
                     )}
                     {bom?.map((line) => (
                       <tr key={line.id}>
-                        <td className="px-4 py-2.5">
+                        <td data-main className="px-4 py-2.5">
                           <span className="font-mono text-xs text-slate-400 mr-2">
                             {line.component?.item_code}
                           </span>
@@ -356,10 +356,10 @@ export default async function ItemDetailPage({ params }: Props) {
                             {line.component?.name}
                           </span>
                         </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums font-semibold">
+                        <td data-label="Qty per Unit" className="px-4 py-2.5 text-right tabular-nums font-semibold">
                           {formatQty(line.qty_per_unit, line.unit?.name)}
                         </td>
-                        <td className="px-4 py-2.5 text-slate-500 text-xs">
+                        <td data-label="Notes" className="px-4 py-2.5 text-slate-500 text-xs">
                           {line.notes ?? "—"}
                         </td>
                       </tr>
@@ -378,7 +378,7 @@ export default async function ItemDetailPage({ params }: Props) {
               </h3>
             </CardHeader>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="stack w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">
@@ -418,15 +418,15 @@ export default async function ItemDetailPage({ params }: Props) {
                     ].includes(m.movement_type);
                     return (
                       <tr key={m.id}>
-                        <td className="px-4 py-2.5 text-slate-500">
+                        <td data-label="Date" className="px-4 py-2.5 text-slate-500">
                           {formatDate(m.movement_date)}
                         </td>
-                        <td className="px-4 py-2.5">
+                        <td data-main className="px-4 py-2.5">
                           <Badge variant={isPositive ? "success" : "danger"}>
                             {m.movement_type.replace("_", " ")}
                           </Badge>
                         </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums font-semibold">
+                        <td data-label="Qty" className="px-4 py-2.5 text-right tabular-nums font-semibold">
                           <span
                             className={
                               isPositive ? "text-green-600" : "text-red-600"
@@ -436,12 +436,12 @@ export default async function ItemDetailPage({ params }: Props) {
                             {formatQty(m.qty, item.unit?.name)}
                           </span>
                         </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">
+                        <td data-label="Rate" className="px-4 py-2.5 text-right tabular-nums text-slate-600">
                           {m.rate_at_time
                             ? formatCurrency(m.rate_at_time)
                             : "—"}
                         </td>
-                        <td className="px-4 py-2.5 text-slate-500 text-xs">
+                        <td data-label="Source" className="px-4 py-2.5 text-slate-500 text-xs">
                           {m.ref_type?.replace("_", " ") ?? "—"}
                         </td>
                       </tr>

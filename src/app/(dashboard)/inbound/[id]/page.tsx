@@ -214,7 +214,7 @@ export default async function GrnDetailPage({ params }: Props) {
               </h3>
             </CardHeader>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="stack w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">#</th>
@@ -236,10 +236,10 @@ export default async function GrnDetailPage({ params }: Props) {
                       : null
                     return (
                       <tr key={line.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 text-slate-400 text-xs">
+                        <td data-hide className="px-4 py-3 text-slate-400 text-xs">
                           {i + 1}
                         </td>
-                        <td className="px-4 py-3">
+                        <td data-main className="px-4 py-3">
                           <Link href={`/items/${line.item?.id}`}>
                             <span className="font-mono text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded mr-2">
                               {line.item?.item_code}
@@ -254,12 +254,12 @@ export default async function GrnDetailPage({ params }: Props) {
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-slate-500">
+                        <td data-label="Ordered" className="px-4 py-3 text-right tabular-nums text-slate-500">
                           {line.qty_ordered
                             ? formatQty(line.qty_ordered, line.unit?.name)
                             : "—"}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums">
+                        <td data-label="Received" className="px-4 py-3 text-right tabular-nums">
                           <span className="font-semibold text-slate-900">
                             {formatQty(line.qty_received, line.unit?.name)}
                           </span>
@@ -283,16 +283,16 @@ export default async function GrnDetailPage({ params }: Props) {
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-slate-600">
+                        <td data-label="Rate" className="px-4 py-3 text-right tabular-nums text-slate-600">
                           {formatCurrency(line.rate)}
                           <div className="text-xs text-slate-400">
                             /{line.unit?.name ?? "—"}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-center text-slate-500">
+                        <td data-label="GST" className="px-4 py-3 text-center text-slate-500">
                           {line.gst_percent}%
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
+                        <td data-label="Amount" className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
                           {formatCurrency(line.line_total)}
                         </td>
                       </tr>
@@ -331,7 +331,7 @@ export default async function GrnDetailPage({ params }: Props) {
                 </h3>
               </CardHeader>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="stack w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-100">
                       <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Type</th>
@@ -343,16 +343,16 @@ export default async function GrnDetailPage({ params }: Props) {
                   <tbody className="divide-y divide-slate-50">
                     {movements.map((m) => (
                       <tr key={m.id}>
-                        <td className="px-4 py-2.5">
+                        <td data-main className="px-4 py-2.5">
                           <Badge variant="success">{m.movement_type}</Badge>
                         </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-green-600">
+                        <td data-label="Qty" className="px-4 py-2.5 text-right tabular-nums font-semibold text-green-600">
                           +{m.qty}
                         </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">
+                        <td data-label="Rate" className="px-4 py-2.5 text-right tabular-nums text-slate-600">
                           {m.rate_at_time ? formatCurrency(m.rate_at_time) : '—'}
                         </td>
-                        <td className="px-4 py-2.5 text-slate-500">
+                        <td data-label="Date" className="px-4 py-2.5 text-slate-500">
                           {formatDate(m.movement_date)}
                         </td>
                       </tr>

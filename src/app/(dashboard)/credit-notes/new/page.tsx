@@ -266,7 +266,7 @@ function NewCreditNote() {
                 </Button>
               </CardHeader>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="stack w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                       <th className="text-left px-4 py-3">Item</th>
@@ -282,21 +282,21 @@ function NewCreditNote() {
                       const open = isReturn ? l.qtyLeft > 0 && l.valueLeft > 0 : l.valueLeft > 0
                       return (
                         <tr key={l.id} className={open ? undefined : 'opacity-50'}>
-                          <td className="px-4 py-3">
+                          <td data-main className="px-4 py-3">
                             <div className="text-slate-900">{l.description}</div>
                             <div className="text-xs text-slate-400">
                               HSN {l.hsn_code ?? '—'} · {formatCurrency(l.rate)} · GST {l.gst_rate}%
                             </div>
                             {row?.error && <div className="text-xs text-red-600 mt-1">{row.error}</div>}
                           </td>
-                          <td className="px-4 py-3 text-right tabular-nums text-slate-600">
+                          <td data-label="Invoiced" className="px-4 py-3 text-right tabular-nums text-slate-600">
                             {formatQty(l.qty, l.unit_name)}
                             <div className="text-xs text-slate-400">{formatCurrency(l.taxable_value)}</div>
                           </td>
-                          <td className="px-4 py-3 text-right tabular-nums text-slate-600">
+                          <td data-label={isReturn ? 'Returnable' : 'Value left'} className="px-4 py-3 text-right tabular-nums text-slate-600">
                             {isReturn ? formatQty(l.qtyLeft, l.unit_name) : formatCurrency(l.valueLeft)}
                           </td>
-                          <td className="px-4 py-3">
+                          <td data-label={isReturn ? 'Qty' : 'Amount (₹)'} className="px-4 py-3">
                             <input
                               type="number"
                               min="0"
@@ -307,7 +307,7 @@ function NewCreditNote() {
                               className="w-full px-2 py-1.5 text-sm text-right rounded-lg border border-slate-300 disabled:bg-slate-50"
                             />
                           </td>
-                          <td className="px-4 py-3 text-right tabular-nums font-medium">
+                          <td data-label="Credit" className="px-4 py-3 text-right tabular-nums font-medium">
                             {row && !row.error ? formatCurrency(row.taxable + row.cgst + row.sgst + row.igst) : '—'}
                           </td>
                         </tr>

@@ -328,7 +328,7 @@ function NewGrnPageContent() {
             </CardHeader>
             <CardBody className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="stack w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-100">
                       <th className="text-left px-3 py-2.5 text-xs font-semibold text-slate-500">
@@ -358,7 +358,7 @@ function NewGrnPageContent() {
                   <tbody className="divide-y divide-slate-50">
                     {lines.map((line, i) => (
                       <tr key={i} className="group">
-                        <td className="px-3 py-2">
+                        <td data-main className="px-3 py-2">
                           <select
                             value={line.item_id}
                             onChange={(e) => selectItem(i, e.target.value)}
@@ -372,7 +372,7 @@ function NewGrnPageContent() {
                             ))}
                           </select>
                         </td>
-                        <td className="px-3 py-2">
+                        <td data-label="Ordered" className="px-3 py-2">
                           <input
                             type="number"
                             min="0"
@@ -389,7 +389,7 @@ function NewGrnPageContent() {
                             className="w-full px-2 py-1.5 text-xs rounded border border-slate-200 text-right focus:outline-none focus:ring-1 focus:ring-teal-500"
                           />
                         </td>
-                        <td className="px-3 py-2">
+                        <td data-label="Received" className="px-3 py-2">
                           <input
                             type="number"
                             min="0.0001"
@@ -405,7 +405,7 @@ function NewGrnPageContent() {
                             className="w-full px-2 py-1.5 text-xs rounded border border-slate-200 text-right focus:outline-none focus:ring-1 focus:ring-teal-500"
                           />
                         </td>
-                        <td className="px-3 py-2">
+                        <td data-label="Unit" className="px-3 py-2">
                           <input
                             type="text"
                             value={line.unit_name || "—"}
@@ -413,7 +413,7 @@ function NewGrnPageContent() {
                             className="w-full px-2 py-1.5 text-xs rounded border border-slate-200 bg-slate-50 text-center text-slate-500 focus:outline-none"
                           />
                         </td>
-                        <td className="px-3 py-2">
+                        <td data-label="Rate (₹)" className="px-3 py-2">
                           <input
                             type="number"
                             min="0"
@@ -425,7 +425,7 @@ function NewGrnPageContent() {
                             className="w-full px-2 py-1.5 text-xs rounded border border-slate-200 text-right focus:outline-none focus:ring-1 focus:ring-teal-500"
                           />
                         </td>
-                        <td className="px-3 py-2">
+                        <td data-label="GST%" className="px-3 py-2">
                           <select
                             value={line.gst_percent}
                             onChange={(e) =>
@@ -442,7 +442,7 @@ function NewGrnPageContent() {
                             ))}
                           </select>
                         </td>
-                        <td className="px-3 py-2 text-right tabular-nums">
+                        <td data-label="Line Total" className="px-3 py-2 text-right tabular-nums">
                           <div className="font-semibold text-xs text-slate-900">
                             {formatCurrency(lineSubtotal(line))}
                           </div>
@@ -454,7 +454,7 @@ function NewGrnPageContent() {
                           {lines.length > 1 && (
                             <button
                               onClick={() => removeLine(i)}
-                              className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all"
+                              className="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>

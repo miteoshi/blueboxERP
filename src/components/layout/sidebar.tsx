@@ -35,6 +35,8 @@ import {
   FileMinus,
   ClipboardCheck,
   Undo2,
+  Menu,
+  X,
 } from 'lucide-react'
 import type { Enums } from '@/lib/types/database'
 import { Route } from 'next'
@@ -343,6 +345,11 @@ export function Sidebar() {
 
   const [hovered, setHovered] = useState<string | null>(null)
 
+  // On a phone the sidebar is a drawer. It is open only for the page it was
+  // opened on, so moving to another page closes it without an effect.
+  const [openOnPath, setOpenOnPath] = useState<string | null>(null)
+  const mobileOpen = openOnPath === pathname
+
   function toggleGroup(label: string) {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }))
   }
@@ -375,11 +382,49 @@ export function Sidebar() {
   }
 
   return (
-    // KEY FIX: sidebar itself is a flex column with height:100vh so it never
-    // grows taller than the viewport — the nav section can then scroll internally.
+    <>
+    {/* ── Phone and tablet: a top bar with the menu button ─────────────── */}
+    <div
+      style={{ background: '#0f172a' }}
+      className="lg:hidden fixed top-0 inset-x-0 z-30 h-14 flex items-center gap-3 px-3"
+    >
+      <button
+        type="button"
+        aria-label="Open menu"
+        aria-expanded={mobileOpen}
+        onClick={() => setOpenOnPath(pathname)}
+        className="w-10 h-10 flex items-center justify-center rounded-lg text-slate-200 hover:bg-white/10"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+      <div style={{ ...S.logoIcon, width: 28, height: 28, borderRadius: 8 }}>
+        <Zap style={{ width: 14, height: 14, color: '#fff' }} />
+      </div>
+      <span className="text-sm font-semibold text-slate-100 truncate">
+        {organization?.name || 'Blue Box'}
+      </span>
+    </div>
+
+    {/* Tapping outside the drawer closes it */}
+    {mobileOpen && (
+      <div
+        aria-hidden="true"
+        onClick={() => setOpenOnPath(null)}
+        className="lg:hidden fixed inset-0 z-30 bg-slate-900/50"
+      />
+    )}
+
+    {/* The sidebar is a flex column exactly as tall as the screen, so the nav
+        section scrolls inside it. Below lg it slides in over the page. */}
     <aside
-      style={{ ...S.sidebar, height: '100vh' }}
-      className="flex flex-col w-64 fixed left-0 top-0 z-30"
+      style={S.sidebar}
+      onClick={(e) => {
+        // A link to the page already open does not change the path, so close here too
+        if ((e.target as HTMLElement).closest('a')) setOpenOnPath(null)
+      }}
+      className={`flex flex-col w-64 h-screen supports-[height:100dvh]:h-dvh fixed left-0 top-0 z-40 transition-transform duration-200 lg:translate-x-0 ${
+        mobileOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}
     >
 
       {/* ── Logo — fixed height, never shrinks ───────────────────────── */}
@@ -395,6 +440,14 @@ export function Sidebar() {
             ERP System
           </div>
         </div>
+        <button
+          type="button"
+          aria-label="Close menu"
+          onClick={() => setOpenOnPath(null)}
+          className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:bg-white/10"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* ── Nav — takes remaining space, scrolls when content overflows ── */}
@@ -579,5 +632,6 @@ export function Sidebar() {
 
       </div>
     </aside>
+    </>
   )
 }

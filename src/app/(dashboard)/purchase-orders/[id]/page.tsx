@@ -245,6 +245,7 @@ export default function PurchaseOrderDetailPage() {
               {grns.length === 0 ? (
                 <p className="px-5 py-6 text-sm text-slate-400">Nothing received yet.</p>
               ) : (
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <tbody className="divide-y divide-slate-50">
                     {grns.map((g) => (
@@ -269,6 +270,7 @@ export default function PurchaseOrderDetailPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </CardBody>
           </Card>

@@ -135,7 +135,7 @@ export default function PurchaseOrdersPage() {
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
         <div className="px-5 py-4 flex flex-wrap items-center gap-3 border-b border-slate-100">
-          <div className="flex rounded-lg border border-slate-200 p-0.5 text-xs">
+          <div className="flex rounded-lg border border-slate-200 p-0.5 text-xs max-w-full overflow-x-auto *:shrink-0 *:whitespace-nowrap">
             {TABS.map((t) => (
               <button
                 key={t.value}

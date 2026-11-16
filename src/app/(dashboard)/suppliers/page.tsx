@@ -168,17 +168,17 @@ export default function SuppliersPage() {
             <div className="px-6 py-5 space-y-4">
               <Input label="Supplier Name" required value={form.name} onChange={f('name')} placeholder="e.g. Sun Insulators Pvt Ltd" />
               <Input label="Contact Person" value={form.contact_person} onChange={f('contact_person')} />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input label="Phone" value={form.phone} onChange={f('phone')} />
                 <Input label="Email" type="email" value={form.email} onChange={f('email')} />
               </div>
               <Input label="GST Number" value={form.gst_number} onChange={f('gst_number')} placeholder="24XXXXX1234X1ZX" />
               <Textarea label="Address" value={form.address} onChange={f('address')} />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input label="City" value={form.city} onChange={f('city')} />
                 <Input label="State" value={form.state} onChange={f('state')} />
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="col-span-2">
                   <Input label="Payment Terms" value={form.payment_terms} onChange={f('payment_terms')} placeholder="e.g. 100% advance before delivery" />
                 </div>

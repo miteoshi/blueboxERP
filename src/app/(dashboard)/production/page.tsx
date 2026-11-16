@@ -76,7 +76,7 @@ export default function ProductionPage() {
       </PageHeader>
 
       {/* Status tabs */}
-      <div className="flex gap-1 mb-4 bg-slate-100 p-1 rounded-lg w-fit">
+      <div className="flex gap-1 mb-4 bg-slate-100 p-1 rounded-lg w-fit max-w-full overflow-x-auto *:shrink-0 *:whitespace-nowrap">
         {STATUS_TABS.map(tab => (
           <button
             key={tab.value}

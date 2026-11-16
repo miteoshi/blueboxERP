@@ -274,7 +274,7 @@ async function handleSave() {
                 onChange={e => setField('contact_person', e.target.value)}
                 placeholder="Primary contact name"
               />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input
                   label="Phone"
                   value={form.phone}
@@ -304,7 +304,7 @@ async function handleSave() {
                 onChange={e => setField('address', e.target.value)}
                 placeholder="Street address"
               />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input
                   label="City"
                   value={form.city}
@@ -339,7 +339,7 @@ async function handleSave() {
                     : 'Decides CGST + SGST (same state) or IGST (other state) on invoices'}
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input
                   label="Credit Limit (₹)"
                   type="number"

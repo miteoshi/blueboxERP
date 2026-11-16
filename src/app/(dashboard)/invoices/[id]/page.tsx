@@ -328,6 +328,7 @@ export default function InvoiceDetailPage() {
             {payments.length === 0 ? (
               <CardBody className="text-sm text-slate-400">No payments applied yet.</CardBody>
             ) : (
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <tbody className="divide-y divide-slate-50">
                   {payments.map((a) => (
@@ -343,6 +344,7 @@ export default function InvoiceDetailPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </Card>
 
@@ -351,6 +353,7 @@ export default function InvoiceDetailPage() {
               <CardHeader>
                 <h3 className="font-semibold text-slate-900">Credit notes</h3>
               </CardHeader>
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <tbody className="divide-y divide-slate-50">
                   {creditNotes.map((n) => (
@@ -371,6 +374,7 @@ export default function InvoiceDetailPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </Card>
           )}
         </div>

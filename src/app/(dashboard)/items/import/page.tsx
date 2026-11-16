@@ -390,7 +390,7 @@ function ImportItemsPageContent() {
 
           <CardBody className="p-0">
             <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-              <table className="w-full text-xs">
+              <table className="stack w-full text-xs">
                 <thead className="sticky top-0 bg-slate-50">
                   <tr className="border-b border-slate-100">
                     <th className="text-left px-3 py-2 font-semibold text-slate-500">
@@ -425,27 +425,27 @@ function ImportItemsPageContent() {
                       key={r.rowNumber}
                       className={r.errors.length > 0 ? "bg-red-50/50" : ""}
                     >
-                      <td className="px-3 py-2 text-slate-400">
+                      <td data-label="Row" className="px-3 py-2 text-slate-400">
                         {r.rowNumber}
                       </td>
 
-                      <td className="px-3 py-2 font-medium text-slate-700">
+                      <td data-main className="px-3 py-2 font-medium text-slate-700">
                         {String(r.raw.item_code ?? "—")}
                       </td>
 
-                      <td className="px-3 py-2 text-slate-600">
+                      <td data-label="Name" className="px-3 py-2 text-slate-600">
                         {String(r.raw.name ?? "—")}
                       </td>
 
-                      <td className="px-3 py-2 text-slate-600">
+                      <td data-label="Category" className="px-3 py-2 text-slate-600">
                         {String(r.raw.category ?? "—")}
                       </td>
 
-                      <td className="px-3 py-2 text-slate-600">
+                      <td data-label="Unit" className="px-3 py-2 text-slate-600">
                         {String(r.raw.unit ?? "—")}
                       </td>
 
-                      <td className="px-3 py-2 text-red-600">
+                      <td data-label="Issues" className="px-3 py-2 text-red-600">
                         {r.errors.length > 0 ? (
                           r.errors.join("; ")
                         ) : (

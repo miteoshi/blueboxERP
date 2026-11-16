@@ -312,7 +312,7 @@ export default function SettingsPage() {
             {loadingProfiles ? (
               <TableLoader />
             ) : (
-              <table className="w-full text-sm">
+              <table className="stack w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
@@ -353,7 +353,7 @@ export default function SettingsPage() {
                         !profile.is_active ? "opacity-50" : ""
                       }`}
                     >
-                      <td className="px-4 py-3">
+                      <td data-main className="px-4 py-3">
                         <div className="font-semibold text-slate-900">
                           {profile.full_name}
                         </div>
@@ -363,12 +363,12 @@ export default function SettingsPage() {
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td data-label="Current Role" className="px-4 py-3">
                         <Badge variant={ROLE_COLORS[profile.role as UserRole]}>
                           {profile.role}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3">
+                      <td data-label="Change Role" className="px-4 py-3">
                         {profile.id !== me?.id ? (
                           <select
                             value={profile.role}
@@ -398,17 +398,17 @@ export default function SettingsPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td data-label="Status" className="px-4 py-3 text-center">
                         <Badge
                           variant={profile.is_active ? "success" : "default"}
                         >
                           {profile.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-slate-500 text-xs">
+                      <td data-label="Joined" className="px-4 py-3 text-slate-500 text-xs">
                         {formatDate(profile.created_at)}
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td data-label="Actions" className="px-4 py-3 text-center">
                         {profile.id !== me?.id && (
                           <Button
                             variant="ghost"
@@ -469,7 +469,7 @@ export default function SettingsPage() {
               <TableLoader />
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="stack w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200">
                       <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
@@ -511,7 +511,7 @@ export default function SettingsPage() {
                         key={item.id}
                         className="hover:bg-slate-50 transition-colors"
                       >
-                        <td className="px-4 py-3">
+                        <td data-main className="px-4 py-3">
                           <span className="font-mono text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded mr-2">
                             {item.item_code}
                           </span>
@@ -519,22 +519,22 @@ export default function SettingsPage() {
                             {item.name}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
+                        <td data-label="Category" className="px-4 py-3">
                           <Badge variant="default">
                             {item.item_category?.name ?? "—"}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3 text-center font-mono text-xs text-slate-500">
+                        <td data-label="Unit" className="px-4 py-3 text-center font-mono text-xs text-slate-500">
                           {item.unit?.name ?? "—"}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-slate-600">
+                        <td data-label="Purchase Rate" className="px-4 py-3 text-right tabular-nums text-slate-600">
                           {item.currentPrice?.purchase_rate ? (
                             formatCurrency(item.currentPrice.purchase_rate)
                           ) : (
                             <span className="text-slate-300">—</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
+                        <td data-label="Selling Rate" className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
                           {item.currentPrice?.selling_rate ? (
                             formatCurrency(item.currentPrice.selling_rate)
                           ) : (
@@ -543,12 +543,12 @@ export default function SettingsPage() {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-400">
+                        <td data-label="Since" className="px-4 py-3 text-xs text-slate-400">
                           {item.currentPrice?.effective_from
                             ? formatDate(item.currentPrice.effective_from)
                             : "—"}
                         </td>
-                        <td className="px-4 py-3">
+                        <td data-label="Update" className="px-4 py-3">
                           {editingPrice === item.id ? (
                             <div className="flex items-center gap-1.5">
                               <input
@@ -670,7 +670,7 @@ export default function SettingsPage() {
                         {reconcileResult.length === 1 ? "y" : "ies"}:
                       </p>
                       <div className="overflow-x-auto rounded-lg border border-slate-200">
-                        <table className="w-full text-xs">
+                        <table className="stack w-full text-xs">
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-200">
                               <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase">
@@ -690,16 +690,16 @@ export default function SettingsPage() {
                           <tbody className="divide-y divide-slate-100">
                             {reconcileResult.map((r, i) => (
                               <tr key={i} className="hover:bg-slate-50">
-                                <td className="px-3 py-2 font-mono text-slate-500 truncate max-w-[200px]">
+                                <td data-main className="px-3 py-2 font-mono text-slate-500 truncate max-w-[200px]">
                                   {r.item_id}
                                 </td>
-                                <td className="px-3 py-2 text-right tabular-nums text-slate-600">
+                                <td data-label="Old Qty" className="px-3 py-2 text-right tabular-nums text-slate-600">
                                   {r.old_qty}
                                 </td>
-                                <td className="px-3 py-2 text-right tabular-nums font-semibold text-slate-900">
+                                <td data-label="New Qty" className="px-3 py-2 text-right tabular-nums font-semibold text-slate-900">
                                   {r.new_qty}
                                 </td>
-                                <td
+                                <td data-label="Difference"
                                   className={`px-3 py-2 text-right tabular-nums font-bold ${
                                     r.diff > 0
                                       ? "text-green-600"

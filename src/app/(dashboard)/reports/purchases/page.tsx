@@ -412,7 +412,7 @@ export default function PurchaseRegisterPage() {
           <TableLoader />
         ) : tab === 'Register' ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="stack w-full text-sm">
               <thead>
                 <tr className={HEAD}>
                   <th className="text-left px-4 py-3">Bill</th>
@@ -428,7 +428,7 @@ export default function PurchaseRegisterPage() {
                 {rows.length === 0 && noteRows.length === 0 && <Empty cols={7} />}
                 {noteRows.map((n) => (
                   <tr key={n.id} className="hover:bg-slate-50 bg-amber-50/30">
-                    <td className="px-4 py-3">
+                    <td data-main className="px-4 py-3">
                       <Link href={`/debit-notes/${n.id}` as Route} className="font-mono font-semibold text-blue-600 hover:underline">
                         {n.debit_note_no}
                       </Link>
@@ -436,20 +436,20 @@ export default function PurchaseRegisterPage() {
                         {debitNoteReasonLabel(n.reason)} on {n.bill?.bill_no} · {formatDate(n.note_date)}
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td data-label="Supplier" className="px-4 py-3">
                       <div className="font-medium text-slate-900">{n.supplier?.name}</div>
                       <div className="text-xs text-amber-700">Input credit reversed</div>
                     </td>
-                    <Num value={-n.taxable_value} />
-                    <Num value={-n.igst_amount} />
-                    <Num value={-n.cgst_amount} />
-                    <Num value={-n.sgst_amount} />
-                    <Num value={-n.total_amount} bold />
+                    <Num label="Taxable" value={-n.taxable_value} />
+                    <Num label="IGST" value={-n.igst_amount} />
+                    <Num label="CGST" value={-n.cgst_amount} />
+                    <Num label="SGST" value={-n.sgst_amount} />
+                    <Num label="Total" value={-n.total_amount} bold />
                   </tr>
                 ))}
                 {rows.map((b) => (
                   <tr key={b.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3">
+                    <td data-main className="px-4 py-3">
                       <Link href={`/supplier-bills/${b.id}` as Route} className="font-mono font-semibold text-blue-600 hover:underline">
                         {b.bill_no}
                       </Link>
@@ -457,7 +457,7 @@ export default function PurchaseRegisterPage() {
                         Inv {b.supplier_invoice_no} · {formatDate(b.bill_date)}
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td data-label="Supplier" className="px-4 py-3">
                       <div className="font-medium text-slate-900">{b.supplier?.name}</div>
                       {b.supplier_gstin ? (
                         <div className="text-xs font-mono text-slate-400">{b.supplier_gstin}</div>
@@ -465,11 +465,11 @@ export default function PurchaseRegisterPage() {
                         <div className="text-xs text-amber-700">No GSTIN — no input credit</div>
                       )}
                     </td>
-                    <Num value={b.taxable_value} />
-                    <Num value={b.igst_amount} />
-                    <Num value={b.cgst_amount} />
-                    <Num value={b.sgst_amount} />
-                    <Num value={b.total_amount} bold />
+                    <Num label="Taxable" value={b.taxable_value} />
+                    <Num label="IGST" value={b.igst_amount} />
+                    <Num label="CGST" value={b.cgst_amount} />
+                    <Num label="SGST" value={b.sgst_amount} />
+                    <Num label="Total" value={b.total_amount} bold />
                   </tr>
                 ))}
               </tbody>
@@ -479,10 +479,10 @@ export default function PurchaseRegisterPage() {
                     <td className="px-4 py-3" colSpan={2}>
                       Net of debit notes
                     </td>
-                    <Num value={totals.taxable} />
-                    <Num value={r2(sum(rows, (b) => b.igst_amount) - sum(noteRows, (n) => n.igst_amount))} />
-                    <Num value={r2(sum(rows, (b) => b.cgst_amount) - sum(noteRows, (n) => n.cgst_amount))} />
-                    <Num value={r2(sum(rows, (b) => b.sgst_amount) - sum(noteRows, (n) => n.sgst_amount))} />
+                    <Num value={totals.taxable} hide />
+                    <Num value={r2(sum(rows, (b) => b.igst_amount) - sum(noteRows, (n) => n.igst_amount))} hide />
+                    <Num value={r2(sum(rows, (b) => b.cgst_amount) - sum(noteRows, (n) => n.cgst_amount))} hide />
+                    <Num value={r2(sum(rows, (b) => b.sgst_amount) - sum(noteRows, (n) => n.sgst_amount))} hide />
                     <Num value={totals.value} />
                   </tr>
                 </tfoot>
@@ -491,7 +491,7 @@ export default function PurchaseRegisterPage() {
           </div>
         ) : tab === 'By rate' ? (
           <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="stack w-full text-sm">
             <thead>
               <tr className={HEAD}>
                 <th className="text-left px-4 py-3">GST rate</th>
@@ -505,11 +505,11 @@ export default function PurchaseRegisterPage() {
               {byRate.length === 0 && <Empty cols={5} />}
               {byRate.map((r) => (
                 <tr key={r.rate}>
-                  <td className="px-4 py-3 font-medium">{r.rate}%</td>
-                  <Num value={r.taxable} />
-                  <Num value={r.igst} />
-                  <Num value={r.cgst} />
-                  <Num value={r.sgst} />
+                  <td data-main className="px-4 py-3 font-medium">{r.rate}%</td>
+                  <Num label="Taxable" value={r.taxable} />
+                  <Num label="IGST" value={r.igst} />
+                  <Num label="CGST" value={r.cgst} />
+                  <Num label="SGST" value={r.sgst} />
                 </tr>
               ))}
             </tbody>
@@ -517,7 +517,7 @@ export default function PurchaseRegisterPage() {
           </div>
         ) : tab === 'By supplier' ? (
           <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="stack w-full text-sm">
             <thead>
               <tr className={HEAD}>
                 <th className="text-left px-4 py-3">Supplier</th>
@@ -532,15 +532,15 @@ export default function PurchaseRegisterPage() {
               {bySupplier.length === 0 && <Empty cols={6} />}
               {bySupplier.map((r) => (
                 <tr key={r.id}>
-                  <td className="px-4 py-3">
+                  <td data-main className="px-4 py-3">
                     <div className="font-medium text-slate-900">{r.name}</div>
                     <div className="text-xs font-mono text-slate-400">{r.gstin ?? 'Unregistered'}</div>
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums">{r.bills}</td>
-                  <Num value={r.taxable} />
-                  <Num value={r.tax} />
-                  <Num value={r.value} bold />
-                  <td className="px-4 py-3 text-right tabular-nums text-slate-500">
+                  <td data-label="Bills" className="px-4 py-3 text-right tabular-nums">{r.bills}</td>
+                  <Num label="Taxable" value={r.taxable} />
+                  <Num label="GST" value={r.tax} />
+                  <Num label="Total" value={r.value} bold />
+                  <td data-label="Share" className="px-4 py-3 text-right tabular-nums text-slate-500">
                     {totals.value ? `${Math.round((r.value / totals.value) * 100)}%` : '—'}
                   </td>
                 </tr>
@@ -550,7 +550,7 @@ export default function PurchaseRegisterPage() {
           </div>
         ) : tab === 'HSN' ? (
           <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="stack w-full text-sm">
             <thead>
               <tr className={HEAD}>
                 <th className="text-left px-4 py-3">HSN</th>
@@ -564,11 +564,11 @@ export default function PurchaseRegisterPage() {
               {hsn.length === 0 && <Empty cols={5} />}
               {hsn.map((r) => (
                 <tr key={`${r.hsn}|${r.unit}|${r.rate}`}>
-                  <td className={`px-4 py-3 font-mono ${r.hsn === 'No HSN' ? 'text-amber-700' : ''}`}>{r.hsn}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{formatQty(r.qty, r.unit)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{r.rate}%</td>
-                  <Num value={r.taxable} />
-                  <Num value={r.tax} />
+                  <td data-main className={`px-4 py-3 font-mono ${r.hsn === 'No HSN' ? 'text-amber-700' : ''}`}>{r.hsn}</td>
+                  <td data-label="Quantity" className="px-4 py-3 text-right tabular-nums">{formatQty(r.qty, r.unit)}</td>
+                  <td data-label="Rate" className="px-4 py-3 text-right tabular-nums">{r.rate}%</td>
+                  <Num label="Taxable" value={r.taxable} />
+                  <Num label="GST" value={r.tax} />
                 </tr>
               ))}
             </tbody>
@@ -663,9 +663,13 @@ export default function PurchaseRegisterPage() {
 
 const HEAD = 'bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase'
 
-function Num({ value, bold }: { value: number; bold?: boolean }) {
+function Num({ value, bold, label, hide }: { value: number; bold?: boolean; label?: string; hide?: boolean }) {
   return (
-    <td className={`px-4 py-3 text-right tabular-nums ${bold ? 'font-semibold text-slate-900' : ''}`}>
+    <td
+      data-label={label}
+      data-hide={hide ? '' : undefined}
+      className={`px-4 py-3 text-right tabular-nums ${bold ? 'font-semibold text-slate-900' : ''}`}
+    >
       {value ? formatCurrency(value) : '—'}
     </td>
   )

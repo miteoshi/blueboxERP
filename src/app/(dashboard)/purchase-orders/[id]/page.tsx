@@ -246,11 +246,11 @@ export default function PurchaseOrderDetailPage() {
                 <p className="px-5 py-6 text-sm text-slate-400">Nothing received yet.</p>
               ) : (
                 <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="stack w-full text-sm">
                   <tbody className="divide-y divide-slate-50">
                     {grns.map((g) => (
                       <tr key={g.id}>
-                        <td className="px-5 py-3">
+                        <td data-main className="px-5 py-3">
                           <Link href={`/inbound/${g.id}` as Route} className="font-mono text-blue-600 hover:underline">
                             {g.receipt_no}
                           </Link>
@@ -260,7 +260,7 @@ export default function PurchaseOrderDetailPage() {
                           {g.challan_no && <div>Challan {g.challan_no}</div>}
                           {g.invoice_no && <div>Invoice {g.invoice_no}</div>}
                         </td>
-                        <td className="px-5 py-3 text-right tabular-nums">
+                        <td data-label="Value" className="px-5 py-3 text-right tabular-nums">
                           {formatCurrency(g.total_amount)}
                           {(g.gst_amount ?? 0) > 0 && (
                             <div className="text-xs text-slate-400">+{formatCurrency(g.gst_amount)} GST</div>

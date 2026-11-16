@@ -117,7 +117,7 @@ export default function PaymentsPage() {
           <TableLoader />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="stack w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                   <th className="text-left px-4 py-3">Receipt</th>
@@ -142,11 +142,11 @@ export default function PaymentsPage() {
                   const active = r.status === 'active'
                   return (
                     <tr key={r.id} className={active ? 'hover:bg-slate-50' : 'opacity-60'}>
-                      <td className="px-4 py-3">
+                      <td data-main className="px-4 py-3">
                         <div className="font-mono text-sm font-semibold text-slate-900">{r.receipt_no}</div>
                         <div className="text-xs text-slate-400">{formatDate(r.receipt_date)}</div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td data-label="Client" className="px-4 py-3">
                         <div className="font-medium text-slate-900">{r.client?.name}</div>
                         {r.sales_order && (
                           <Link
@@ -157,12 +157,12 @@ export default function PaymentsPage() {
                           </Link>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-slate-600">
+                      <td data-label="Mode" className="px-4 py-3 text-slate-600">
                         {paymentModeLabel(r.mode)}
                         {r.reference && <div className="text-xs text-slate-400 font-mono">{r.reference}</div>}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums font-semibold">{formatCurrency(r.amount)}</td>
-                      <td className="px-4 py-3">
+                      <td data-label="Amount" className="px-4 py-3 text-right tabular-nums font-semibold">{formatCurrency(r.amount)}</td>
+                      <td data-label="Applied to" className="px-4 py-3">
                         {r.receipt_allocations.length === 0 ? (
                           <span className="text-slate-300">—</span>
                         ) : (
@@ -180,7 +180,7 @@ export default function PaymentsPage() {
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
+                      <td data-label="Unapplied" className="px-4 py-3 text-right tabular-nums">
                         {!active ? (
                           <Badge>Cancelled</Badge>
                         ) : unapplied > 0 ? (
@@ -189,7 +189,7 @@ export default function PaymentsPage() {
                           <span className="text-slate-300">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td data-label="Actions" className="px-4 py-3">
                         <div className="flex items-center justify-center gap-1">
                           {active && unapplied > 0 && canBill && (
                             <Button
@@ -401,17 +401,17 @@ function RecordPaymentForm({ onClose }: { onClose: () => void }) {
               </p>
             ) : (
               <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="stack w-full text-sm">
                 <tbody className="divide-y divide-slate-50">
                   {invoices.map((i) => (
                     <tr key={i.id}>
-                      <td className="px-4 py-2 font-mono text-xs">{i.invoice_no}</td>
+                      <td data-main className="px-4 py-2 font-mono text-xs">{i.invoice_no}</td>
                       <td className="px-4 py-2 text-xs text-slate-500">
                         due {formatDate(i.due_date)}
                         {(i.days_overdue ?? 0) > 0 && <span className="text-red-600"> · {i.days_overdue}d overdue</span>}
                       </td>
-                      <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(i.balance_due)}</td>
-                      <td className="px-4 py-2 text-right w-36">
+                      <td data-label="Balance" className="px-4 py-2 text-right tabular-nums">{formatCurrency(i.balance_due)}</td>
+                      <td data-label="Apply" className="px-4 py-2 text-right w-36">
                         {manual ? (
                           <input
                             type="number"

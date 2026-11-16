@@ -187,11 +187,11 @@ export default function SupplierBillDetailPage() {
                 <p className="px-5 py-6 text-sm text-slate-400">None against this bill.</p>
               ) : (
                 <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="stack w-full text-sm">
                   <tbody className="divide-y divide-slate-50">
                     {notes.map((n) => (
                       <tr key={n.id} className={n.status === 'cancelled' ? 'opacity-60' : ''}>
-                        <td className="px-5 py-3">
+                        <td data-main className="px-5 py-3">
                           <Link href={`/debit-notes/${n.id}` as Route} className="font-mono text-blue-600 hover:underline">
                             {n.debit_note_no}
                           </Link>
@@ -202,7 +202,7 @@ export default function SupplierBillDetailPage() {
                           {n.returned_stock ? ' · stock sent back' : ''}
                           {n.status === 'cancelled' ? ' · cancelled' : ''}
                         </td>
-                        <td className="px-5 py-3 text-right tabular-nums font-medium">{formatCurrency(n.total_amount)}</td>
+                        <td data-label="Amount" className="px-5 py-3 text-right tabular-nums font-medium">{formatCurrency(n.total_amount)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -221,11 +221,11 @@ export default function SupplierBillDetailPage() {
                 <p className="px-5 py-6 text-sm text-slate-400">No payments yet.</p>
               ) : (
                 <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="stack w-full text-sm">
                   <tbody className="divide-y divide-slate-50">
                     {payments.map((a) => (
                       <tr key={a.id}>
-                        <td className="px-5 py-3">
+                        <td data-main className="px-5 py-3">
                           <span className="font-mono">{a.payment?.payment_no}</span>
                           <div className="text-xs text-slate-400">{formatDate(a.payment?.payment_date)}</div>
                         </td>
@@ -233,7 +233,7 @@ export default function SupplierBillDetailPage() {
                           {paymentModeLabel(a.payment?.mode ?? '')}
                           {a.payment?.reference ? ` · ${a.payment.reference}` : ''}
                         </td>
-                        <td className="px-5 py-3 text-right tabular-nums font-medium">{formatCurrency(a.amount)}</td>
+                        <td data-label="Amount" className="px-5 py-3 text-right tabular-nums font-medium">{formatCurrency(a.amount)}</td>
                       </tr>
                     ))}
                   </tbody>

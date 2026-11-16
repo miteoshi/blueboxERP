@@ -93,7 +93,7 @@ export default function ReceivablesPage() {
           <TableLoader />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="stack w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                   <th className="text-left px-4 py-3">Client</th>
@@ -121,7 +121,7 @@ export default function ReceivablesPage() {
                   return (
                     <Fragment key={r.client_id}>
                       <tr className="hover:bg-slate-50 cursor-pointer" onClick={() => setOpen(expanded ? null : r.client_id)}>
-                        <td className="px-4 py-3">
+                        <td data-main className="px-4 py-3">
                           <div className="flex items-center gap-2 font-medium text-slate-900">
                             {expanded ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
                             {r.client_name}
@@ -137,10 +137,11 @@ export default function ReceivablesPage() {
                             <div className="text-xs text-teal-600 ml-6">{formatCurrency(r.unallocated_credit)} unapplied credit</div>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums font-semibold">{money(r.outstanding)}</td>
+                        <td data-label="Outstanding" className="px-4 py-3 text-right tabular-nums font-semibold">{money(r.outstanding)}</td>
                         {BUCKETS.map((b) => (
                           <td
                             key={b.key}
+                            data-label={b.label}
                             className={`px-4 py-3 text-right tabular-nums ${
                               b.key === 'overdue_90_plus' && (r[b.key] ?? 0) > 0
                                 ? 'text-red-600 font-medium'
@@ -152,7 +153,7 @@ export default function ReceivablesPage() {
                             {money(r[b.key])}
                           </td>
                         ))}
-                        <td className="px-4 py-3 text-right">
+                        <td data-label="Credit used" className="px-4 py-3 text-right">
                           {used === null ? (
                             <span className="text-xs text-slate-300">No limit</span>
                           ) : (
@@ -179,7 +180,7 @@ export default function ReceivablesPage() {
                     <td className="px-4 py-3">Total</td>
                     <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(totals.outstanding)}</td>
                     {BUCKETS.map((b) => (
-                      <td key={b.key} className="px-4 py-3 text-right tabular-nums">
+                      <td key={b.key} data-hide className="px-4 py-3 text-right tabular-nums">
                         {money(totals.buckets[b.key])}
                       </td>
                     ))}
@@ -201,11 +202,11 @@ function ClientInvoices({ clientId }: { clientId: string }) {
   if (!data?.length) return <p className="text-xs text-slate-500">No open invoices — only unapplied credit.</p>
   return (
     <div className="overflow-x-auto">
-    <table className="w-full text-xs">
+    <table className="stack w-full text-xs">
       <tbody>
         {data.map((i) => (
           <tr key={i.id}>
-            <td className="py-1">
+            <td data-main className="py-1">
               <Link href={`/invoices/${i.id}` as Route} className="font-mono text-blue-600 hover:underline">
                 {i.invoice_no}
               </Link>
@@ -215,8 +216,8 @@ function ClientInvoices({ clientId }: { clientId: string }) {
             <td className={`py-1 ${(i.days_overdue ?? 0) > 0 ? 'text-red-600' : 'text-slate-500'}`}>
               {(i.days_overdue ?? 0) > 0 ? `${i.days_overdue} days overdue` : 'not due'}
             </td>
-            <td className="py-1 text-right tabular-nums">{formatCurrency(i.total_amount)}</td>
-            <td className="py-1 text-right tabular-nums font-medium">{formatCurrency(i.balance_due)}</td>
+            <td data-label="Total" className="py-1 text-right tabular-nums">{formatCurrency(i.total_amount)}</td>
+            <td data-label="Balance" className="py-1 text-right tabular-nums font-medium">{formatCurrency(i.balance_due)}</td>
           </tr>
         ))}
       </tbody>

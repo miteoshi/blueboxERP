@@ -319,7 +319,7 @@ export default function GstReportsPage() {
           <TableLoader />
         ) : tab === 'Summary' ? (
           <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="stack w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                 <th className="text-left px-4 py-3">Section</th>
@@ -340,10 +340,14 @@ export default function GstReportsPage() {
                 { label: 'CDNUR — credit notes on B2CL invoices (Table 9B)', rows: cdnur, sign: -1 },
               ].map((s) => (
                 <tr key={s.label} className={s.sign < 0 ? 'text-red-700' : undefined}>
-                  <td className={`px-4 py-3 ${s.sign < 0 ? '' : 'text-slate-700'}`}>{s.label}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{s.rows.length}</td>
+                  <td data-main className={`px-4 py-3 ${s.sign < 0 ? '' : 'text-slate-700'}`}>{s.label}</td>
+                  <td data-label="Documents" className="px-4 py-3 text-right tabular-nums">{s.rows.length}</td>
                   {(['taxable_value', 'igst_amount', 'cgst_amount', 'sgst_amount'] as const).map((k) => (
-                    <td key={k} className="px-4 py-3 text-right tabular-nums">
+                    <td
+                      key={k}
+                      data-label={k === 'taxable_value' ? 'Taxable' : k.slice(0, 4).toUpperCase()}
+                      className="px-4 py-3 text-right tabular-nums"
+                    >
                       {formatCurrency(s.sign * sum(s.rows as { [key in typeof k]: number }[], (i) => i[k]))}
                     </td>
                   ))}
@@ -356,7 +360,7 @@ export default function GstReportsPage() {
           <InvoiceTable rows={tab === 'B2B' ? b2b : b2cl} stateLabel={stateLabel} />
         ) : tab === 'B2CS' ? (
           <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="stack w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                 <th className="text-left px-4 py-3">Place of supply</th>
@@ -371,12 +375,12 @@ export default function GstReportsPage() {
               {b2cs.length === 0 && <Empty cols={6} />}
               {b2cs.map((r) => (
                 <tr key={`${r.pos}-${r.rate}`}>
-                  <td className="px-4 py-3">{stateLabel(r.pos)}</td>
-                  <td className="px-4 py-3 text-right">{r.rate}%</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(r.taxable)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(r.igst)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(r.cgst)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(r.sgst)}</td>
+                  <td data-main className="px-4 py-3">{stateLabel(r.pos)}</td>
+                  <td data-label="Rate" className="px-4 py-3 text-right">{r.rate}%</td>
+                  <td data-label="Taxable" className="px-4 py-3 text-right tabular-nums">{formatCurrency(r.taxable)}</td>
+                  <td data-label="IGST" className="px-4 py-3 text-right tabular-nums">{formatCurrency(r.igst)}</td>
+                  <td data-label="CGST" className="px-4 py-3 text-right tabular-nums">{formatCurrency(r.cgst)}</td>
+                  <td data-label="SGST" className="px-4 py-3 text-right tabular-nums">{formatCurrency(r.sgst)}</td>
                 </tr>
               ))}
             </tbody>
@@ -384,7 +388,7 @@ export default function GstReportsPage() {
           </div>
         ) : tab === 'CDNR' || tab === 'CDNUR' ? (
           <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="stack w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                 <th className="text-left px-4 py-3">Credit note</th>
@@ -401,25 +405,25 @@ export default function GstReportsPage() {
               {(tab === 'CDNR' ? cdnr : cdnur).length === 0 && <Empty cols={8} />}
               {(tab === 'CDNR' ? cdnr : cdnur).map((n) => (
                 <tr key={n.id}>
-                  <td className="px-4 py-3">
+                  <td data-main className="px-4 py-3">
                     <Link href={`/credit-notes/${n.id}` as Route} className="font-mono text-xs text-blue-600 hover:underline">
                       {n.credit_note_no}
                     </Link>
                     <div className="text-xs text-slate-400">{formatDate(n.note_date)}</div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td data-label="Buyer" className="px-4 py-3">
                     <div>{n.invoice?.buyer_name ?? n.client?.name}</div>
                     <div className="text-xs font-mono text-slate-400">{n.buyer_gstin ?? 'Unregistered'}</div>
                   </td>
-                  <td className="px-4 py-3 text-xs">
+                  <td data-label="Original invoice" className="px-4 py-3 text-xs">
                     {n.invoice?.invoice_no}
                     <div className="text-slate-400">{formatDate(n.invoice?.invoice_date)}</div>
                   </td>
-                  <td className="px-4 py-3 text-xs">{stateLabel(n.place_of_supply)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(n.taxable_value)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(n.igst_amount)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(n.cgst_amount + n.sgst_amount)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums font-medium">{formatCurrency(n.total_amount)}</td>
+                  <td data-label="POS" className="px-4 py-3 text-xs">{stateLabel(n.place_of_supply)}</td>
+                  <td data-label="Taxable" className="px-4 py-3 text-right tabular-nums">{formatCurrency(n.taxable_value)}</td>
+                  <td data-label="IGST" className="px-4 py-3 text-right tabular-nums">{formatCurrency(n.igst_amount)}</td>
+                  <td data-label="CGST + SGST" className="px-4 py-3 text-right tabular-nums">{formatCurrency(n.cgst_amount + n.sgst_amount)}</td>
+                  <td data-label="Value" className="px-4 py-3 text-right tabular-nums font-medium">{formatCurrency(n.total_amount)}</td>
                 </tr>
               ))}
             </tbody>
@@ -430,7 +434,7 @@ export default function GstReportsPage() {
             <TableLoader />
           ) : (
             <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="stack w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                   <th className="text-left px-4 py-3">Type</th>
@@ -447,16 +451,16 @@ export default function GstReportsPage() {
                 {(hsn ?? []).length === 0 && <Empty cols={8} />}
                 {(hsn ?? []).map((r) => (
                   <tr key={`${r.b2b}-${r.hsn_code}-${r.gst_rate}-${r.unit_name}`}>
-                    <td className="px-4 py-3 text-xs">{r.b2b ? 'B2B' : 'B2C'}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{r.hsn_code}</td>
-                    <td className="px-4 py-3 text-slate-700">{r.description}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">
+                    <td data-main className="px-4 py-3 text-xs">{r.b2b ? 'B2B' : 'B2C'}</td>
+                    <td data-label="HSN" className="px-4 py-3 font-mono text-xs">{r.hsn_code}</td>
+                    <td data-label="Description" className="px-4 py-3 text-slate-700">{r.description}</td>
+                    <td data-label="Qty" className="px-4 py-3 text-right tabular-nums">
                       {r.total_qty} {r.unit_name}
                     </td>
-                    <td className="px-4 py-3 text-right">{r.gst_rate}%</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(r.taxable_value)}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(r.igst_amount)}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(r.cgst_amount + r.sgst_amount)}</td>
+                    <td data-label="Rate" className="px-4 py-3 text-right">{r.gst_rate}%</td>
+                    <td data-label="Taxable" className="px-4 py-3 text-right tabular-nums">{formatCurrency(r.taxable_value)}</td>
+                    <td data-label="IGST" className="px-4 py-3 text-right tabular-nums">{formatCurrency(r.igst_amount)}</td>
+                    <td data-label="CGST + SGST" className="px-4 py-3 text-right tabular-nums">{formatCurrency(r.cgst_amount + r.sgst_amount)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -465,7 +469,7 @@ export default function GstReportsPage() {
           )
         ) : (
           <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="stack w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                 <th className="text-left px-4 py-3">Nature</th>
@@ -481,13 +485,13 @@ export default function GstReportsPage() {
               {documents.length === 0 && <Empty cols={7} />}
               {documents.map((d) => (
                 <tr key={`${d.nature}-${d.series}`}>
-                  <td className="px-4 py-3 text-xs text-slate-600">{d.nature}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{d.series}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{d.from}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{d.to}</td>
-                  <td className="px-4 py-3 text-right">{d.total}</td>
-                  <td className="px-4 py-3 text-right">{d.cancelled}</td>
-                  <td className="px-4 py-3 text-right font-medium">{d.total - d.cancelled}</td>
+                  <td data-main className="px-4 py-3 text-xs text-slate-600">{d.nature}</td>
+                  <td data-label="Series" className="px-4 py-3 font-mono text-xs">{d.series}</td>
+                  <td data-label="From" className="px-4 py-3 font-mono text-xs">{d.from}</td>
+                  <td data-label="To" className="px-4 py-3 font-mono text-xs">{d.to}</td>
+                  <td data-label="Total" className="px-4 py-3 text-right">{d.total}</td>
+                  <td data-label="Cancelled" className="px-4 py-3 text-right">{d.cancelled}</td>
+                  <td data-label="Net issued" className="px-4 py-3 text-right font-medium">{d.total - d.cancelled}</td>
                 </tr>
               ))}
             </tbody>
@@ -535,7 +539,7 @@ function InvoiceTable({
 }) {
   return (
     <div className="overflow-x-auto">
-    <table className="w-full text-sm">
+    <table className="stack w-full text-sm">
       <thead>
         <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
           <th className="text-left px-4 py-3">Invoice</th>
@@ -551,21 +555,21 @@ function InvoiceTable({
         {rows.length === 0 && <Empty cols={7} />}
         {rows.map((i) => (
           <tr key={i.id}>
-            <td className="px-4 py-3">
+            <td data-main className="px-4 py-3">
               <Link href={`/invoices/${i.id}` as Route} className="font-mono text-xs text-blue-600 hover:underline">
                 {i.invoice_no}
               </Link>
               <div className="text-xs text-slate-400">{formatDate(i.invoice_date)}</div>
             </td>
-            <td className="px-4 py-3">
+            <td data-label="Buyer" className="px-4 py-3">
               <div>{i.buyer_name}</div>
               <div className="text-xs font-mono text-slate-400">{i.buyer_gstin ?? 'Unregistered'}</div>
             </td>
-            <td className="px-4 py-3 text-xs">{stateLabel(i.place_of_supply)}</td>
-            <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(i.taxable_value)}</td>
-            <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(i.igst_amount)}</td>
-            <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(i.cgst_amount + i.sgst_amount)}</td>
-            <td className="px-4 py-3 text-right tabular-nums font-medium">{formatCurrency(i.total_amount)}</td>
+            <td data-label="POS" className="px-4 py-3 text-xs">{stateLabel(i.place_of_supply)}</td>
+            <td data-label="Taxable" className="px-4 py-3 text-right tabular-nums">{formatCurrency(i.taxable_value)}</td>
+            <td data-label="IGST" className="px-4 py-3 text-right tabular-nums">{formatCurrency(i.igst_amount)}</td>
+            <td data-label="CGST + SGST" className="px-4 py-3 text-right tabular-nums">{formatCurrency(i.cgst_amount + i.sgst_amount)}</td>
+            <td data-label="Value" className="px-4 py-3 text-right tabular-nums font-medium">{formatCurrency(i.total_amount)}</td>
           </tr>
         ))}
       </tbody>

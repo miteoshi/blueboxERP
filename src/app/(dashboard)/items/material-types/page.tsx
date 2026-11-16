@@ -288,7 +288,7 @@ export default function MaterialTypesPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="stack w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
@@ -316,23 +316,23 @@ export default function MaterialTypesPage() {
                 <tbody className="divide-y divide-slate-100">
                   {filteredMaterialTypes.map((materialType) => (
                     <tr key={materialType.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3">
+                      <td data-label="Code" className="px-4 py-3">
                         <span className="font-mono text-sm text-slate-600">
                           {materialType.code}
                         </span>
                       </td>
 
-                      <td className="px-4 py-3">
+                      <td data-main className="px-4 py-3">
                         <span className="font-medium text-slate-700">
                           {materialType.name}
                         </span>
                       </td>
 
-                      <td className="px-4 py-3 text-sm text-slate-500">
+                      <td data-label="Description" className="px-4 py-3 text-sm text-slate-500">
                         {materialType.description || "—"}
                       </td>
 
-                      <td className="px-4 py-3">
+                      <td data-label="Status" className="px-4 py-3">
                         <Badge
                           variant={
                             materialType.is_active ? "success" : "default"
@@ -342,7 +342,7 @@ export default function MaterialTypesPage() {
                         </Badge>
                       </td>
 
-                      <td className="px-4 py-3">
+                      <td data-label="Actions" className="px-4 py-3">
                         {canEdit && <div className="flex justify-end gap-2">
                           <Button
                             variant="outline"

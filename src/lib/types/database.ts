@@ -4861,6 +4861,20 @@ export type Database = {
         Returns: Json
       }
       client_credit_status: { Args: { p_client_id: string }; Returns: Json }
+      client_statement: {
+        Args: { p_client_id: string; p_from: string; p_to: string }
+        Returns: {
+          balance: number
+          credit: number
+          debit: number
+          detail: string
+          doc_id: string
+          doc_no: string
+          entry_date: string
+          kind: string
+          seq: number
+        }[]
+      }
       close_purchase_order: {
         Args: { p_po_id: string; p_reason: string }
         Returns: Json
@@ -5209,6 +5223,20 @@ export type Database = {
       start_production_order: {
         Args: { p_production_order_id: string }
         Returns: Json
+      }
+      supplier_statement: {
+        Args: { p_from: string; p_supplier_id: string; p_to: string }
+        Returns: {
+          balance: number
+          credit: number
+          debit: number
+          detail: string
+          doc_id: string
+          doc_no: string
+          entry_date: string
+          kind: string
+          seq: number
+        }[]
       }
       update_purchase_order: {
         Args: {

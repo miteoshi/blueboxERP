@@ -39,6 +39,7 @@ import {
   Undo2,
   Menu,
   X,
+  ScrollText,
 } from 'lucide-react'
 import type { Enums } from '@/lib/types/database'
 import { Route } from 'next'
@@ -207,6 +208,12 @@ const NAV: (NavItem | NavGroup)[] = [
         label: "Receivables",
         href: "/receivables",
         icon: BarChart3,
+        roles: ["admin", "manager", "sales", "viewer"],
+      },
+      {
+        label: "Statements",
+        href: "/statements",
+        icon: ScrollText,
         roles: ["admin", "manager", "sales", "viewer"],
       },
       {

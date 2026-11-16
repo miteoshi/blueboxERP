@@ -163,6 +163,13 @@ export default function PayablesPage() {
                             {expanded ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
                             {r.supplier_name}
                           </div>
+                          <Link
+                            href={`/statements?party=supplier&id=${r.supplier_id}` as Route}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-xs text-blue-600 hover:underline ml-6"
+                          >
+                            Statement
+                          </Link>
                           {(r.advance ?? 0) > 0 && (
                             <div className="text-xs text-teal-600 ml-6">{formatCurrency(r.advance)} advance paid</div>
                           )}

@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useTenant } from '@/lib/hooks/use-tenant'
 import { toast } from 'sonner'
 import { clearOfflineData } from '@/lib/offline/storage'
+import { listOutbox } from '@/lib/offline/outbox'
 import { useState } from 'react'
 import {
   LayoutDashboard,
@@ -372,11 +373,20 @@ export function Sidebar() {
         organization: null,
         orgId: null,
       })
+      // Saves made offline and not yet sent stay on the device for this user
+      const unsent = user?.id ? (await listOutbox(user.id).catch(() => [])).length : 0
       await supabase.auth.signOut()
       queryClient.clear()
-      // Nothing of this user's is left on the device for the next person
+      // Nothing else of this user's is left on the device for the next person
       await clearOfflineData()
-      toast.success('Signed out')
+      if (unsent > 0) {
+        toast.warning(
+          `Signed out. ${unsent} saved change${unsent === 1 ? ' is' : 's are'} still waiting on this device and will be sent when you sign in here again.`,
+          { duration: 10000 }
+        )
+      } else {
+        toast.success('Signed out')
+      }
       router.push('/login')
     } catch (err) {
       console.error('Sign out error:', err)

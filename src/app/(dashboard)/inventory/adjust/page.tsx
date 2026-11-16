@@ -3,19 +3,21 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useItems } from '@/lib/hooks/use-items'
-import { adjustInventory } from '@/lib/utils/inventory'
+
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Input, Textarea } from '@/components/ui/input'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { Save, AlertTriangle } from 'lucide-react'
-import { useOrgId } from "@/lib/hooks/use-tenant";
+import { useOrgId, useTenant } from "@/lib/hooks/use-tenant";
 import { RequirePermission } from '@/components/auth/require-permission'
+import { QUEUED_MESSAGE, saveOrQueue } from '@/lib/offline/outbox'
 
 function AdjustInventoryPageContent() {
 const router = useRouter();
 const orgId = useOrgId();
+const { user } = useTenant();
 const { data: items, isLoading: itemsLoading } = useItems();
 
   const [itemId, setItemId] = useState('')
@@ -40,15 +42,23 @@ const { data: items, isLoading: itemsLoading } = useItems();
 
     setSaving(true)
     try {
-      await adjustInventory({
-        itemId,
-        delta: Number(delta),
-        reason: reason.trim(),
-        refId: refId.trim() || undefined,
-        operationId,
+      const item = items?.find((i) => i.id === itemId)
+      const outcome = await saveOrQueue({
+        kind: 'stock_adjustment',
+        id: operationId,
+        userId: user?.id,
+        summary: `${item?.item_code ?? 'Item'} ${Number(delta) > 0 ? '+' : ''}${Number(delta)} — ${reason.trim()}`,
+        params: {
+          itemId,
+          delta: Number(delta),
+          reason: reason.trim(),
+          refId: refId.trim() || undefined,
+          operationId,
+        },
       })
 
-      toast.success('Stock adjusted successfully')
+      // With no connection the adjustment is kept on this device and sent later
+      toast.success(outcome.queued ? QUEUED_MESSAGE : 'Stock adjusted successfully')
       router.push('/inventory')
     } catch (err: unknown) {
         toast.error(

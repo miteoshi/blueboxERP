@@ -6,8 +6,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { useActiveSuppliers, usePurchasableItems } from '@/lib/hooks/use-purchasing'
-import { useOrgId } from '@/lib/hooks/use-tenant'
-import { createInboundReceipt } from '@/lib/utils/inventory'
+import { useOrgId, useTenant } from '@/lib/hooks/use-tenant'
 import { useRequestId } from '@/lib/hooks/use-request-id'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
@@ -20,6 +19,7 @@ import type {
     Enums
   } from '@/lib/types/database'
 import { RequirePermission } from '@/components/auth/require-permission'
+import { QUEUED_MESSAGE, saveOrQueue } from '@/lib/offline/outbox'
 
 
 type TransportMode = Enums<'transport_mode'>
@@ -54,6 +54,7 @@ function NewGrnPageContent() {
   const router   = useRouter()
   const qc       = useQueryClient()
   const orgId    = useOrgId()
+  const { user } = useTenant()
 
   const { data: suppliers } = useActiveSuppliers()
   const { data: items } = usePurchasableItems()
@@ -127,7 +128,12 @@ function NewGrnPageContent() {
     try {
       // One transaction in the database: GRN header + lines + stock
       // receipt for every line. If anything fails, nothing is written.
-      const result = await createInboundReceipt({
+      const outcome = await saveOrQueue({
+        kind: 'goods_receipt',
+        id: requestId.get(),
+        userId: user?.id,
+        summary: `${suppliers?.find((sp) => sp.id === supplierId)?.name ?? 'Supplier'} · ${lines.length} line${lines.length === 1 ? '' : 's'} · ${receiptDate}`,
+        params: {
         supplierId,
         lines: lines.map((l) => ({
           itemId:      l.item_id,
@@ -145,8 +151,18 @@ function NewGrnPageContent() {
         invoiceNo:  invoiceNo  || undefined,
         notes:      notes      || undefined,
         requestId:  requestId.get(),
+      },
       });
       requestId.clear();
+
+      // With no connection the receipt is kept on this device and sent later;
+      // stock goes up when it is sent, not before.
+      if (outcome.queued) {
+        toast.success(QUEUED_MESSAGE);
+        router.push("/inbound");
+        return;
+      }
+      const result = outcome.data;
 
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["inbound-receipts"] }),

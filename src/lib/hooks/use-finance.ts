@@ -119,10 +119,10 @@ export function useInvoice(id: string | null) {
         .from('sales_invoices')
         .select(`
           *,
-          client:clients ( id, name, phone, email ),
+          client:clients ( id, name, phone, email, address, city, pincode ),
           sales_order:sales_orders ( id, so_number ),
           sales_invoice_lines ( * ),
-          delivery_challans ( id, challan_no, challan_date ),
+          delivery_challans ( id, challan_no, challan_date, vehicle_no ),
           receipt_allocations (
             id, amount, created_at,
             receipt:customer_receipts ( id, receipt_no, receipt_date, mode, reference, status )

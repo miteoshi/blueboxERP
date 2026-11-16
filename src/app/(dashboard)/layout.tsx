@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/layout/sidebar'
 import { TenantProvider } from '@/components/providers/tenant-provider'
+import { OfflineSupport } from '@/components/layout/offline-support'
 
 // This layout wraps every page inside (dashboard)
 // It checks auth server-side as a second layer of protection
@@ -53,6 +54,9 @@ export default async function DashboardLayout({
             on a phone. min-w-0 keeps a wide table scrolling inside its own
             box instead of stretching the whole page sideways. */}
         <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
+
+          {/* Says so when the connection is gone; also turns on offline use */}
+          <OfflineSupport />
 
           {/* Page content */}
           <main className="flex-1 px-4 pb-4 pt-[4.5rem] lg:p-6 lg:pt-6 animate-fade-in">

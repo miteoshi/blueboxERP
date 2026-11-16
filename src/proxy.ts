@@ -15,6 +15,7 @@ export const config = {
     // - _next/image (image optimization)
     // - favicon.ico
     // - public folder files
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // - the service worker and its offline page, which must load signed out too
+    '/((?!_next/static|_next/image|favicon.ico|sw\\.js|offline\\.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

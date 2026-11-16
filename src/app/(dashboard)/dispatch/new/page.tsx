@@ -4,8 +4,7 @@ import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { useOrgId } from '@/lib/hooks/use-tenant'
-import { createDeliveryChallan } from '@/lib/utils/inventory'
+import { useOrgId, useTenant } from '@/lib/hooks/use-tenant'
 import { useRequestId } from '@/lib/hooks/use-request-id'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
@@ -16,6 +15,7 @@ import { toast } from 'sonner'
 import { Trash2, Save, AlertTriangle } from 'lucide-react'
 import type { Enums } from '@/lib/types/database'
 import { RequirePermission } from '@/components/auth/require-permission'
+import { QUEUED_MESSAGE, saveOrQueue } from '@/lib/offline/outbox'
 
 type TransportMode = Enums<'transport_mode'>
 
@@ -151,6 +151,7 @@ function NewChallanPageContent() {
   const searchParams = useSearchParams()
   const qc           = useQueryClient()
   const orgId        = useOrgId()
+  const { user }     = useTenant()
 
 const { data: salesOrders } = useSalesOrdersForDispatch(orgId);
 
@@ -230,17 +231,32 @@ const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
       // One transaction in the database: challan header + lines + stock
       // dispatch (consuming this SO's reservations first) + qty_dispatched
       // + SO status. If anything fails, nothing is written.
-      const result = await createDeliveryChallan({
-        soId:          selectedSoId,
-        lines:         lines.map((l) => ({ soLineId: l.so_line_id, qty: l.qty, rate: l.rate })),
-        challanDate,
-        transportMode,
-        vehicleNo:     vehicleNo  || undefined,
-        driverName:    driverName || undefined,
-        notes:         notes      || undefined,
-        requestId:     requestId.get(),
+      const outcome = await saveOrQueue({
+        kind: 'delivery_challan',
+        id: requestId.get(),
+        userId: user?.id,
+        summary: `${selectedSo?.so_number ?? 'Sales order'}${selectedClient?.name ? ` · ${selectedClient.name}` : ''} · ${lines.length} line${lines.length === 1 ? '' : 's'} · ${challanDate}`,
+        params: {
+          soId:          selectedSoId,
+          lines:         lines.map((l) => ({ soLineId: l.so_line_id, qty: l.qty, rate: l.rate })),
+          challanDate,
+          transportMode,
+          vehicleNo:     vehicleNo  || undefined,
+          driverName:    driverName || undefined,
+          notes:         notes      || undefined,
+          requestId:     requestId.get(),
+        },
       })
       requestId.clear()
+
+      // With no connection the challan is kept on this device and sent later.
+      // It has no number until then, and stock is only checked when it is sent.
+      if (outcome.queued) {
+        toast.success(QUEUED_MESSAGE)
+        router.push('/dispatch')
+        return
+      }
+      const result = outcome.data
 
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['delivery-challans'] }),

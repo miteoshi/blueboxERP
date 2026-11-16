@@ -10,12 +10,14 @@ import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Input, Textarea } from '@/components/ui/input'
 import { PageLoader } from '@/components/ui/spinner'
 import { InvoiceStatusBadge } from '@/components/finance/invoice-status'
+import { EwayBillExport } from '@/components/finance/eway-bill-export'
 import {
   PAYMENT_MODES,
   creditNoteDeadline,
   creditNoteReasonLabel,
   paymentModeLabel,
   useCancelInvoice,
+  useCompanyProfile,
   useGstStates,
   useInvoice,
   useRecordReceipt,
@@ -34,6 +36,7 @@ export default function InvoiceDetailPage() {
   const canManage = useCanManageFinance()
   const { data: inv, isLoading } = useInvoice(id)
   const { data: gstStates } = useGstStates()
+  const { data: company } = useCompanyProfile()
   const recordReceipt = useRecordReceipt()
   const cancelInvoice = useCancelInvoice()
 
@@ -159,6 +162,15 @@ export default function InvoiceDetailPage() {
           </Button>
         )}
       </PageHeader>
+
+      {inv.status === 'issued' && (
+        <EwayBillExport
+          invoice={{ ...inv, lines: [...inv.sales_invoice_lines].sort((a, b) => a.sort_order - b.sort_order) }}
+          from={{ address: company?.address ?? null, city: company?.city ?? null, pincode: company?.pincode ?? null }}
+          to={{ address: inv.client?.address ?? null, city: inv.client?.city ?? null, pincode: inv.client?.pincode ?? null }}
+          defaultVehicleNo={inv.delivery_challans.find((c) => c.vehicle_no)?.vehicle_no}
+        />
+      )}
 
       {inv.status === 'cancelled' && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

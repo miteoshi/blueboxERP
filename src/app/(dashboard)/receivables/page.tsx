@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { StatCard } from '@/components/ui/card'
 import { TableLoader } from '@/components/ui/spinner'
+import { PaymentReminder } from '@/components/finance/payment-reminder'
 import { useClientReceivables, useInvoiceAgeing } from '@/lib/hooks/use-finance'
 import { formatCurrency, formatDate, todayISO } from '@/lib/utils/format'
 import { downloadCsv } from '@/lib/utils/csv'
@@ -166,7 +167,7 @@ export default function ReceivablesPage() {
                       {expanded && (
                         <tr>
                           <td colSpan={8} className="bg-slate-50 px-10 py-3">
-                            <ClientInvoices clientId={r.client_id ?? ''} />
+                            <ClientInvoices clientId={r.client_id ?? ''} clientName={r.client_name ?? ''} />
                           </td>
                         </tr>
                       )}
@@ -196,11 +197,12 @@ export default function ReceivablesPage() {
   )
 }
 
-function ClientInvoices({ clientId }: { clientId: string }) {
+function ClientInvoices({ clientId, clientName }: { clientId: string; clientName: string }) {
   const { data, isLoading } = useInvoiceAgeing(clientId)
   if (isLoading) return <p className="text-xs text-slate-400">Loading…</p>
   if (!data?.length) return <p className="text-xs text-slate-500">No open invoices — only unapplied credit.</p>
   return (
+    <>
     <div className="overflow-x-auto">
     <table className="stack w-full text-xs">
       <tbody>
@@ -223,5 +225,7 @@ function ClientInvoices({ clientId }: { clientId: string }) {
       </tbody>
     </table>
     </div>
+    <PaymentReminder clientId={clientId} clientName={clientName} invoices={data} />
+    </>
   )
 }

@@ -5561,6 +5561,7 @@ export type Database = {
         Returns: Json
       }
       expire_stale_reservations: { Args: never; Returns: number }
+      financial_position: { Args: { p_as_of: string }; Returns: Json }
       financial_year: { Args: { p_date: string }; Returns: string }
       gst_hsn_summary: {
         Args: { p_from: string; p_to: string }

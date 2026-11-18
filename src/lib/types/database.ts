@@ -2147,6 +2147,58 @@ export type Database = {
           },
         ]
       }
+      money_openings: {
+        Row: {
+          account: string
+          amount: number
+          as_of: string
+          id: string
+          org_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account: string
+          amount: number
+          as_of: string
+          id?: string
+          org_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account?: string
+          amount?: number
+          as_of?: string
+          id?: string
+          org_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "money_openings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "money_openings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "money_openings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_sequences: {
         Row: {
           current_value: number
@@ -5222,6 +5274,7 @@ export type Database = {
         }
       }
       mark_challan_delivered: { Args: { p_challan_id: string }; Returns: Json }
+      money_balances: { Args: { p_from: string; p_to: string }; Returns: Json }
       my_org: { Args: never; Returns: string }
       my_role: {
         Args: never
@@ -5378,6 +5431,10 @@ export type Database = {
           p_purchase_rate?: number
           p_selling_rate?: number
         }
+        Returns: Json
+      }
+      set_money_opening: {
+        Args: { p_account: string; p_amount: number; p_as_of: string }
         Returns: Json
       }
       set_quotation_status: {

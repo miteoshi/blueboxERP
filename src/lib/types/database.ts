@@ -1253,6 +1253,151 @@ export type Database = {
           },
         ]
       }
+      expense_heads: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          org_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          org_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_heads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_heads_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_heads_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          created_by: string | null
+          expense_date: string
+          expense_no: string
+          financial_year: string
+          head_id: string
+          id: string
+          mode: string
+          notes: string | null
+          org_id: string
+          payee: string | null
+          reference: string | null
+          status: string
+        }
+        Insert: {
+          amount: number
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          expense_date: string
+          expense_no: string
+          financial_year: string
+          head_id: string
+          id?: string
+          mode: string
+          notes?: string | null
+          org_id: string
+          payee?: string | null
+          reference?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          expense_date?: string
+          expense_no?: string
+          financial_year?: string
+          head_id?: string
+          id?: string
+          mode?: string
+          notes?: string | null
+          org_id?: string
+          payee?: string | null
+          reference?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_head_id_fkey"
+            columns: ["head_id"]
+            isOneToOne: false
+            referencedRelation: "expense_heads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
       gst_states: {
         Row: {
           alpha_code: string
@@ -4800,6 +4945,7 @@ export type Database = {
         Args: { p_incoming: number; p_invoice_id: string }
         Returns: number
       }
+      _seed_expense_heads: { Args: { p_org_id: string }; Returns: undefined }
       _write_purchase_order_lines: {
         Args: { p_lines: Json; p_po_id: string }
         Returns: undefined
@@ -4837,6 +4983,10 @@ export type Database = {
       }
       cancel_debit_note: {
         Args: { p_debit_note_id: string; p_reason: string }
+        Returns: Json
+      }
+      cancel_expense: {
+        Args: { p_expense_id: string; p_reason: string }
         Returns: Json
       }
       cancel_production_order: {
@@ -5151,6 +5301,19 @@ export type Database = {
         }
         Returns: Json
       }
+      record_expense: {
+        Args: {
+          p_amount: number
+          p_expense_date?: string
+          p_head_id: string
+          p_mode: string
+          p_notes?: string
+          p_payee?: string
+          p_reference?: string
+          p_request_id?: string
+        }
+        Returns: Json
+      }
       record_so_payment: {
         Args: { p_amount: number; p_so_id: string }
         Returns: Json
@@ -5192,6 +5355,10 @@ export type Database = {
       }
       reserve_sales_order: {
         Args: { p_expiry_hours?: number; p_so_id: string }
+        Returns: Json
+      }
+      save_expense_head: {
+        Args: { p_id?: string; p_is_active?: boolean; p_name: string }
         Returns: Json
       }
       set_invoice_eway_bill: {

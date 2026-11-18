@@ -127,6 +127,58 @@ export type Database = {
           },
         ]
       }
+      bank_clearings: {
+        Row: {
+          bank_date: string
+          doc_id: string
+          doc_type: string
+          id: string
+          org_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          bank_date: string
+          doc_id: string
+          doc_type: string
+          id?: string
+          org_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          bank_date?: string
+          doc_id?: string
+          doc_type?: string
+          id?: string
+          org_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_clearings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_clearings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "bank_clearings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bom: {
         Row: {
           component_id: string
@@ -4571,6 +4623,24 @@ export type Database = {
       }
     }
     Views: {
+      v_bank_entries: {
+        Row: {
+          bank_date: string | null
+          created_at: string | null
+          deposit: number | null
+          detail: string | null
+          doc_date: string | null
+          doc_id: string | null
+          doc_no: string | null
+          kind: string | null
+          mode: string | null
+          org_id: string | null
+          party: string | null
+          reference: string | null
+          withdrawal: number | null
+        }
+        Relationships: []
+      }
       v_bill_ageing: {
         Row: {
           amount_debited: number | null
@@ -5108,6 +5178,23 @@ export type Database = {
         Args: { p_roles: Database["public"]["Enums"]["user_role"][] }
         Returns: undefined
       }
+      bank_book: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          bank_date: string
+          deposit: number
+          detail: string
+          doc_date: string
+          doc_id: string
+          doc_no: string
+          kind: string
+          mode: string
+          party: string
+          reference: string
+          withdrawal: number
+        }[]
+      }
+      bank_reconciliation: { Args: { p_as_of: string }; Returns: Json }
       cancel_credit_note: {
         Args: { p_credit_note_id: string; p_reason: string }
         Returns: Json
@@ -5513,6 +5600,7 @@ export type Database = {
         Args: { p_id?: string; p_is_active?: boolean; p_name: string }
         Returns: Json
       }
+      set_bank_dates: { Args: { p_entries: Json }; Returns: Json }
       set_invoice_eway_bill: {
         Args: {
           p_eway_bill_date?: string

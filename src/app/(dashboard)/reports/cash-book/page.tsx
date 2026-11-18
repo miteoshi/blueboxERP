@@ -1,6 +1,8 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
+import type { Route } from 'next'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useOrgId } from '@/lib/hooks/use-tenant'
@@ -483,7 +485,11 @@ export default function CashBookPage() {
             out. Cash deposited in or drawn from the bank is listed in the day book but not counted as money in or out —
             it only moves money between the two balances above. The balances start from the opening balance you set and
             add everything recorded since. Money not recorded in the app (loans, capital, tax paid) is not included, so
-            compare the bank figure with your bank statement now and then.
+            check the bank figure against your bank statement on{' '}
+            <Link href={'/reports/bank-reconciliation' as Route} className="text-blue-600 hover:underline">
+              Bank Reconciliation
+            </Link>
+            .
           </p>
         )}
       </div>

@@ -47,6 +47,8 @@ export function useSetMoneyOpening() {
     },
     onSuccess: (d) => {
       qc.invalidateQueries({ queryKey: ['money-balances'] })
+      qc.invalidateQueries({ queryKey: ['bank-book'] })
+      qc.invalidateQueries({ queryKey: ['bank-reconciliation'] })
       toast.success(`Opening ${d.account} balance saved`)
     },
     onError: (err: Error) => toast.error(err.message),

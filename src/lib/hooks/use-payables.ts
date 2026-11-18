@@ -33,6 +33,8 @@ const PAYABLES_KEYS = [
   ['money-balances'],
   ['statement'],
   ['profit-and-loss'],
+  ['bank-book'],
+  ['bank-reconciliation'],
 ] as const
 
 function useInvalidatePayables() {

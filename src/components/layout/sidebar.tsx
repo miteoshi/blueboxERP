@@ -241,6 +241,12 @@ const NAV: (NavItem | NavGroup)[] = [
         roles: ["admin", "manager", "viewer"],
       },
       {
+        label: "Bank Reconciliation",
+        href: "/reports/bank-reconciliation",
+        icon: FileSpreadsheet,
+        roles: ["admin", "manager", "viewer"],
+      },
+      {
         label: "GST Reports",
         href: "/reports/gst",
         icon: FileSpreadsheet,

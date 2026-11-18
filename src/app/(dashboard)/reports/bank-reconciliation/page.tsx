@@ -418,8 +418,8 @@ export default function BankReconciliationPage() {
           )}
 
           <p className="px-4 py-3 text-xs text-slate-500 border-t border-slate-100">
-            Lists customer receipts, supplier payments and expenses not made in cash, and cash deposited in or drawn from
-            the bank. Entries from before this period appear while they are still not in the bank. Set each one&apos;s bank
+            Lists customer receipts, other income, supplier payments and expenses not made in cash, and cash deposited in or
+            drawn from the bank. Entries from before this period appear while they are still not in the bank. Set each one&apos;s bank
             date — the day it shows on your statement — and the reconciliation above works out what the statement should
             say. Entries on or before the bank opening date are part of the opening balance and are not listed.
           </p>

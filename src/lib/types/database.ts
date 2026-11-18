@@ -1689,6 +1689,55 @@ export type Database = {
           },
         ]
       }
+      income_heads: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          org_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          org_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "income_heads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "income_heads_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "income_heads_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
       inventory_balance: {
         Row: {
           available_qty: number | null
@@ -2453,6 +2502,102 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "gst_states"
             referencedColumns: ["code"]
+          },
+        ]
+      }
+      other_income: {
+        Row: {
+          amount: number
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          created_by: string | null
+          financial_year: string
+          head_id: string
+          id: string
+          income_date: string
+          income_no: string
+          mode: string
+          notes: string | null
+          org_id: string
+          received_from: string | null
+          reference: string | null
+          status: string
+        }
+        Insert: {
+          amount: number
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          financial_year: string
+          head_id: string
+          id?: string
+          income_date: string
+          income_no: string
+          mode: string
+          notes?: string | null
+          org_id: string
+          received_from?: string | null
+          reference?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          financial_year?: string
+          head_id?: string
+          id?: string
+          income_date?: string
+          income_no?: string
+          mode?: string
+          notes?: string | null
+          org_id?: string
+          received_from?: string | null
+          reference?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "other_income_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "other_income_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "other_income_head_id_fkey"
+            columns: ["head_id"]
+            isOneToOne: false
+            referencedRelation: "income_heads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "other_income_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "other_income_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
           },
         ]
       }
@@ -5151,6 +5296,7 @@ export type Database = {
         Returns: number
       }
       _seed_expense_heads: { Args: { p_org_id: string }; Returns: undefined }
+      _seed_income_heads: { Args: { p_org_id: string }; Returns: undefined }
       _write_purchase_order_lines: {
         Args: { p_lines: Json; p_po_id: string }
         Returns: undefined
@@ -5213,6 +5359,10 @@ export type Database = {
       }
       cancel_money_transfer: {
         Args: { p_reason: string; p_transfer_id: string }
+        Returns: Json
+      }
+      cancel_other_income: {
+        Args: { p_income_id: string; p_reason: string }
         Returns: Json
       }
       cancel_production_order: {
@@ -5553,6 +5703,19 @@ export type Database = {
         }
         Returns: Json
       }
+      record_other_income: {
+        Args: {
+          p_amount: number
+          p_head_id: string
+          p_income_date?: string
+          p_mode: string
+          p_notes?: string
+          p_received_from?: string
+          p_reference?: string
+          p_request_id?: string
+        }
+        Returns: Json
+      }
       record_so_payment: {
         Args: { p_amount: number; p_so_id: string }
         Returns: Json
@@ -5597,6 +5760,10 @@ export type Database = {
         Returns: Json
       }
       save_expense_head: {
+        Args: { p_id?: string; p_is_active?: boolean; p_name: string }
+        Returns: Json
+      }
+      save_income_head: {
         Args: { p_id?: string; p_is_active?: boolean; p_name: string }
         Returns: Json
       }

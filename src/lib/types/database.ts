@@ -2199,6 +2199,89 @@ export type Database = {
           },
         ]
       }
+      money_transfers: {
+        Row: {
+          amount: number
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          created_by: string | null
+          direction: string
+          financial_year: string
+          id: string
+          notes: string | null
+          org_id: string
+          reference: string | null
+          status: string
+          transfer_date: string
+          transfer_no: string
+        }
+        Insert: {
+          amount: number
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          direction: string
+          financial_year: string
+          id?: string
+          notes?: string | null
+          org_id: string
+          reference?: string | null
+          status?: string
+          transfer_date: string
+          transfer_no: string
+        }
+        Update: {
+          amount?: number
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          financial_year?: string
+          id?: string
+          notes?: string | null
+          org_id?: string
+          reference?: string | null
+          status?: string
+          transfer_date?: string
+          transfer_no?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "money_transfers_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "money_transfers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "money_transfers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "money_transfers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
       org_sequences: {
         Row: {
           current_value: number
@@ -5041,6 +5124,10 @@ export type Database = {
         Args: { p_expense_id: string; p_reason: string }
         Returns: Json
       }
+      cancel_money_transfer: {
+        Args: { p_reason: string; p_transfer_id: string }
+        Returns: Json
+      }
       cancel_production_order: {
         Args: { p_production_order_id: string }
         Returns: Json
@@ -5365,6 +5452,17 @@ export type Database = {
           p_payee?: string
           p_reference?: string
           p_request_id?: string
+        }
+        Returns: Json
+      }
+      record_money_transfer: {
+        Args: {
+          p_amount: number
+          p_direction: string
+          p_notes?: string
+          p_reference?: string
+          p_request_id?: string
+          p_transfer_date?: string
         }
         Returns: Json
       }

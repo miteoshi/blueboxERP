@@ -27,6 +27,12 @@ const PAYABLES_KEYS = [
   ['debit-note'],
   ['stock-levels'],
   ['purchase-register'],
+  // Reports built from bills, payments and debit notes
+  ['purchase-register-notes'],
+  ['cash-book-payments'],
+  ['money-balances'],
+  ['statement'],
+  ['profit-and-loss'],
 ] as const
 
 function useInvalidatePayables() {

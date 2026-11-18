@@ -5248,6 +5248,7 @@ export type Database = {
         }
         Returns: Json
       }
+      profit_and_loss: { Args: { p_from: string; p_to: string }; Returns: Json }
       prune_document_requests: { Args: never; Returns: number }
       receive_inventory: {
         Args: {

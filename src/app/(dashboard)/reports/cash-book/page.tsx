@@ -15,6 +15,8 @@ import { allRows } from '@/lib/utils/all-rows'
 import { monthRange, reportPeriods } from '@/lib/utils/periods'
 import { downloadCsv } from '@/lib/utils/csv'
 import { Download } from 'lucide-react'
+import { MoneyBalances } from '@/components/finance/money-balances'
+import { useRole } from '@/lib/hooks/use-profile'
 
 const TABS = ['Day book', 'By mode', 'By day'] as const
 type Tab = (typeof TABS)[number]
@@ -92,6 +94,8 @@ function useExpensesForPeriod(from: string, to: string) {
 }
 
 export default function CashBookPage() {
+  const role = useRole()
+  const canEdit = role === 'admin' || role === 'manager'
   const thisMonth = monthRange(0)
   const [from, setFrom] = useState(thisMonth.from)
   const [to, setTo] = useState(thisMonth.to)
@@ -247,6 +251,8 @@ export default function CashBookPage() {
         </div>
       </div>
 
+      {from <= to && <MoneyBalances from={from} to={to} canEdit={canEdit} />}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
           label="Money in"
@@ -395,8 +401,9 @@ export default function CashBookPage() {
         {!isLoading && (
           <p className="px-4 py-3 text-xs text-slate-500 border-t border-slate-100">
             Customer receipts, supplier payments and expenses, on the date each was recorded. Cancelled entries are left
-            out. There is no opening balance here, so this shows movement in the period, not what is in the bank or the
-            cash box. Money not recorded in the app (loans, capital, tax paid) is not included.
+            out. The balances above start from the opening balance you set and add everything recorded since. Money not
+            recorded in the app (loans, capital, tax paid, cash drawn from the bank) is not included, so compare the bank
+            figure with your bank statement now and then.
           </p>
         )}
       </div>

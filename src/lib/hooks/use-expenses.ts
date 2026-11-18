@@ -10,7 +10,7 @@ import { isAlreadySaved, rpcFailure } from '@/lib/utils/rpc'
 import type { MoneyEntry, MoneyHead, RecordMoneyEntry, RecordedMoneyEntry } from '@/lib/money-entries'
 
 // Everything that shows expenses, so a change refreshes all of it
-const EXPENSE_KEYS = [['expense-heads'], ['expenses'], ['cash-book-expenses'], ['money-balances'], ['profit-and-loss'], ['bank-book'], ['bank-reconciliation']] as const
+const EXPENSE_KEYS = [['expense-heads'], ['expenses'], ['cash-book-expenses'], ['money-balances'], ['profit-and-loss'], ['bank-book'], ['bank-reconciliation'], ['financial-position']] as const
 
 function useInvalidateExpenses() {
   const qc = useQueryClient()

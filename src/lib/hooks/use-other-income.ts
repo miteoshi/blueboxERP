@@ -10,7 +10,7 @@ import { isAlreadySaved, rpcFailure } from '@/lib/utils/rpc'
 import type { MoneyEntry, MoneyHead, RecordMoneyEntry, RecordedMoneyEntry } from '@/lib/money-entries'
 
 // Everything that shows other income, so a change refreshes all of it
-const INCOME_KEYS = [['income-heads'], ['other-income'], ['cash-book-income'], ['money-balances'], ['profit-and-loss'], ['bank-book'], ['bank-reconciliation']] as const
+const INCOME_KEYS = [['income-heads'], ['other-income'], ['cash-book-income'], ['money-balances'], ['profit-and-loss'], ['bank-book'], ['bank-reconciliation'], ['financial-position']] as const
 
 function useInvalidateIncome() {
   const qc = useQueryClient()

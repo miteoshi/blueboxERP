@@ -139,6 +139,12 @@ const NAV: (NavItem | NavGroup)[] = [
         roles: ["admin", "manager", "viewer"],
       },
       {
+        label: "Expenses",
+        href: "/expenses",
+        icon: Receipt,
+        roles: ["admin", "manager", "viewer"],
+      },
+      {
         label: "Debit Notes",
         href: "/debit-notes",
         icon: Undo2,

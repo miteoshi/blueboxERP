@@ -68,6 +68,29 @@ function usePaymentsForPeriod(from: string, to: string) {
   })
 }
 
+// Expenses paid in the period (cancelled ones left out)
+function useExpensesForPeriod(from: string, to: string) {
+  const supabase = createClient()
+  const orgId = useOrgId()
+  return useQuery({
+    queryKey: ['cash-book-expenses', orgId, from, to],
+    queryFn: async () => {
+      const { data, error } = await allRows(supabase
+        .from('expenses')
+        .select('id, expense_no, expense_date, amount, mode, reference, payee, created_at, head:expense_heads ( name )')
+        .eq('status', 'active')
+        .gte('expense_date', from)
+        .lte('expense_date', to)
+        .order('expense_date')
+        .order('id'))
+      if (error) throw error
+      return data
+    },
+    enabled: !!orgId && !!from && !!to,
+    staleTime: 60 * 1000,
+  })
+}
+
 export default function CashBookPage() {
   const thisMonth = monthRange(0)
   const [from, setFrom] = useState(thisMonth.from)
@@ -76,7 +99,8 @@ export default function CashBookPage() {
 
   const { data: receipts, isLoading: loadingReceipts } = useReceiptsForPeriod(from, to)
   const { data: payments, isLoading: loadingPayments } = usePaymentsForPeriod(from, to)
-  const isLoading = loadingReceipts || loadingPayments
+  const { data: expenses, isLoading: loadingExpenses } = useExpensesForPeriod(from, to)
+  const isLoading = loadingReceipts || loadingPayments || loadingExpenses
 
   // One list in the order the money moved
   const entries = useMemo(() => {
@@ -105,15 +129,29 @@ export default function CashBookPage() {
         moneyIn: 0,
         moneyOut: Number(p.amount),
       })),
+      ...(expenses ?? []).map((x) => ({
+        key: `x${x.id}`,
+        date: x.expense_date,
+        at: x.created_at,
+        no: x.expense_no,
+        kind: 'Expense' as const,
+        party: x.payee || x.head?.name || '—',
+        head: x.head?.name ?? '',
+        mode: x.mode,
+        reference: x.reference ?? '',
+        moneyIn: 0,
+        moneyOut: Number(x.amount),
+      })),
     ]
     return list.sort((a, b) => a.date.localeCompare(b.date) || (a.at ?? '').localeCompare(b.at ?? '') || a.no.localeCompare(b.no))
-  }, [receipts, payments])
+  }, [receipts, payments, expenses])
 
   const totals = {
     moneyIn: r2(sum(entries, (e) => e.moneyIn)),
     moneyOut: r2(sum(entries, (e) => e.moneyOut)),
     receipts: receipts?.length ?? 0,
     payments: payments?.length ?? 0,
+    expenses: expenses?.length ?? 0,
   }
   const net = r2(totals.moneyIn - totals.moneyOut)
 
@@ -169,7 +207,7 @@ export default function CashBookPage() {
           { header: 'Date', value: (r) => r.date },
           { header: 'Type', value: (r) => r.kind },
           { header: 'Document No', value: (r) => r.no },
-          { header: 'Party', value: (r) => r.party },
+          { header: 'Party / Head', value: (r) => ('head' in r && r.head ? `${r.party} (${r.head})` : r.party) },
           { header: 'Mode', value: (r) => paymentModeLabel(r.mode) },
           { header: 'Reference', value: (r) => r.reference },
           { header: 'Money In', value: (r) => (r.moneyIn ? r.moneyIn : null) },
@@ -182,7 +220,7 @@ export default function CashBookPage() {
 
   return (
     <div>
-      <PageHeader title="Cash & Bank Book" description="Money received from customers and paid to suppliers, by day and by mode">
+      <PageHeader title="Cash & Bank Book" description="Money received from customers and paid to suppliers and on expenses, by day and by mode">
         <Button variant="outline" size="sm" onClick={exportTab} disabled={isLoading}>
           <Download className="w-4 h-4" />
           Export {tab.toLowerCase()} CSV
@@ -218,7 +256,7 @@ export default function CashBookPage() {
         <StatCard
           label="Money out"
           value={formatCurrency(totals.moneyOut)}
-          sub={`${totals.payments} ${totals.payments === 1 ? 'payment' : 'payments'}`}
+          sub={`${totals.payments} supplier ${totals.payments === 1 ? 'payment' : 'payments'}, ${totals.expenses} ${totals.expenses === 1 ? 'expense' : 'expenses'}`}
         />
         <StatCard
           label="Net movement"
@@ -270,7 +308,13 @@ export default function CashBookPage() {
                     <td data-label="Date" className="px-4 py-3 text-slate-600 whitespace-nowrap">{formatDate(e.date)}</td>
                     <td data-main className="px-4 py-3">
                       <span className="font-mono font-semibold text-slate-900 whitespace-nowrap">{e.no}</span>
-                      <div className="text-xs text-slate-400">{e.kind === 'Receipt' ? 'Receipt from customer' : 'Payment to supplier'}</div>
+                      <div className="text-xs text-slate-400">
+                        {e.kind === 'Receipt'
+                          ? 'Receipt from customer'
+                          : e.kind === 'Payment'
+                            ? 'Payment to supplier'
+                            : `Expense${'head' in e && e.head ? ` · ${e.head}` : ''}`}
+                      </div>
                     </td>
                     <td data-label="Party" className="px-4 py-3 font-medium text-slate-900">{e.party}</td>
                     <td data-label="Mode" className="px-4 py-3 text-slate-600">
@@ -350,9 +394,9 @@ export default function CashBookPage() {
         )}
         {!isLoading && (
           <p className="px-4 py-3 text-xs text-slate-500 border-t border-slate-100">
-            Customer receipts and supplier payments only, on the date each was recorded as received or paid. Cancelled
-            entries are left out. There is no opening balance here, so this shows movement in the period, not what is in
-            the bank or the cash box; other money in and out (salaries, rent, tax, loans) is not recorded in this app.
+            Customer receipts, supplier payments and expenses, on the date each was recorded. Cancelled entries are left
+            out. There is no opening balance here, so this shows movement in the period, not what is in the bank or the
+            cash box. Money not recorded in the app (loans, capital, tax paid) is not included.
           </p>
         )}
       </div>

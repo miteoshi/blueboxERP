@@ -17,7 +17,7 @@ export const TRANSFER_LABEL: Record<TransferDirection, string> = {
 }
 
 // Everything a transfer changes, so recording or cancelling one refreshes all of it
-const TRANSFER_KEYS = [['money-transfers'], ['money-balances']] as const
+const TRANSFER_KEYS = [['money-transfers'], ['money-balances'], ['bank-book'], ['bank-reconciliation']] as const
 
 function useInvalidateTransfers() {
   const qc = useQueryClient()

@@ -22,6 +22,9 @@ export type ProfitAndLoss = {
   gross_profit: number
   expenses: { head: string; amount: number; entries: number }[]
   expenses_total: number
+  // Missing from reports cached before other income was added
+  other_income?: { head: string; amount: number; entries: number }[]
+  other_income_total?: number
   net_profit: number
 }
 

@@ -75,12 +75,22 @@ export default function ProfitAndLossPage() {
   )
   const headAmount = (p: ProfitAndLoss | undefined, head: string) => p?.expenses.find((e) => e.head === head)?.amount ?? 0
 
+  // Other income heads from both periods, the same way
+  const incomeOf = (p: ProfitAndLoss | undefined) => p?.other_income ?? []
+  const incomeTotal = (p: ProfitAndLoss | undefined) => p?.other_income_total ?? 0
+  const incomeHeads = Array.from(
+    new Set([...incomeOf(pl).map((e) => e.head), ...(compare && before ? incomeOf(before).map((e) => e.head) : [])])
+  )
+  const incomeAmount = (p: ProfitAndLoss | undefined, head: string) => incomeOf(p).find((e) => e.head === head)?.amount ?? 0
+
   function exportCsv() {
     if (!pl) return
     const rows: { label: string; now: number; then: number | null }[] = [
       ...lines.map((l) => ({ label: l.label, now: l.value(pl), then: compare && before ? l.value(before) : null })),
       ...heads.map((h) => ({ label: `Expense: ${h}`, now: headAmount(pl, h), then: compare && before ? headAmount(before, h) : null })),
       { label: 'Total expenses', now: pl.expenses_total, then: compare && before ? before.expenses_total : null },
+      ...incomeHeads.map((h) => ({ label: `Other income: ${h}`, now: incomeAmount(pl, h), then: compare && before ? incomeAmount(before, h) : null })),
+      { label: 'Total other income', now: incomeTotal(pl), then: compare && before ? incomeTotal(before) : null },
       { label: 'Net profit', now: pl.net_profit, then: compare && before ? before.net_profit : null },
     ]
     downloadCsv(`profit-and-loss-${from}_${to}`, rows, [
@@ -95,7 +105,7 @@ export default function ProfitAndLossPage() {
 
   return (
     <div>
-      <PageHeader title="Profit & Loss" description="Net sales, cost of goods sold and expenses for a period, from the books in this app">
+      <PageHeader title="Profit & Loss" description="Net sales, cost of goods sold, expenses and other income for a period, from the books in this app">
         <Button variant="outline" size="sm" onClick={exportCsv} disabled={!pl}>
           <Download className="w-4 h-4" />
           Export CSV
@@ -236,6 +246,29 @@ export default function ProfitAndLossPage() {
                     now={pl.expenses_total}
                     then={showThen && before ? before.expenses_total : null}
                   />
+                  {(incomeHeads.length > 0 || incomeTotal(pl) !== 0) && (
+                    <>
+                      <tr>
+                        <td colSpan={cols} className="px-3 sm:px-4 pt-5 pb-1 text-xs font-semibold text-slate-500 uppercase">
+                          Other income
+                        </td>
+                      </tr>
+                      {incomeHeads.map((h) => (
+                        <Row
+                          key={`inc-${h}`}
+                          phoneHidden={!incomeAmount(pl, h)}
+                          line={{ key: `inc-${h}`, label: h, value: () => 0, kind: 'sub' }}
+                          now={incomeAmount(pl, h)}
+                          then={showThen ? incomeAmount(before, h) : null}
+                        />
+                      ))}
+                      <Row
+                        line={{ key: 'inc', label: 'Total other income', value: () => 0, href: '/income' }}
+                        now={incomeTotal(pl)}
+                        then={showThen && before ? incomeTotal(before) : null}
+                      />
+                    </>
+                  )}
                   <Row
                     line={{ key: 'net', label: pl.net_profit < 0 ? 'Net loss' : 'Net profit', value: () => 0, kind: 'grand' }}
                     now={pl.net_profit}
@@ -251,8 +284,8 @@ export default function ProfitAndLossPage() {
                 are part of it. Stock is valued at a running average purchase cost per item, from the stock ledger.
               </p>
               <p>
-                Expenses are as recorded, GST included. Depreciation, interest, income tax and anything not recorded in this
-                app are not included, so this is a management view, not your audited accounts.
+                Expenses and other income are as recorded, GST included. Depreciation, interest paid, income tax and anything
+                not recorded in this app are not included, so this is a management view, not your audited accounts.
               </p>
             </div>
           </div>

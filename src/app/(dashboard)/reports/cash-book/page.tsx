@@ -97,6 +97,29 @@ function useExpensesForPeriod(from: string, to: string) {
   })
 }
 
+// Other income received in the period (cancelled entries left out)
+function useIncomeForPeriod(from: string, to: string) {
+  const supabase = createClient()
+  const orgId = useOrgId()
+  return useQuery({
+    queryKey: ['cash-book-income', orgId, from, to],
+    queryFn: async () => {
+      const { data, error } = await allRows(supabase
+        .from('other_income')
+        .select('id, income_no, income_date, amount, mode, reference, received_from, created_at, head:income_heads ( name )')
+        .eq('status', 'active')
+        .gte('income_date', from)
+        .lte('income_date', to)
+        .order('income_date')
+        .order('id'))
+      if (error) throw error
+      return data
+    },
+    enabled: !!orgId && !!from && !!to,
+    staleTime: 60 * 1000,
+  })
+}
+
 export default function CashBookPage() {
   const role = useRole()
   const canEdit = role === 'admin' || role === 'manager'
@@ -109,8 +132,9 @@ export default function CashBookPage() {
   const { data: receipts, isLoading: loadingReceipts } = useReceiptsForPeriod(from, to)
   const { data: payments, isLoading: loadingPayments } = usePaymentsForPeriod(from, to)
   const { data: expenses, isLoading: loadingExpenses } = useExpensesForPeriod(from, to)
+  const { data: income, isLoading: loadingIncome } = useIncomeForPeriod(from, to)
   const { data: transfers, isLoading: loadingTransfers } = useMoneyTransfers(from, to)
-  const isLoading = loadingReceipts || loadingPayments || loadingExpenses || loadingTransfers
+  const isLoading = loadingReceipts || loadingPayments || loadingExpenses || loadingIncome || loadingTransfers
 
   // One list in the order the money moved
   const entries = useMemo(() => {
@@ -152,9 +176,22 @@ export default function CashBookPage() {
         moneyIn: 0,
         moneyOut: Number(x.amount),
       })),
+      ...(income ?? []).map((i) => ({
+        key: `i${i.id}`,
+        date: i.income_date,
+        at: i.created_at,
+        no: i.income_no,
+        kind: 'Income' as const,
+        party: i.received_from || i.head?.name || '—',
+        head: i.head?.name ?? '',
+        mode: i.mode,
+        reference: i.reference ?? '',
+        moneyIn: Number(i.amount),
+        moneyOut: 0,
+      })),
     ]
     return list.sort(byWhen)
-  }, [receipts, payments, expenses])
+  }, [receipts, payments, expenses, income])
 
   // Transfers between cash and bank are not money in or out of the business:
   // they appear in the day book but stay out of the totals, by mode and by day
@@ -186,6 +223,7 @@ export default function CashBookPage() {
     receipts: receipts?.length ?? 0,
     payments: payments?.length ?? 0,
     expenses: expenses?.length ?? 0,
+    income: income?.length ?? 0,
   }
   const net = r2(totals.moneyIn - totals.moneyOut)
 
@@ -270,7 +308,7 @@ export default function CashBookPage() {
 
   return (
     <div>
-      <PageHeader title="Cash & Bank Book" description="Money received from customers and paid to suppliers and on expenses, by day and by mode">
+      <PageHeader title="Cash & Bank Book" description="Money received from customers and as other income, and paid to suppliers and on expenses, by day and by mode">
         <Button variant="outline" size="sm" onClick={exportTab} disabled={isLoading}>
           <Download className="w-4 h-4" />
           Export {tab.toLowerCase()} CSV
@@ -311,7 +349,7 @@ export default function CashBookPage() {
         <StatCard
           label="Money in"
           value={formatCurrency(totals.moneyIn)}
-          sub={`${totals.receipts} ${totals.receipts === 1 ? 'receipt' : 'receipts'}`}
+          sub={`${totals.receipts} ${totals.receipts === 1 ? 'receipt' : 'receipts'}${totals.income ? `, ${totals.income} other income` : ''}`}
         />
         <StatCard
           label="Money out"
@@ -390,7 +428,7 @@ export default function CashBookPage() {
                           ? 'Receipt from customer'
                           : e.kind === 'Payment'
                             ? 'Payment to supplier'
-                            : `Expense${'head' in e && e.head ? ` · ${e.head}` : ''}`}
+                            : `${e.kind === 'Income' ? 'Other income' : 'Expense'}${'head' in e && e.head ? ` · ${e.head}` : ''}`}
                       </div>
                     </td>
                     <td data-label="Party" className="px-4 py-3 font-medium text-slate-900">{e.party}</td>
@@ -481,7 +519,7 @@ export default function CashBookPage() {
         )}
         {!isLoading && (
           <p className="px-4 py-3 text-xs text-slate-500 border-t border-slate-100">
-            Customer receipts, supplier payments and expenses, on the date each was recorded. Cancelled entries are left
+            Customer receipts, other income, supplier payments and expenses, on the date each was recorded. Cancelled entries are left
             out. Cash deposited in or drawn from the bank is listed in the day book but not counted as money in or out —
             it only moves money between the two balances above. The balances start from the opening balance you set and
             add everything recorded since. Money not recorded in the app (loans, capital, tax paid) is not included, so

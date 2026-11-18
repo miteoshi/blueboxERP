@@ -7,7 +7,7 @@ import { useOrgId } from '@/lib/hooks/use-tenant'
 import { useRequestId } from '@/lib/hooks/use-request-id'
 import { allRows } from '@/lib/utils/all-rows'
 import { isAlreadySaved, rpcFailure } from '@/lib/utils/rpc'
-import type { PaymentMode } from '@/lib/hooks/use-finance'
+import type { MoneyEntry, MoneyHead, RecordMoneyEntry, RecordedMoneyEntry } from '@/lib/money-entries'
 
 // Everything that shows expenses, so a change refreshes all of it
 const EXPENSE_KEYS = [['expense-heads'], ['expenses'], ['cash-book-expenses'], ['money-balances'], ['profit-and-loss'], ['bank-book'], ['bank-reconciliation']] as const
@@ -28,7 +28,7 @@ export function useExpenseHeads() {
         .select('id, name, is_active')
         .order('name')
       if (error) throw error
-      return data
+      return data as MoneyHead[]
     },
     enabled: !!orgId,
     staleTime: 5 * 60 * 1000,
@@ -56,7 +56,23 @@ export function useExpenses(from: string, to: string) {
         .order('created_at', { ascending: false })
         .order('id'))
       if (error) throw error
-      return data
+      return (data ?? []).map(
+        (e): MoneyEntry => ({
+          id: e.id,
+          no: e.expense_no,
+          date: e.expense_date,
+          head_id: e.head_id,
+          head_name: e.head?.name ?? null,
+          party: e.payee,
+          amount: Number(e.amount),
+          mode: e.mode,
+          reference: e.reference,
+          notes: e.notes,
+          status: e.status,
+          cancel_reason: e.cancel_reason,
+          creator_name: e.creator?.full_name ?? null,
+        })
+      )
     },
     enabled: !!orgId && !!from && !!to && from <= to,
     staleTime: 30 * 1000,
@@ -69,32 +85,25 @@ export function useRecordExpense() {
   const requestId = useRequestId()
 
   return useMutation({
-    mutationFn: async (input: {
-      headId: string
-      amount: number
-      mode: PaymentMode
-      expenseDate?: string
-      payee?: string
-      reference?: string
-      notes?: string
-    }) => {
+    mutationFn: async (input: RecordMoneyEntry): Promise<RecordedMoneyEntry> => {
       const { data, error } = await supabase.rpc('record_expense', {
         p_head_id: input.headId,
         p_amount: input.amount,
         p_mode: input.mode,
-        p_expense_date: input.expenseDate || undefined,
-        p_payee: input.payee || undefined,
+        p_expense_date: input.date || undefined,
+        p_payee: input.party || undefined,
         p_reference: input.reference || undefined,
         p_notes: input.notes || undefined,
         p_request_id: requestId.get(),
       })
       if (error) throw rpcFailure(error, 'Could not record the expense')
-      return data as { id: string; expense_no: string; amount: number }
+      const saved = data as { id: string; expense_no: string; amount: number }
+      return { id: saved.id, no: saved.expense_no, amount: saved.amount }
     },
     onSuccess: (data) => {
       requestId.clear()
       invalidate()
-      toast.success(`${data.expense_no} recorded`)
+      toast.success(`${data.no} recorded`)
     },
     onError: (err: Error) => {
       toast.error(err.message)
@@ -111,11 +120,11 @@ export function useCancelExpense() {
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
       const { data, error } = await supabase.rpc('cancel_expense', { p_expense_id: id, p_reason: reason })
       if (error) throw rpcFailure(error, 'Could not cancel the expense')
-      return data as { expense_no: string }
+      return { no: (data as { expense_no: string }).expense_no }
     },
     onSuccess: (data) => {
       invalidate()
-      toast.success(`${data.expense_no} cancelled`)
+      toast.success(`${data.no} cancelled`)
     },
     onError: (err: Error) => toast.error(err.message),
   })

@@ -31,6 +31,7 @@ import {
   Plus,
   List,
   Receipt,
+  HandCoins,
   Wallet,
   Landmark,
   FileSpreadsheet,
@@ -142,6 +143,12 @@ const NAV: (NavItem | NavGroup)[] = [
         label: "Expenses",
         href: "/expenses",
         icon: Receipt,
+        roles: ["admin", "manager", "viewer"],
+      },
+      {
+        label: "Other Income",
+        href: "/income",
+        icon: HandCoins,
         roles: ["admin", "manager", "viewer"],
       },
       {

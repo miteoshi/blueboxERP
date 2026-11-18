@@ -20,6 +20,10 @@ import {
   type StatementLine,
 } from '@/lib/bank-statement'
 import { useBankBook, useSetBankDates } from '@/lib/hooks/use-bank-reconciliation'
+import { useExpenseHeads, useRecordExpense } from '@/lib/hooks/use-expenses'
+import { useIncomeHeads, useRecordOtherIncome } from '@/lib/hooks/use-other-income'
+import { PAYMENT_MODES, type PaymentMode } from '@/lib/hooks/use-finance'
+import { EXPENSE_RULES, INCOME_RULES, suggestHead } from '@/lib/money-entries'
 import { formatCurrency, formatDate, todayISO } from '@/lib/utils/format'
 import { FileUp, X } from 'lucide-react'
 
@@ -327,30 +331,19 @@ export function StatementMatch({
                 <div className="px-3 py-2 bg-amber-50 border-b border-amber-200">
                   <p className="text-sm font-medium text-slate-900">On the statement but not in the app</p>
                   <p className="text-xs text-slate-600">
-                    Bank charges and interest go in{' '}
-                    <Link href={'/expenses' as Route} className="text-blue-600 hover:underline">
-                      Expenses
-                    </Link>
-                    ; money from customers in{' '}
+                    {canEdit ? 'Record bank charges as an expense and interest as other income right here; ' : 'Bank charges go in Expenses and interest in Other Income; '}
+                    money from customers goes in{' '}
                     <Link href={'/payments' as Route} className="text-blue-600 hover:underline">
                       Payments Received
                     </Link>
-                    . Match the statement again after recording them.
+                    , then match the statement again.
                   </p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="stack w-full text-sm">
                     <tbody className="divide-y divide-slate-50">
                       {result.bankOnly.map((l) => (
-                        <tr key={lineKey(l)}>
-                          <td data-main className="px-3 py-2">
-                            <div className="text-slate-900 whitespace-nowrap">{formatDate(l.date)}</div>
-                            <div className="text-xs text-slate-500 break-words">
-                              {[l.description, l.reference].filter(Boolean).join(' · ') || `Row ${l.row}`}
-                            </div>
-                          </td>
-                          <StatementAmount line={l} />
-                        </tr>
+                        <BankOnlyRow key={lineKey(l)} line={l} canEdit={canEdit} />
                       ))}
                     </tbody>
                   </table>
@@ -365,6 +358,135 @@ export function StatementMatch({
         )}
       </div>
     </div>
+  )
+}
+
+const BANK_MODES = PAYMENT_MODES.filter((m) => m.value !== 'cash')
+
+// A statement line not in the app, with a way to record it as an expense or
+// other income that is then ticked off on the statement date
+function BankOnlyRow({ line, canEdit }: { line: StatementLine; canEdit: boolean }) {
+  const isOut = line.withdrawal > 0
+  const { data: expenseHeads } = useExpenseHeads()
+  const { data: incomeHeads } = useIncomeHeads()
+  const recordExpense = useRecordExpense()
+  const recordIncome = useRecordOtherIncome()
+  const setDates = useSetBankDates()
+  const heads = (isOut ? expenseHeads : incomeHeads) ?? []
+  const [open, setOpen] = useState(false)
+  const [headId, setHeadId] = useState('')
+  const [party, setParty] = useState('')
+  const [mode, setMode] = useState<PaymentMode>('bank_transfer')
+  const [saving, setSaving] = useState(false)
+  const amount = isOut ? line.withdrawal : line.deposit
+
+  function start() {
+    setHeadId(suggestHead(heads, `${line.description} ${line.reference}`, isOut ? EXPENSE_RULES : INCOME_RULES))
+    setParty(isOut ? '' : /interest|\bint\b/i.test(line.description) ? 'Bank' : '')
+    setOpen(true)
+  }
+
+  async function save() {
+    if (!headId) return toast.error(`Choose an ${isOut ? 'expense' : 'income'} head`)
+    if (line.date > todayISO()) return toast.error('The statement date is in the future')
+    setSaving(true)
+    try {
+      const input = {
+        headId,
+        amount,
+        mode,
+        date: line.date,
+        party: party.trim() || undefined,
+        reference: line.reference || undefined,
+        notes: line.description ? `Bank statement: ${line.description}`.slice(0, 200) : undefined,
+      }
+      const saved = isOut ? await recordExpense.mutateAsync(input) : await recordIncome.mutateAsync(input)
+      // Ticked off on the statement date, so the line drops into "already ticked off"
+      await setDates.mutateAsync([{ doc_type: isOut ? 'expense' : 'income', doc_id: saved.id, bank_date: line.date }])
+      setOpen(false)
+    } catch {
+      // the hooks have shown the error; an entry saved before a failed tick-off can be ticked off in the list below
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <>
+      <tr>
+        <td data-main className="px-3 py-2">
+          <div className="text-slate-900 whitespace-nowrap">{formatDate(line.date)}</div>
+          <div className="text-xs text-slate-500 break-words">
+            {[line.description, line.reference].filter(Boolean).join(' · ') || `Row ${line.row}`}
+          </div>
+        </td>
+        <StatementAmount line={line} />
+        <td data-hide={canEdit && !open ? undefined : true} className="px-3 py-2 text-right">
+          {canEdit && !open && (
+            <button type="button" onClick={start} className="text-xs text-blue-600 hover:underline whitespace-nowrap">
+              Record as {isOut ? 'expense' : 'income'}
+            </button>
+          )}
+        </td>
+      </tr>
+      {open && (
+        <tr>
+          <td colSpan={3} className="bg-blue-50/60 px-3 py-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
+              <label className="text-xs text-slate-600">
+                {isOut ? 'Expense head' : 'Income head'}
+                <select
+                  value={headId}
+                  onChange={(e) => setHeadId(e.target.value)}
+                  className="mt-1 w-full px-2 py-1.5 text-sm rounded-md border border-slate-300 bg-white"
+                >
+                  <option value="">Choose…</option>
+                  {heads.filter((h) => h.is_active).map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs text-slate-600">
+                {isOut ? 'Paid to' : 'Received from'}
+                <input
+                  value={party}
+                  onChange={(e) => setParty(e.target.value)}
+                  placeholder={isOut ? 'e.g. HDFC Bank' : 'e.g. Bank'}
+                  className="mt-1 w-full px-2 py-1.5 text-sm rounded-md border border-slate-300 bg-white"
+                />
+              </label>
+              <label className="text-xs text-slate-600">
+                Mode
+                <select
+                  value={mode}
+                  onChange={(e) => setMode(e.target.value as PaymentMode)}
+                  className="mt-1 w-full px-2 py-1.5 text-sm rounded-md border border-slate-300 bg-white"
+                >
+                  {BANK_MODES.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="flex gap-2 sm:justify-end">
+                <Button size="sm" variant="outline" onClick={() => setOpen(false)} disabled={saving}>
+                  Close
+                </Button>
+                <Button size="sm" loading={saving} onClick={save}>
+                  Save {formatCurrency(amount)}
+                </Button>
+              </div>
+            </div>
+            <p className="mt-1.5 text-xs text-slate-500">
+              Saved as {isOut ? 'an expense' : 'other income'} dated {formatDate(line.date)} and ticked off on the same day.
+            </p>
+          </td>
+        </tr>
+      )}
+    </>
   )
 }
 

@@ -22,7 +22,8 @@ import {
 import { formatCurrency, formatDate, todayISO } from '@/lib/utils/format'
 import { monthRange, reportPeriods } from '@/lib/utils/periods'
 import { downloadCsv } from '@/lib/utils/csv'
-import { CheckCircle2, Download, Landmark, X } from 'lucide-react'
+import { CheckCircle2, Download, FileUp, Landmark, X } from 'lucide-react'
+import { StatementMatch } from '@/components/finance/statement-match'
 
 const HEAD = 'bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase'
 const r2 = (n: number) => Math.round(n * 100) / 100
@@ -38,6 +39,7 @@ export default function BankReconciliationPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkDate, setBulkDate] = useState(todayISO)
   const [statement, setStatement] = useState('')
+  const [matching, setMatching] = useState(false)
 
   // Reconcile on the last day of the period, but never on a day still to come
   const today = todayISO()
@@ -110,7 +112,23 @@ export default function BankReconciliationPage() {
           <Download className="w-4 h-4" />
           Export CSV
         </Button>
+        <Button size="sm" onClick={() => setMatching(true)} disabled={matching}>
+          <FileUp className="w-4 h-4" />
+          Match statement
+        </Button>
       </PageHeader>
+
+      {matching && (
+        <StatementMatch
+          canEdit={canEdit}
+          onClose={() => setMatching(false)}
+          onUseClosing={(date, balance) => {
+            if (date < from) setFrom(`${date.slice(0, 8)}01`)
+            setTo(date)
+            setStatement(String(balance))
+          }}
+        />
+      )}
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 flex flex-wrap items-end gap-3">
         <Input label="From" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />

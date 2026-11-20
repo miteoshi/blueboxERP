@@ -21,6 +21,7 @@ import { useStockLevels } from '@/lib/hooks/use-stock'
 import { formatCurrency, formatDate, formatQty, todayISO } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { Save } from 'lucide-react'
+import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
 
 // Same rounding as create_debit_note(): per line, to the paisa
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
@@ -53,6 +54,7 @@ function NewDebitNote() {
   const [reason, setReason] = useState<DebitNoteReason>('purchase_return')
   const [returnStock, setReturnStock] = useState(true)
   const [noteDate, setNoteDate] = useState(todayISO)
+  const closed = useClosedPeriod()
   const [notes, setNotes] = useState('')
   const [edits, setEdits] = useState<Record<string, LineEdit>>({})
 
@@ -118,6 +120,7 @@ function NewDebitNote() {
   function save() {
     if (!bill) return toast.error('Select a bill')
     if (noteDate > todayISO()) return toast.error('Debit note date cannot be in the future')
+    if (closed.error(noteDate)) return toast.error(closed.error(noteDate))
     if (noteDate < bill.bill_date) return toast.error(`Date cannot be before the bill date (${formatDate(bill.bill_date)})`)
     if (selected.length === 0) return toast.error(isReturn ? 'Tick what you are returning' : 'Tick the lines to debit')
     for (const r of selected) {
@@ -232,7 +235,8 @@ function NewDebitNote() {
               <Input
                 label="Debit note date"
                 type="date"
-                min={bill?.bill_date}
+                min={closed.min(bill?.bill_date)}
+                error={closed.error(noteDate)}
                 max={todayISO()}
                 value={noteDate}
                 onChange={(e) => setNoteDate(e.target.value)}

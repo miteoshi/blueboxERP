@@ -28,6 +28,7 @@ import { formatCurrency, formatDate, formatDateTime, formatQty, todayISO } from 
 import { amountInWords } from '@/lib/gst'
 import { toast } from 'sonner'
 import { ArrowLeft, FileMinus, Printer, Wallet, XCircle } from 'lucide-react'
+import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
 
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -48,6 +49,7 @@ export default function InvoiceDetailPage() {
   const [amount, setAmount] = useState('')
   const [mode, setMode] = useState<PaymentMode>('bank_transfer')
   const [payDate, setPayDate] = useState(todayISO)
+  const closed = useClosedPeriod()
   const [reference, setReference] = useState('')
   const [showCancel, setShowCancel] = useState(false)
   const [reason, setReason] = useState('')
@@ -213,7 +215,7 @@ export default function InvoiceDetailPage() {
                 ))}
               </select>
             </div>
-            <Input label="Date" type="date" max={todayISO()} value={payDate} onChange={(e) => setPayDate(e.target.value)} />
+            <Input label="Date" type="date" min={closed.min()} error={closed.error(payDate)} max={todayISO()} value={payDate} onChange={(e) => setPayDate(e.target.value)} />
             <Input
               label="Reference"
               placeholder="UTR / cheque no."

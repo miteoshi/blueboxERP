@@ -17,6 +17,7 @@ import type { Enums } from '@/lib/types/database'
 import { RequirePermission } from '@/components/auth/require-permission'
 import { QUEUED_MESSAGE, saveOrQueue } from '@/lib/offline/outbox'
 import { invalidateStockReports } from '@/lib/hooks/stock-reports'
+import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
 
 type TransportMode = Enums<'transport_mode'>
 
@@ -158,6 +159,7 @@ const { data: salesOrders } = useSalesOrdersForDispatch(orgId);
 
   const [selectedSoId,  setSelectedSoId]  = useState(searchParams.get('so') ?? '')
   const [challanDate,   setChallanDate]   = useState(todayISO)
+  const closed = useClosedPeriod()
   const [transportMode, setTransportMode] = useState<TransportMode>('client_truck')
   const [vehicleNo,     setVehicleNo]     = useState('')
   const [driverName,    setDriverName]    = useState('')
@@ -210,6 +212,7 @@ const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
     if (lines.length === 0)          { toast.error('Add at least one item');       return }
     if (lines.some(l => l.qty <= 0)) { toast.error('All quantities must be > 0'); return }
     if (challanDate > todayISO())    { toast.error('Challan date cannot be in the future'); return }
+    if (closed.error(challanDate)) { toast.error(closed.error(challanDate)); return }
 
     if (!orgId) {
         toast.error("Organization context is not available");
@@ -365,6 +368,8 @@ const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
               <Input
                 label="Challan Date"
                 type="date"
+                min={closed.min()}
+                error={closed.error(challanDate)}
                 max={todayISO()}
                 value={challanDate}
                 onChange={e => setChallanDate(e.target.value)}

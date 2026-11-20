@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import { rpcFailure } from '@/lib/utils/rpc'
 import { formatDate } from '@/lib/utils/format'
+import { earliestOpenDate, isInClosedPeriod } from '@/lib/books-lock'
 
 // The last day of the closed period; nothing dated on or before it can be
 // added, changed or cancelled (enforced in the database)
@@ -45,4 +46,18 @@ export function useSetBooksLock() {
     },
     onError: (err: Error) => toast.error(err.message),
   })
+}
+
+// For date fields on entries the closed period guards: `min(own)` is the
+// field's earliest allowed date, and `error(date)` the message to show when
+// the chosen date is inside the closed period
+export function useClosedPeriod() {
+  const { data } = useBooksLock()
+  const until = data?.locked_until ?? null
+  return {
+    until,
+    min: (ownMin?: string | null) => earliestOpenDate(until, ownMin),
+    error: (date: string | null | undefined) =>
+      until && isInClosedPeriod(date, until) ? `The books are closed up to ${formatDate(until)}. Pick a later date.` : undefined,
+  }
 }

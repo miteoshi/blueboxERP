@@ -19,6 +19,7 @@ import { setOffInputCredit, type TaxHeads } from '@/lib/gst'
 import { GST_HEADS, GST_HEAD_LABEL, challanTotal, defaultReturnPeriod, returnPeriodLabel, returnPeriodOptions } from '@/lib/gst-payments'
 import { formatCurrency, formatDate, todayISO } from '@/lib/utils/format'
 import { Landmark } from 'lucide-react'
+import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
 
 const r2 = (n: number) => Math.round(n * 100) / 100
 const signed = (n: number) => `${n < 0 ? '−' : ''}${formatCurrency(Math.abs(r2(n)))}`
@@ -156,6 +157,7 @@ const fromOpening = (o: GstOpening | null | undefined, side: 'payable' | 'credit
 export function GstOpeningForm({ opening, onDone }: { opening: GstOpening | null | undefined; onDone: () => void }) {
   const save = useSetGstOpening()
   const [asOf, setAsOf] = useState(opening?.as_of ?? '')
+  const closed = useClosedPeriod()
   const [payable, setPayable] = useState(() => fromOpening(opening, 'payable'))
   const [credit, setCredit] = useState(() => fromOpening(opening, 'credit'))
 
@@ -173,6 +175,7 @@ export function GstOpeningForm({ opening, onDone }: { opening: GstOpening | null
   function submit() {
     if (!asOf) return toast.error('Choose the day the position is for')
     if (asOf > todayISO()) return toast.error('The opening day cannot be in the future')
+    if (closed.error(asOf)) return toast.error(closed.error(asOf))
     const p = parse(payable)
     if (typeof p === 'string') return toast.error(`Tax payable — ${p}`)
     const c = parse(credit)
@@ -215,7 +218,7 @@ export function GstOpeningForm({ opening, onDone }: { opening: GstOpening | null
       </CardHeader>
       <CardBody className="space-y-4">
         <div className="max-w-xs">
-          <Input label="Position at the end of" type="date" max={todayISO()} value={asOf} onChange={(e) => setAsOf(e.target.value)} />
+          <Input label="Position at the end of" type="date" min={closed.min()} error={closed.error(asOf)} max={todayISO()} value={asOf} onChange={(e) => setAsOf(e.target.value)} />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {grid('Tax still payable (₹)', payable, setPayable)}
@@ -260,6 +263,7 @@ const blankAmounts: Amounts = {
 export function GstPaymentForm({ payable, onDone }: { payable?: { asOf: string; cash: TaxHeads } | null; onDone: () => void }) {
   const record = useRecordGstPayment()
   const [paymentDate, setPaymentDate] = useState(todayISO)
+  const closed = useClosedPeriod()
   const [period, setPeriod] = useState(() => defaultReturnPeriod(todayISO()))
   const [mode, setMode] = useState<PaymentMode>('bank_transfer')
   const [amounts, setAmounts] = useState<Amounts>(blankAmounts)
@@ -288,6 +292,7 @@ export function GstPaymentForm({ payable, onDone }: { payable?: { asOf: string; 
     if (!(total > 0)) return toast.error('Enter the amount paid under at least one head')
     if (!paymentDate) return toast.error('Give the payment date')
     if (paymentDate > todayISO()) return toast.error('Payment date cannot be in the future')
+    if (closed.error(paymentDate)) return toast.error(closed.error(paymentDate))
     record.mutate(
       {
         paymentDate,
@@ -316,7 +321,7 @@ export function GstPaymentForm({ payable, onDone }: { payable?: { asOf: string; 
       </CardHeader>
       <CardBody className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Input label="Payment date" type="date" max={todayISO()} value={paymentDate} onChange={(e) => changeDate(e.target.value)} />
+          <Input label="Payment date" type="date" min={closed.min()} error={closed.error(paymentDate)} max={todayISO()} value={paymentDate} onChange={(e) => changeDate(e.target.value)} />
           <div>
             <label htmlFor="gst-period" className="block text-sm font-medium text-slate-700 mb-1.5">
               For the return of

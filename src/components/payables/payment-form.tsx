@@ -9,6 +9,7 @@ import { useRecordSupplierPayment } from '@/lib/hooks/use-payables'
 import { formatCurrency, todayISO } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { Wallet } from 'lucide-react'
+import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
 
 interface SupplierOption {
   id: string
@@ -35,6 +36,7 @@ export function SupplierPaymentForm({
   const [amount, setAmount] = useState(bill ? String(bill.balance_due) : '')
   const [mode, setMode] = useState<PaymentMode>('bank_transfer')
   const [paymentDate, setPaymentDate] = useState(todayISO)
+  const closed = useClosedPeriod()
   const [reference, setReference] = useState('')
   const [notes, setNotes] = useState('')
 
@@ -49,6 +51,7 @@ export function SupplierPaymentForm({
       return toast.error(`Only ${formatCurrency(bill.balance_due)} is due on ${bill.bill_no}`)
     }
     if (paymentDate > todayISO()) return toast.error('Payment date cannot be in the future')
+    if (closed.error(paymentDate)) return toast.error(closed.error(paymentDate))
     if (mode !== 'cash' && !reference.trim()) return toast.error('Enter the UTR, cheque or transaction number')
     record.mutate(
       { supplierId, amount: value, mode, paymentDate, reference, notes, billId: bill?.id },
@@ -107,7 +110,7 @@ export function SupplierPaymentForm({
               ))}
             </select>
           </div>
-          <Input label="Payment date" type="date" max={todayISO()} value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
+          <Input label="Payment date" type="date" min={closed.min()} error={closed.error(paymentDate)} max={todayISO()} value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
           <Input
             label={mode === 'cash' ? 'Reference (optional)' : 'UTR / cheque / transaction no.'}
             value={reference}

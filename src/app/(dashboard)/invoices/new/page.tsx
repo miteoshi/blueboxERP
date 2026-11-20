@@ -15,6 +15,7 @@ import { formatCurrency, formatDate, formatQty, todayISO } from '@/lib/utils/for
 import { amountInWords } from '@/lib/gst'
 import { toast } from 'sonner'
 import { AlertTriangle, ArrowLeft, Receipt } from 'lucide-react'
+import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
 
 // Same rounding as create_sales_invoice(): per line, to the paisa
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
@@ -46,6 +47,7 @@ function NewInvoice() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [initialised, setInitialised] = useState(false)
   const [invoiceDate, setInvoiceDate] = useState(todayISO)
+  const closed = useClosedPeriod()
   const [notes, setNotes] = useState('')
   const [reverseCharge, setReverseCharge] = useState(false)
 
@@ -312,6 +314,8 @@ function NewInvoice() {
                 <Input
                   label="Invoice date"
                   type="date"
+                  min={closed.min()}
+                  error={closed.error(invoiceDate)}
                   value={invoiceDate}
                   max={todayISO()}
                   onChange={(e) => setInvoiceDate(e.target.value)}

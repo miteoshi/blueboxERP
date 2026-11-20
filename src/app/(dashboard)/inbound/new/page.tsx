@@ -21,6 +21,7 @@ import type {
 import { RequirePermission } from '@/components/auth/require-permission'
 import { QUEUED_MESSAGE, saveOrQueue } from '@/lib/offline/outbox'
 import { invalidateStockReports } from '@/lib/hooks/stock-reports'
+import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
 
 
 type TransportMode = Enums<'transport_mode'>
@@ -62,6 +63,7 @@ function NewGrnPageContent() {
 
   const [supplierId,    setSupplierId]    = useState('')
   const [receiptDate,   setReceiptDate]   = useState(todayISO)
+  const closed = useClosedPeriod()
   const [transportMode, setTransportMode] = useState<TransportMode>('supplier_truck')
   const [vehicleNo,     setVehicleNo]     = useState('')
   const [driverName,    setDriverName]    = useState('')
@@ -112,6 +114,7 @@ function NewGrnPageContent() {
   async function handleSave() {
     if (!supplierId)              { toast.error('Select a supplier');               return }
     if (receiptDate > todayISO()) { toast.error('Receipt date cannot be in the future'); return }
+    if (closed.error(receiptDate)) { toast.error(closed.error(receiptDate)); return }
     if (lines.some(l => !l.item_id)) { toast.error('All lines need an item');      return }
     if (lines.some((l) => !l.unit_id)) {
       toast.error("All items need a unit assigned");
@@ -226,6 +229,8 @@ function NewGrnPageContent() {
               <Input
                 label="Receipt Date"
                 type="date"
+                min={closed.min()}
+                error={closed.error(receiptDate)}
                 max={todayISO()}
                 value={receiptDate}
                 onChange={(e) => setReceiptDate(e.target.value)}

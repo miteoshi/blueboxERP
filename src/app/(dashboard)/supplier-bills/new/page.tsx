@@ -15,6 +15,7 @@ import { useCreateSupplierBill, useUnbilledGrnLines } from '@/lib/hooks/use-paya
 import { formatCurrency, formatDate, formatQty, todayISO } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { Save } from 'lucide-react'
+import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
 
 // Same rounding as create_supplier_bill(): per line, to the paisa
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
@@ -54,6 +55,7 @@ function NewSupplierBill() {
 
   const [invoiceNo, setInvoiceNo] = useState('')
   const [billDate, setBillDate] = useState(todayISO)
+  const closed = useClosedPeriod()
   const [dueDate, setDueDate] = useState<string | null>(null) // null = follow the supplier's credit days
   const [invoiceTotal, setInvoiceTotal] = useState('')
   const [notes, setNotes] = useState('')
@@ -106,6 +108,7 @@ function NewSupplierBill() {
     if (!invoiceNo.trim()) return toast.error("Enter the supplier's invoice number")
     if (!billDate) return toast.error('Enter the invoice date')
     if (billDate > todayISO()) return toast.error('Invoice date cannot be in the future')
+    if (closed.error(billDate)) return toast.error(closed.error(billDate))
     if (due < billDate) return toast.error('Due date cannot be before the invoice date')
     if (selected.length === 0) return toast.error('Tick the received items this invoice covers')
     for (const r of selected) {
@@ -180,7 +183,7 @@ function NewSupplierBill() {
                 onChange={(e) => setInvoiceNo(e.target.value)}
                 placeholder="As printed on their invoice"
               />
-              <Input label="Invoice date" type="date" max={todayISO()} value={billDate} onChange={(e) => setBillDate(e.target.value)} />
+              <Input label="Invoice date" type="date" min={closed.min()} error={closed.error(billDate)} max={todayISO()} value={billDate} onChange={(e) => setBillDate(e.target.value)} />
               <div>
                 <Input label="Due date" type="date" min={billDate} value={due} onChange={(e) => setDueDate(e.target.value)} />
                 <p className="mt-1 text-xs text-slate-500">

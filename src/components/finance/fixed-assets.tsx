@@ -18,6 +18,7 @@ import {
 import { ASSET_CATEGORIES, METHOD_LABEL, categorySuggestion, describeMethod, type DepreciationMethod } from '@/lib/fixed-assets'
 import { formatCurrency, formatDate, todayISO } from '@/lib/utils/format'
 import { Armchair } from 'lucide-react'
+import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
 
 const SELECT = 'w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
 const twoDp = (n: number) => Number.isFinite(n) && Math.round(n * 100) / 100 === n
@@ -29,6 +30,7 @@ export function FixedAssetForm({ asset, onDone }: { asset?: FixedAsset; onDone: 
   const [name, setName] = useState(asset?.name ?? '')
   const [category, setCategory] = useState(asset?.category ?? '')
   const [purchaseDate, setPurchaseDate] = useState(asset?.purchase_date ?? todayISO())
+  const closed = useClosedPeriod()
   const [cost, setCost] = useState(asset ? String(Number(asset.cost)) : '')
   const [salvage, setSalvage] = useState(asset && Number(asset.salvage_value) ? String(Number(asset.salvage_value)) : '')
   const [method, setMethod] = useState<DepreciationMethod>(asset?.method ?? 'slm')
@@ -55,6 +57,7 @@ export function FixedAssetForm({ asset, onDone }: { asset?: FixedAsset; onDone: 
     if (!name.trim()) return toast.error('Give the asset a name')
     if (!purchaseDate) return toast.error('Choose the purchase date')
     if (purchaseDate > todayISO()) return toast.error('The purchase date cannot be in the future')
+    if (closed.error(purchaseDate)) return toast.error(closed.error(purchaseDate))
     if (!(c > 0) || !twoDp(c)) return toast.error('Enter the cost, with at most 2 decimals')
     if (!(sv >= 0) || !twoDp(sv)) return toast.error('Enter a salvage value of nil or more, with at most 2 decimals')
     if (sv >= c) return toast.error('The salvage value must be less than the cost')
@@ -109,7 +112,7 @@ export function FixedAssetForm({ asset, onDone }: { asset?: FixedAsset; onDone: 
               ))}
             </datalist>
           </div>
-          <Input label="Purchase date" type="date" max={todayISO()} value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} />
+          <Input label="Purchase date" type="date" min={closed.min()} error={closed.error(purchaseDate)} max={todayISO()} value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} />
           <Input label="Cost (₹)" type="number" min="0" step="0.01" inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} />
           <Input
             label="Salvage value (₹)"
@@ -336,6 +339,7 @@ function FootCell({ value, tone }: { value: number; tone?: string }) {
 function DisposePanel({ asset, onDone }: { asset: FixedAsset; onDone: () => void }) {
   const dispose = useDisposeFixedAsset()
   const [disposedOn, setDisposedOn] = useState(todayISO)
+  const closed = useClosedPeriod()
   const [amount, setAmount] = useState('')
   const [mode, setMode] = useState<PaymentMode>('bank_transfer')
   const [reference, setReference] = useState('')
@@ -344,6 +348,7 @@ function DisposePanel({ asset, onDone }: { asset: FixedAsset; onDone: () => void
   function submit() {
     if (!disposedOn) return toast.error('Give the date')
     if (disposedOn > todayISO()) return toast.error('The date cannot be in the future')
+    if (closed.error(disposedOn)) return toast.error(closed.error(disposedOn))
     if (disposedOn < asset.purchase_date) return toast.error(`The date cannot be before the purchase date, ${formatDate(asset.purchase_date)}`)
     if (!(value >= 0) || !twoDp(value)) return toast.error('Enter the amount received, nil or more, with at most 2 decimals')
     dispose.mutate({ id: asset.id, disposedOn, saleAmount: value, saleMode: mode, saleReference: reference }, { onSuccess: onDone })
@@ -356,7 +361,7 @@ function DisposePanel({ asset, onDone }: { asset: FixedAsset; onDone: () => void
         goes to the Profit &amp; Loss.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-        <Input label="Date" type="date" min={asset.purchase_date} max={todayISO()} value={disposedOn} onChange={(e) => setDisposedOn(e.target.value)} />
+        <Input label="Date" type="date" min={closed.min(asset.purchase_date)} error={closed.error(disposedOn)} max={todayISO()} value={disposedOn} onChange={(e) => setDisposedOn(e.target.value)} />
         <Input label="Amount received (₹)" type="number" min="0" step="0.01" inputMode="decimal" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
         {value > 0 && (
           <>

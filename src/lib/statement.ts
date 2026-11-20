@@ -30,6 +30,7 @@ const KIND_LABEL: Record<string, string> = {
   bill: 'Supplier bill',
   payment: 'Payment',
   debit_note: 'Debit note',
+  tds: 'TDS deducted',
 }
 
 const MODE_LABEL: Record<string, string> = {
@@ -78,6 +79,11 @@ export function statementDetail(row: Pick<StatementRow, 'kind' | 'detail'>): str
       return DEBIT_REASON[detail] ?? detail
     case 'bill':
       return `Supplier invoice ${detail}`
+    case 'tds':
+      // "Code 1024 at 2% of 50000.00": the base as rupees
+      return detail.replace(/ of (\d+(?:\.\d+)?)$/, (_, n: string) =>
+        ` of ₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      )
     default:
       return detail
   }

@@ -33,6 +33,8 @@ type Line = {
   detail?: (p: FinancialPosition) => string
   kind?: 'total' | 'grand'
   href?: string
+  // Shown only when it has an amount on either day
+  optional?: boolean
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
@@ -68,6 +70,13 @@ const OWNED: Line[] = [
     value: (p) => (p.gst.balance === null ? null : Math.max(0, -p.gst.balance)),
     href: '/gst-payments',
   },
+  {
+    key: 'tds_excess',
+    label: 'TDS deposited in excess',
+    optional: true,
+    value: (p) => (p.tds.balance === null ? null : Math.max(0, -p.tds.balance)),
+    href: '/tds',
+  },
 ]
 
 const OWED: Line[] = [
@@ -90,6 +99,12 @@ const OWED: Line[] = [
     label: 'GST payable',
     value: (p) => (p.gst.balance === null ? null : Math.max(0, p.gst.balance)),
     href: '/gst-payments',
+  },
+  {
+    key: 'tds_payable',
+    label: 'TDS to deposit',
+    value: (p) => (p.tds.balance === null ? null : Math.max(0, p.tds.balance)),
+    href: '/tds',
   },
   {
     key: 'loans',
@@ -195,7 +210,7 @@ export default function FinancialPositionPage() {
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatCard label="Owned" value={formatCurrency(now.total_owned)} sub="cash, bank, customers, stock, assets" />
-            <StatCard label="Owed" value={formatCurrency(now.total_owed)} sub="suppliers, customer advances, GST, loans" />
+            <StatCard label="Owed" value={formatCurrency(now.total_owed)} sub="suppliers, customer advances, GST, TDS, loans" />
             <StatCard
               label="Net worth as per the app"
               value={signed(now.net_worth)}
@@ -263,7 +278,7 @@ export default function FinancialPositionPage() {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 <Section label="What the business owns" cols={cols} />
-                {OWNED.map((l) => (
+                {OWNED.filter((l) => !l.optional || !!(now && l.value(now)) || !!(then && l.value(then))).map((l) => (
                   <Row key={l.key} line={l} now={now} then={then} />
                 ))}
                 <Row line={{ key: 'owned', label: 'Total owned', value: (p) => p.total_owned, kind: 'total' }} now={now} then={then} />

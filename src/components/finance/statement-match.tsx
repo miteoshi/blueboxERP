@@ -339,6 +339,10 @@ export function StatementMatch({
                     , GST challans in{' '}
                     <Link href={'/gst-payments' as Route} className="text-blue-600 hover:underline">
                       GST Payments
+                    </Link>
+                    , TDS challans in{' '}
+                    <Link href={'/tds' as Route} className="text-blue-600 hover:underline">
+                      TDS
                     </Link>{' '}
                     and loan EMIs or capital in{' '}
                     <Link href={'/capital-loans' as Route} className="text-blue-600 hover:underline">

@@ -145,6 +145,29 @@ function useGstPaidForPeriod(from: string, to: string) {
   })
 }
 
+// TDS challans deposited in the period (cancelled ones left out)
+function useTdsPaidForPeriod(from: string, to: string) {
+  const supabase = createClient()
+  const orgId = useOrgId()
+  return useQuery({
+    queryKey: ['cash-book-tds', orgId, from, to],
+    queryFn: async () => {
+      const { data, error } = await allRows(supabase
+        .from('tds_deposits')
+        .select('id, deposit_no, deposit_date, amount, mode, reference, period, created_at')
+        .eq('status', 'active')
+        .gte('deposit_date', from)
+        .lte('deposit_date', to)
+        .order('deposit_date')
+        .order('id'))
+      if (error) throw error
+      return data
+    },
+    enabled: !!orgId && !!from && !!to,
+    staleTime: 60 * 1000,
+  })
+}
+
 // Capital and loan entries in the period (cancelled ones left out)
 function useFundingForPeriod(from: string, to: string) {
   const supabase = createClient()
@@ -218,10 +241,11 @@ export default function CashBookPage() {
   const { data: expenses, isLoading: loadingExpenses } = useExpensesForPeriod(from, to)
   const { data: income, isLoading: loadingIncome } = useIncomeForPeriod(from, to)
   const { data: gstPaid, isLoading: loadingGst } = useGstPaidForPeriod(from, to)
+  const { data: tdsPaid, isLoading: loadingTds } = useTdsPaidForPeriod(from, to)
   const { data: funding, isLoading: loadingFunding } = useFundingForPeriod(from, to)
   const { data: assetFlows, isLoading: loadingAssets } = useAssetsForPeriod(from, to)
   const { data: transfers, isLoading: loadingTransfers } = useMoneyTransfers(from, to)
-  const isLoading = loadingReceipts || loadingPayments || loadingExpenses || loadingIncome || loadingGst || loadingFunding || loadingAssets || loadingTransfers
+  const isLoading = loadingReceipts || loadingPayments || loadingExpenses || loadingIncome || loadingGst || loadingTds || loadingFunding || loadingAssets || loadingTransfers
 
   // One list in the order the money moved
   const entries = useMemo(() => {
@@ -289,6 +313,19 @@ export default function CashBookPage() {
         moneyIn: 0,
         moneyOut: Number(g.amount),
       })),
+      ...(tdsPaid ?? []).map((d) => ({
+        key: `d${d.id}`,
+        date: d.deposit_date,
+        at: d.created_at,
+        no: d.deposit_no,
+        kind: 'TDS' as const,
+        party: 'TDS deposit',
+        head: `for ${returnPeriodLabel(d.period)}`,
+        mode: d.mode,
+        reference: d.reference ?? '',
+        moneyIn: 0,
+        moneyOut: Number(d.amount),
+      })),
       ...(funding ?? []).map((f) => ({
         key: `f${f.id}`,
         date: f.entry_date,
@@ -330,7 +367,7 @@ export default function CashBookPage() {
       })),
     ]
     return list.sort(byWhen)
-  }, [receipts, payments, expenses, income, gstPaid, funding, assetFlows])
+  }, [receipts, payments, expenses, income, gstPaid, tdsPaid, funding, assetFlows])
 
   // Transfers between cash and bank are not money in or out of the business:
   // they appear in the day book but stay out of the totals, by mode and by day
@@ -364,6 +401,7 @@ export default function CashBookPage() {
     expenses: expenses?.length ?? 0,
     income: income?.length ?? 0,
     gst: gstPaid?.length ?? 0,
+    tds: tdsPaid?.length ?? 0,
     fundingIn: (funding ?? []).filter((f) => f.direction === 'in').length,
     fundingOut: (funding ?? []).filter((f) => f.direction === 'out').length,
     assetsBought: assetFlows?.bought.length ?? 0,
@@ -498,7 +536,7 @@ export default function CashBookPage() {
         <StatCard
           label="Money out"
           value={formatCurrency(totals.moneyOut)}
-          sub={`${totals.payments} supplier ${totals.payments === 1 ? 'payment' : 'payments'}, ${totals.expenses} ${totals.expenses === 1 ? 'expense' : 'expenses'}${totals.gst ? `, ${totals.gst} GST` : ''}${totals.fundingOut ? `, ${totals.fundingOut} capital/loan` : ''}${totals.assetsBought ? `, ${totals.assetsBought} asset bought` : ''}`}
+          sub={`${totals.payments} supplier ${totals.payments === 1 ? 'payment' : 'payments'}, ${totals.expenses} ${totals.expenses === 1 ? 'expense' : 'expenses'}${totals.gst ? `, ${totals.gst} GST` : ''}${totals.tds ? `, ${totals.tds} TDS` : ''}${totals.fundingOut ? `, ${totals.fundingOut} capital/loan` : ''}${totals.assetsBought ? `, ${totals.assetsBought} asset bought` : ''}`}
         />
         <StatCard
           label="Net movement"
@@ -574,7 +612,7 @@ export default function CashBookPage() {
                             ? 'Payment to supplier'
                             : e.kind === 'Funding' || e.kind === 'Asset'
                               ? ('head' in e && e.head) || 'Capital / loan'
-                              : `${e.kind === 'Income' ? 'Other income' : e.kind === 'GST' ? 'GST challan' : 'Expense'}${'head' in e && e.head ? ` · ${e.head}` : ''}`}
+                              : `${e.kind === 'Income' ? 'Other income' : e.kind === 'GST' ? 'GST challan' : e.kind === 'TDS' ? 'TDS challan' : 'Expense'}${'head' in e && e.head ? ` · ${e.head}` : ''}`}
                       </div>
                     </td>
                     <td data-label="Party" className="px-4 py-3 font-medium text-slate-900">{e.party}</td>

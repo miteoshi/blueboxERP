@@ -91,7 +91,7 @@ export default function SupplierBillDetailPage() {
       {panel === 'pay' && (
         <SupplierPaymentForm
           supplierId={bill.supplier_id}
-          bill={{ id: bill.id, bill_no: bill.bill_no, balance_due: balance }}
+          bill={{ id: bill.id, bill_no: bill.bill_no, balance_due: balance, taxable_value: bill.taxable_value, total_amount: bill.total_amount }}
           onDone={() => setPanel(null)}
         />
       )}

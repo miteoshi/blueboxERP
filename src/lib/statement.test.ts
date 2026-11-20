@@ -10,6 +10,7 @@ describe('statementDetail', () => {
   it('turns note reasons and bill numbers into words', () => {
     expect(statementDetail({ kind: 'credit_note', detail: 'sales_return' })).toBe('Sales return')
     expect(statementDetail({ kind: 'debit_note', detail: 'purchase_return' })).toBe('Goods returned')
+    expect(statementDetail({ kind: 'tds', detail: 'Code 1024 at 2% of 150000.00' })).toBe('Code 1024 at 2% of ₹1,50,000.00')
     expect(statementDetail({ kind: 'bill', detail: 'INV/778' })).toBe('Supplier invoice INV/778')
     expect(statementDetail({ kind: 'invoice', detail: '  ' })).toBe('')
   })

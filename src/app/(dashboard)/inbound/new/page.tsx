@@ -20,6 +20,7 @@ import type {
   } from '@/lib/types/database'
 import { RequirePermission } from '@/components/auth/require-permission'
 import { QUEUED_MESSAGE, saveOrQueue } from '@/lib/offline/outbox'
+import { invalidateStockReports } from '@/lib/hooks/stock-reports'
 
 
 type TransportMode = Enums<'transport_mode'>
@@ -167,6 +168,7 @@ function NewGrnPageContent() {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["inbound-receipts"] }),
         qc.invalidateQueries({ queryKey: ["stock-levels"] }),
+        invalidateStockReports(qc),
       ]);
 
       toast.success(`GRN ${result.receipt_no} created — stock updated`);

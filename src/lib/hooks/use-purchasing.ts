@@ -39,6 +39,10 @@ const PURCHASING_KEYS = [
   ['inbound-receipts'],
   ['stock-levels'],
   ['reorder-alerts'],
+  // Stock came in, so the reports that value it change
+  ['stock-valuation'],
+  ['profit-and-loss'],
+  ['financial-position'],
 ] as const
 
 function useInvalidatePurchasing() {

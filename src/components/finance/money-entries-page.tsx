@@ -17,6 +17,8 @@ import { monthRange, reportPeriods } from '@/lib/utils/periods'
 import { downloadCsv } from '@/lib/utils/csv'
 import { Download, Plus, Receipt, Tags, type LucideIcon } from 'lucide-react'
 import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
+import { useTdsFields } from '@/components/finance/tds-fields'
+import { EXPENSE_TDS_CODES, isPan } from '@/lib/tds'
 
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
 
@@ -48,6 +50,8 @@ export type MoneyEntriesConfig = {
   emptyText: string
   footnote: ReactNode
   barClass: string
+  // Entries can deduct TDS from the payee (expenses)
+  allowTds?: boolean
   useHeads: () => UseQueryResult<MoneyHead[]>
   useEntries: (from: string, to: string) => UseQueryResult<MoneyEntry[]>
   useRecord: () => UseMutationResult<RecordedMoneyEntry, Error, RecordMoneyEntry>
@@ -91,7 +95,7 @@ export function MoneyEntriesPage({ config: c }: { config: MoneyEntriesConfig }) 
     return [...map.entries()].map(([id, r]) => ({ id, ...r })).sort((a, b) => b.amount - a.amount)
   }, [entries])
   const periodTotal = r2(byHead.reduce((s, h) => s + h.amount, 0))
-  const cashTotal = r2(active.filter((e) => e.mode === 'cash').reduce((s, e) => s + Number(e.amount), 0))
+  const cashTotal = r2(active.filter((e) => e.mode === 'cash').reduce((s, e) => s + Number(e.paid ?? e.amount), 0))
 
   function confirmCancel(id: string) {
     if (!reason.trim()) {
@@ -118,6 +122,13 @@ export function MoneyEntriesPage({ config: c }: { config: MoneyEntriesConfig }) 
       { header: 'Mode', value: (e) => paymentModeLabel(e.mode) },
       { header: 'Reference', value: (e) => e.reference },
       { header: 'Amount', value: (e) => Number(e.amount) },
+      ...(c.allowTds
+        ? [
+            { header: 'TDS', value: (e: MoneyEntry) => Number(e.tds ?? 0) },
+            { header: 'TDS Code', value: (e: MoneyEntry) => e.tds_code ?? '' },
+            { header: 'Paid', value: (e: MoneyEntry) => Number(e.paid ?? e.amount) },
+          ]
+        : []),
       { header: 'Status', value: (e) => (e.status === 'cancelled' ? `Cancelled: ${e.cancel_reason ?? ''}` : 'Active') },
       { header: 'Notes', value: (e) => e.notes },
     ])
@@ -294,6 +305,11 @@ export function MoneyEntriesPage({ config: c }: { config: MoneyEntriesConfig }) 
                         </td>
                         <td data-label="Amount" className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900 whitespace-nowrap">
                           {formatCurrency(Number(e.amount))}
+                          {Number(e.tds) > 0 && (
+                            <div className="text-xs font-normal text-slate-500">
+                              paid {formatCurrency(Number(e.paid))} + TDS {formatCurrency(Number(e.tds))}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right">
                           {canWrite && !off && (
@@ -367,7 +383,9 @@ function EntryForm({ config: c, heads, onDone }: { config: MoneyEntriesConfig; h
   const [party, setParty] = useState('')
   const [reference, setReference] = useState('')
   const [notes, setNotes] = useState('')
+  const [partyPan, setPartyPan] = useState('')
   const value = Number(amount)
+  const tdsFields = useTdsFields({ codes: EXPENSE_TDS_CODES })
 
   function submit(again: boolean) {
     if (!headId) return toast.error(`Choose an ${c.headWord}`)
@@ -375,14 +393,20 @@ function EntryForm({ config: c, heads, onDone }: { config: MoneyEntriesConfig; h
     if (Math.round(value * 100) / 100 !== value) return toast.error('Amount can have at most 2 decimals')
     if (entryDate > todayISO()) return toast.error(`${c.dateLabel} date cannot be in the future`)
     if (closed.error(entryDate)) return toast.error(closed.error(entryDate))
+    const tdsProblem = tdsFields.problem()
+    if (tdsProblem) return toast.error(tdsProblem)
+    if (tdsFields.on && !party.trim()) return toast.error(`${c.partyLabel}: the TDS return needs the payee's name`)
+    const pan = partyPan.trim().toUpperCase()
+    if (pan && !isPan(pan)) return toast.error('A PAN is 5 letters, 4 digits and a letter, like ABCDE1234F')
     record.mutate(
-      { headId, amount: value, mode, date: entryDate, party, reference, notes },
+      { headId, amount: value, mode, date: entryDate, party, reference, notes, partyPan: pan || undefined, tds: tdsFields.input },
       {
         onSuccess: () => {
           if (!again) return onDone()
           // Keep head, mode and date: the next one is usually the same kind
           setAmount('')
           setParty('')
+          setPartyPan('')
           setReference('')
           setNotes('')
         },
@@ -416,7 +440,15 @@ function EntryForm({ config: c, heads, onDone }: { config: MoneyEntriesConfig; h
               ))}
             </select>
           </div>
-          <Input label="Amount (₹)" type="number" min="0" step="0.01" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <Input
+            label={tdsFields.on ? 'Paid (₹)' : 'Amount (₹)'}
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
           <Input label="Date" type="date" min={closed.min()} error={closed.error(entryDate)} max={todayISO()} value={entryDate} onChange={(e) => setEntryDate(e.target.value)} />
           <Input label={c.partyLabel} placeholder={c.partyPlaceholder} value={party} onChange={(e) => setParty(e.target.value)} />
           <div>
@@ -445,6 +477,28 @@ function EntryForm({ config: c, heads, onDone }: { config: MoneyEntriesConfig; h
             <Input label="Notes" placeholder={c.notesPlaceholder} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
         </div>
+        {c.allowTds &&
+          tdsFields.fields({
+            summary: (
+              <p className="text-sm text-slate-600 pb-2">
+                Paid <span className="font-semibold tabular-nums">{formatCurrency(Number.isFinite(value) ? value : 0)}</span>
+                {' · '}TDS <span className="font-semibold tabular-nums">{formatCurrency(tdsFields.tds)}</span>
+                {' · '}costs <span className="font-semibold tabular-nums">{formatCurrency(r2((Number.isFinite(value) ? value : 0) + tdsFields.tds))}</span>
+              </p>
+            ),
+            extra: (
+              <div className="w-full sm:w-64">
+                <Input
+                  label="Payee's PAN"
+                  placeholder="ABCDE1234F"
+                  maxLength={10}
+                  value={partyPan}
+                  onChange={(e) => setPartyPan(e.target.value)}
+                  hint="For the TDS return; without it TDS is due at 20%"
+                />
+              </div>
+            ),
+          })}
         <div className="flex flex-wrap gap-2 justify-end">
           <Button variant="outline" onClick={onDone}>
             Close

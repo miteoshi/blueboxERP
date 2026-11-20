@@ -27,6 +27,11 @@ export const TDS_CODES: TdsCode[] = [
   { code: '1009', label: 'Rent of land or building', was: '194I', rate: 10, rateWithoutPan: 20, threshold: '₹50,000 a month' },
 ]
 
+// For expenses: what is usually paid as an expense, most common first (no purchase of goods)
+export const EXPENSE_TDS_CODES: TdsCode[] = ['1009', '1027', '1024', '1023', '1026', '1006', '1008'].map(
+  (c) => TDS_CODES.find((x) => x.code === c) as TdsCode,
+)
+
 export function tdsCode(code: string | null | undefined): TdsCode | undefined {
   return TDS_CODES.find((c) => c.code === code)
 }

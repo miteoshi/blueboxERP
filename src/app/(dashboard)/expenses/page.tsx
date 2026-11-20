@@ -5,6 +5,7 @@ import { useCancelExpense, useExpenseHeads, useExpenses, useRecordExpense, useSa
 import { Receipt } from 'lucide-react'
 
 const EXPENSES: MoneyEntriesConfig = {
+  allowTds: true,
   title: 'Expenses',
   description: 'Rent, wages, electricity, freight and other money paid out that is not a supplier bill',
   csvName: 'expenses',

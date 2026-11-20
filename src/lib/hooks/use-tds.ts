@@ -112,35 +112,96 @@ export function useTdsDeposits(from: string, to: string, enabled = true) {
 
 export type TdsDepositRow = NonNullable<ReturnType<typeof useTdsDeposits>['data']>[number]
 
-// Payments that deducted TDS in the period: the register the quarterly return is made from
+// Every deduction in the period, from supplier payments and from expenses:
+// the register the quarterly return is made from
+export type TdsDeductionRow = {
+  id: string
+  kind: 'payment' | 'expense'
+  no: string
+  date: string
+  party: string
+  pan: string | null
+  gstin: string | null
+  code: string | null
+  rate: number
+  base: number
+  tds: number
+  paid: number
+  mode: string
+  reference: string | null
+}
+
 export function useTdsDeductions(from: string, to: string, enabled = true) {
   const supabase = createClient()
   const orgId = useOrgId()
   return useQuery({
     queryKey: ['tds-deductions', orgId, from, to],
-    queryFn: async () => {
-      const { data, error } = await allRows(supabase
-        .from('supplier_payments')
-        .select(`
-          id, payment_no, payment_date, amount, tds_code, tds_rate, tds_base, tds_amount, gross_amount, mode, reference,
-          supplier:suppliers ( id, name, pan, gst_number )
-        `)
-        .eq('status', 'active')
-        .gt('tds_amount', 0)
-        .gte('payment_date', from)
-        .lte('payment_date', to)
-        .order('payment_date')
-        .order('payment_no')
-        .order('id'))
-      if (error) throw error
-      return data ?? []
+    queryFn: async (): Promise<TdsDeductionRow[]> => {
+      const [payments, expenses] = await Promise.all([
+        allRows(supabase
+          .from('supplier_payments')
+          .select(`
+            id, payment_no, payment_date, amount, tds_code, tds_rate, tds_base, tds_amount, mode, reference,
+            supplier:suppliers ( name, pan, gst_number )
+          `)
+          .eq('status', 'active')
+          .gt('tds_amount', 0)
+          .gte('payment_date', from)
+          .lte('payment_date', to)
+          .order('payment_date')
+          .order('id')),
+        allRows(supabase
+          .from('expenses')
+          .select('id, expense_no, expense_date, payee, payee_pan, amount, tds_code, tds_rate, tds_base, tds_amount, mode, reference')
+          .eq('status', 'active')
+          .gt('tds_amount', 0)
+          .gte('expense_date', from)
+          .lte('expense_date', to)
+          .order('expense_date')
+          .order('id')),
+      ])
+      if (payments.error) throw payments.error
+      if (expenses.error) throw expenses.error
+      const rows: TdsDeductionRow[] = [
+        ...(payments.data ?? []).map((p) => ({
+          id: p.id,
+          kind: 'payment' as const,
+          no: p.payment_no,
+          date: p.payment_date,
+          party: p.supplier?.name ?? '—',
+          pan: p.supplier?.pan ?? null,
+          gstin: p.supplier?.gst_number ?? null,
+          code: p.tds_code,
+          rate: Number(p.tds_rate),
+          base: Number(p.tds_base ?? 0),
+          tds: Number(p.tds_amount),
+          paid: Number(p.amount),
+          mode: p.mode,
+          reference: p.reference,
+        })),
+        ...(expenses.data ?? []).map((e) => ({
+          id: e.id,
+          kind: 'expense' as const,
+          no: e.expense_no,
+          date: e.expense_date,
+          party: e.payee ?? '—',
+          pan: e.payee_pan,
+          gstin: null,
+          code: e.tds_code,
+          rate: Number(e.tds_rate),
+          base: Number(e.tds_base ?? 0),
+          tds: Number(e.tds_amount),
+          paid: Number(e.amount),
+          mode: e.mode,
+          reference: e.reference,
+        })),
+      ]
+      return rows.sort((a, b) => a.date.localeCompare(b.date) || a.no.localeCompare(b.no))
     },
     enabled: !!orgId && enabled && !!from && !!to && from <= to,
     staleTime: 30 * 1000,
   })
 }
-
-export type TdsDeductionRow = NonNullable<ReturnType<typeof useTdsDeductions>['data']>[number]
 
 export function useSetTdsOpening() {
   const supabase = createClient()

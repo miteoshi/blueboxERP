@@ -55,24 +55,25 @@ export default function TdsPage() {
   const months = setLedger?.months ?? []
   const overdue = months.filter((m) => m.overdue)
   const overdueAmount = r2(overdue.reduce((s, m) => s + m.outstanding, 0))
-  const deducted = r2((deductions ?? []).reduce((s, p) => s + Number(p.tds_amount), 0))
+  const deducted = r2((deductions ?? []).reduce((s, p) => s + p.tds, 0))
   const activeDeposits = (deposits ?? []).filter((d) => d.status === 'active')
   const charges = r2(activeDeposits.reduce((s, d) => s + Number(d.interest) + Number(d.late_fee), 0))
 
   // The deductions as the quarterly return wants them, one row per payment
   function exportDeductions() {
     downloadCsv(`tds-deductions-${from}_${to}`, deductions ?? [], [
-      { header: 'Quarter', value: (p) => tdsQuarter(p.payment_date).label },
-      { header: 'Payment No', value: (p) => p.payment_no },
-      { header: 'Date of Payment', value: (p) => p.payment_date },
-      { header: 'Deductee', value: (p) => p.supplier?.name },
-      { header: 'PAN', value: (p) => deducteePan(p.supplier?.pan, p.supplier?.gst_number) ?? 'PANNOTAVBL' },
-      { header: 'Payment Code', value: (p) => p.tds_code },
-      { header: 'Nature of Payment', value: (p) => tdsCodeLabel(p.tds_code) },
-      { header: 'Amount Paid / Credited', value: (p) => Number(p.tds_base ?? 0) },
-      { header: 'Rate %', value: (p) => Number(p.tds_rate) },
-      { header: 'TDS', value: (p) => Number(p.tds_amount) },
-      { header: 'Paid to Supplier', value: (p) => Number(p.amount) },
+      { header: 'Quarter', value: (p) => tdsQuarter(p.date).label },
+      { header: 'Entry No', value: (p) => p.no },
+      { header: 'Entry', value: (p) => (p.kind === 'expense' ? 'Expense' : 'Supplier payment') },
+      { header: 'Date of Payment', value: (p) => p.date },
+      { header: 'Deductee', value: (p) => p.party },
+      { header: 'PAN', value: (p) => deducteePan(p.pan, p.gstin) ?? 'PANNOTAVBL' },
+      { header: 'Payment Code', value: (p) => p.code },
+      { header: 'Nature of Payment', value: (p) => tdsCodeLabel(p.code) },
+      { header: 'Amount Paid / Credited', value: (p) => p.base },
+      { header: 'Rate %', value: (p) => p.rate },
+      { header: 'TDS', value: (p) => p.tds },
+      { header: 'Paid to Deductee', value: (p) => p.paid },
       { header: 'Mode', value: (p) => paymentModeLabel(p.mode) },
       { header: 'Reference', value: (p) => p.reference },
     ])
@@ -107,7 +108,7 @@ export default function TdsPage() {
 
   return (
     <div>
-      <PageHeader title="TDS" description="TDS deducted from supplier payments, what is still to deposit, and the challans paid">
+      <PageHeader title="TDS" description="TDS deducted from supplier payments and expenses, what is still to deposit, and the challans paid">
         <Button variant="outline" size="sm" onClick={exportDeductions} disabled={!deductions?.length}>
           <Download className="w-4 h-4" />
           Deductions CSV
@@ -225,13 +226,17 @@ export default function TdsPage() {
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
         <div className="px-4 py-3 border-b border-slate-100">
-          <h2 className="text-sm font-semibold text-slate-900">Deducted from suppliers</h2>
+          <h2 className="text-sm font-semibold text-slate-900">Deducted</h2>
           <p className="text-xs text-slate-500">
-            Deduct TDS when recording a payment under{' '}
+            Deduct TDS when paying a supplier under{' '}
             <Link href={'/payables' as Route} className="underline">
               Payables
+            </Link>{' '}
+            or recording rent, fees or labour under{' '}
+            <Link href={'/expenses' as Route} className="underline">
+              Expenses
             </Link>
-            . The CSV has what the quarterly return asks for, one row per payment.
+            . The CSV has what the quarterly return asks for, one row per deduction.
           </p>
         </div>
         {loadingDeductions ? <TableLoader /> : <TdsDeductionList rows={deductions ?? []} />}

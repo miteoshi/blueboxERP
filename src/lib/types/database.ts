@@ -1409,6 +1409,7 @@ export type Database = {
           cancel_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
+          cost: number | null
           created_at: string
           created_by: string | null
           expense_date: string
@@ -1420,14 +1421,20 @@ export type Database = {
           notes: string | null
           org_id: string
           payee: string | null
+          payee_pan: string | null
           reference: string | null
           status: string
+          tds_amount: number
+          tds_base: number | null
+          tds_code: string | null
+          tds_rate: number | null
         }
         Insert: {
           amount: number
           cancel_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          cost?: number | null
           created_at?: string
           created_by?: string | null
           expense_date: string
@@ -1439,14 +1446,20 @@ export type Database = {
           notes?: string | null
           org_id: string
           payee?: string | null
+          payee_pan?: string | null
           reference?: string | null
           status?: string
+          tds_amount?: number
+          tds_base?: number | null
+          tds_code?: string | null
+          tds_rate?: number | null
         }
         Update: {
           amount?: number
           cancel_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          cost?: number | null
           created_at?: string
           created_by?: string | null
           expense_date?: string
@@ -1458,8 +1471,13 @@ export type Database = {
           notes?: string | null
           org_id?: string
           payee?: string | null
+          payee_pan?: string | null
           reference?: string | null
           status?: string
+          tds_amount?: number
+          tds_base?: number | null
+          tds_code?: string | null
+          tds_rate?: number | null
         }
         Relationships: [
           {
@@ -6503,8 +6521,13 @@ export type Database = {
           p_mode: string
           p_notes?: string
           p_payee?: string
+          p_payee_pan?: string
           p_reference?: string
           p_request_id?: string
+          p_tds_amount?: number
+          p_tds_base?: number
+          p_tds_code?: string
+          p_tds_rate?: number
         }
         Returns: Json
       }

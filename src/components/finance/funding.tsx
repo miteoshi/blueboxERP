@@ -528,9 +528,13 @@ export function FundingEntryList({ rows, canEdit }: { rows: FundingEntryRow[]; c
             <tr className="bg-slate-50 border-t border-slate-200 font-semibold">
               <td colSpan={3} className="px-4 py-3">
                 Total, cancelled left out
+                {/* On phones the two amounts sit under the label, named */}
+                <span className="md:hidden block text-sm font-normal tabular-nums">
+                  <span className="text-green-700">{formatCurrency(moneyIn)} in</span> · {formatCurrency(moneyOut)} out
+                </span>
               </td>
-              <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap text-green-700">{formatCurrency(moneyIn)}</td>
-              <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">{formatCurrency(moneyOut)}</td>
+              <td data-hide className="px-4 py-3 text-right tabular-nums whitespace-nowrap text-green-700">{formatCurrency(moneyIn)}</td>
+              <td data-hide className="px-4 py-3 text-right tabular-nums whitespace-nowrap">{formatCurrency(moneyOut)}</td>
               <td data-hide />
             </tr>
           </tfoot>

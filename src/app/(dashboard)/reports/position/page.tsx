@@ -56,6 +56,13 @@ const OWNED: Line[] = [
   },
   { key: 'stock', label: 'Stock, at average cost', value: (p) => p.stock.amount, href: '/reports/stock-valuation' },
   {
+    key: 'fixed_assets',
+    label: 'Fixed assets, at book value',
+    value: (p) => p.fixed_assets.amount,
+    detail: (p) => plural(p.fixed_assets.assets, 'asset', 'assets'),
+    href: '/fixed-assets',
+  },
+  {
     key: 'gst_credit',
     label: 'GST credit in hand',
     value: (p) => (p.gst.balance === null ? null : Math.max(0, -p.gst.balance)),
@@ -187,7 +194,7 @@ export default function FinancialPositionPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <StatCard label="Owned" value={formatCurrency(now.total_owned)} sub="cash, bank, customers, stock, GST credit" />
+            <StatCard label="Owned" value={formatCurrency(now.total_owned)} sub="cash, bank, customers, stock, assets" />
             <StatCard label="Owed" value={formatCurrency(now.total_owed)} sub="suppliers, customer advances, GST, loans" />
             <StatCard
               label="Net worth as per the app"
@@ -291,8 +298,9 @@ export default function FinancialPositionPage() {
                 — or the input credit you hold — is shown from the GST ledger, and the change in net worth between two days
                 after it is the profit for the period, less any GST charged by unregistered suppliers (no credit can be claimed
                 on it), plus capital put in less drawings. Without it, the change also includes GST collected less GST paid
-                on purchases. Loans count once their account is set up under Capital &amp; Loans. Fixed assets and anything
-                else not recorded in the app are outside this view, so it is not yet your balance sheet.
+                on purchases. Loans count once their account is set up under Capital &amp; Loans, and machines, vehicles and
+                other fixed assets once they are entered under Fixed Assets, at book value after depreciation. Anything not
+                recorded in the app is outside this view.
               </p>
             </div>
           </div>

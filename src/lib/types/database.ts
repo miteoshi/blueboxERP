@@ -1450,6 +1450,106 @@ export type Database = {
           },
         ]
       }
+      fixed_assets: {
+        Row: {
+          asset_no: string
+          cancel_reason: string | null
+          category: string | null
+          cost: number
+          created_at: string
+          created_by: string | null
+          disposed_on: string | null
+          id: string
+          method: string
+          name: string
+          notes: string | null
+          org_id: string
+          pay_mode: string
+          pay_reference: string | null
+          purchase_date: string
+          sale_amount: number | null
+          sale_mode: string | null
+          sale_reference: string | null
+          salvage_value: number
+          status: string
+          updated_at: string
+          useful_life_years: number | null
+          wdv_rate: number | null
+        }
+        Insert: {
+          asset_no: string
+          cancel_reason?: string | null
+          category?: string | null
+          cost: number
+          created_at?: string
+          created_by?: string | null
+          disposed_on?: string | null
+          id?: string
+          method: string
+          name: string
+          notes?: string | null
+          org_id: string
+          pay_mode: string
+          pay_reference?: string | null
+          purchase_date: string
+          sale_amount?: number | null
+          sale_mode?: string | null
+          sale_reference?: string | null
+          salvage_value?: number
+          status?: string
+          updated_at?: string
+          useful_life_years?: number | null
+          wdv_rate?: number | null
+        }
+        Update: {
+          asset_no?: string
+          cancel_reason?: string | null
+          category?: string | null
+          cost?: number
+          created_at?: string
+          created_by?: string | null
+          disposed_on?: string | null
+          id?: string
+          method?: string
+          name?: string
+          notes?: string | null
+          org_id?: string
+          pay_mode?: string
+          pay_reference?: string | null
+          purchase_date?: string
+          sale_amount?: number | null
+          sale_mode?: string | null
+          sale_reference?: string | null
+          salvage_value?: number
+          status?: string
+          updated_at?: string
+          useful_life_years?: number | null
+          wdv_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixed_assets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixed_assets_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixed_assets_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
       funding_accounts: {
         Row: {
           created_at: string
@@ -5692,6 +5792,10 @@ export type Database = {
         Args: { p_expense_id: string; p_reason: string }
         Returns: Json
       }
+      cancel_fixed_asset: {
+        Args: { p_id: string; p_reason: string }
+        Returns: Json
+      }
       cancel_funding_entry: {
         Args: { p_entry_id: string; p_reason: string }
         Returns: Json
@@ -5903,9 +6007,36 @@ export type Database = {
         }
         Returns: Json
       }
+      dispose_fixed_asset: {
+        Args: {
+          p_disposed_on: string
+          p_id: string
+          p_notes?: string
+          p_sale_amount?: number
+          p_sale_mode?: string
+          p_sale_reference?: string
+        }
+        Returns: Json
+      }
       expire_stale_reservations: { Args: never; Returns: number }
       financial_position: { Args: { p_as_of: string }; Returns: Json }
       financial_year: { Args: { p_date: string }; Returns: string }
+      fixed_asset_register: {
+        Args: { p_from: string; p_to: string }
+        Returns: Json
+      }
+      fixed_asset_value: {
+        Args: {
+          p_cost: number
+          p_day: string
+          p_life_years: number
+          p_method: string
+          p_purchase: string
+          p_rate: number
+          p_salvage: number
+        }
+        Returns: number
+      }
       funding_balances: { Args: { p_as_of: string }; Returns: Json }
       gst_hsn_summary: {
         Args: { p_from: string; p_to: string }
@@ -6139,6 +6270,23 @@ export type Database = {
         Args: { p_id?: string; p_is_active?: boolean; p_name: string }
         Returns: Json
       }
+      save_fixed_asset: {
+        Args: {
+          p_category?: string
+          p_cost: number
+          p_id?: string
+          p_method: string
+          p_name: string
+          p_notes?: string
+          p_pay_mode?: string
+          p_pay_reference?: string
+          p_purchase_date: string
+          p_salvage_value?: number
+          p_useful_life_years?: number
+          p_wdv_rate?: number
+        }
+        Returns: Json
+      }
       save_funding_account: {
         Args: {
           p_id?: string
@@ -6215,6 +6363,10 @@ export type Database = {
           kind: string
           seq: number
         }[]
+      }
+      undo_asset_disposal: {
+        Args: { p_id: string; p_reason: string }
+        Returns: Json
       }
       update_purchase_order: {
         Args: {

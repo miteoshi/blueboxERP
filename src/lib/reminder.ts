@@ -114,3 +114,18 @@ export function whatsappNumber(phone: string | null | undefined): string | null 
   if (digits.length === 12 && digits.startsWith('91') && /^[6-9]/.test(digits.slice(2))) return digits
   return null
 }
+
+export type ReminderChannel = 'whatsapp' | 'email' | 'copy'
+
+const CHANNEL_WORD: Record<ReminderChannel, string> = { whatsapp: 'on WhatsApp', email: 'by email', copy: 'copied' }
+
+/**
+ * "Reminded today on WhatsApp", "Reminded 3 days ago by email" — counted in
+ * calendar days in India, so a reminder sent last evening reads "yesterday".
+ */
+export function lastReminderText(sentAt: string, channel: ReminderChannel, now: Date = new Date()): string {
+  const istDay = (d: Date) => Math.floor((d.getTime() + 5.5 * 3600 * 1000) / 86400000)
+  const days = istDay(now) - istDay(new Date(sentAt))
+  const when = days <= 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`
+  return channel === 'copy' ? `Reminder copied ${when}` : `Reminded ${when} ${CHANNEL_WORD[channel]}`
+}

@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import { StatCard } from '@/components/ui/card'
 import { TableLoader } from '@/components/ui/spinner'
 import { PaymentReminder } from '@/components/finance/payment-reminder'
+import { useLastPaymentReminders } from '@/lib/hooks/use-payment-reminders'
+import { lastReminderText } from '@/lib/reminder'
 import { useClientReceivables, useInvoiceAgeing } from '@/lib/hooks/use-finance'
 import { formatCurrency, formatDate, todayISO } from '@/lib/utils/format'
 import { downloadCsv } from '@/lib/utils/csv'
@@ -26,6 +28,7 @@ const money = (n: number | null | undefined) => (n ? formatCurrency(n) : '—')
 export default function ReceivablesPage() {
   const { data: rows, isLoading } = useClientReceivables()
   const { data: ageing } = useInvoiceAgeing()
+  const { data: reminders } = useLastPaymentReminders()
   const [open, setOpen] = useState<string | null>(null)
 
   const totals = useMemo(() => {
@@ -60,6 +63,8 @@ export default function ReceivablesPage() {
       { header: 'Credit limit', value: (r) => r.credit_limit },
       { header: 'Credit days', value: (r) => r.credit_days },
       { header: 'Oldest overdue (days)', value: (r) => r.max_days_overdue },
+      { header: 'Last reminder', value: (r) => (r.client_id && reminders?.[r.client_id] ? formatDate(reminders[r.client_id].sent_at) : '') },
+      { header: 'Reminders in 30 days', value: (r) => (r.client_id && reminders?.[r.client_id]?.last_30_days) || 0 },
     ])
   }
 
@@ -119,6 +124,7 @@ export default function ReceivablesPage() {
                   const limit = r.credit_limit ?? 0
                   const used = limit > 0 ? Math.round(((r.outstanding ?? 0) / limit) * 100) : null
                   const expanded = open === r.client_id
+                  const last = r.client_id ? reminders?.[r.client_id] : undefined
                   return (
                     <Fragment key={r.client_id}>
                       <tr className="hover:bg-slate-50 cursor-pointer" onClick={() => setOpen(expanded ? null : r.client_id)}>
@@ -134,6 +140,12 @@ export default function ReceivablesPage() {
                           >
                             Statement
                           </Link>
+                          {last && (
+                            <div className="text-xs text-slate-500 ml-6">
+                              {lastReminderText(last.sent_at, last.channel)}
+                              {last.last_30_days > 1 ? ` · ${last.last_30_days} in 30 days` : ''}
+                            </div>
+                          )}
                           {(r.unallocated_credit ?? 0) > 0 && (
                             <div className="text-xs text-teal-600 ml-6">{formatCurrency(r.unallocated_credit)} unapplied credit</div>
                           )}

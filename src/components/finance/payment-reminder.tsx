@@ -6,7 +6,10 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useOrg, useOrgId } from '@/lib/hooks/use-tenant'
 import { Button } from '@/components/ui/button'
-import { buildPaymentReminder, whatsappNumber, type ReminderInvoice } from '@/lib/reminder'
+import { buildPaymentReminder, lastReminderText, whatsappNumber, type ReminderChannel, type ReminderInvoice } from '@/lib/reminder'
+import { useLastPaymentReminders, useLogPaymentReminder } from '@/lib/hooks/use-payment-reminders'
+import { useCan } from '@/lib/hooks/use-profile'
+import { formatCurrency } from '@/lib/utils/format'
 import { BellRing, Copy, Mail, MessageCircle } from 'lucide-react'
 
 // The customer's contact details, read only when a reminder is opened
@@ -46,6 +49,10 @@ export function PaymentReminder({
   const { data: contact, isLoading } = useClientContact(clientId, open)
   // null until the user edits the text; then their wording is kept
   const [edited, setEdited] = useState<string | null>(null)
+  const canLog = useCan('sell')
+  const logReminder = useLogPaymentReminder()
+  const { data: lastByClient } = useLastPaymentReminders()
+  const last = lastByClient?.[clientId]
 
   const hasOverdue = invoices.some((i) => (i.days_overdue ?? 0) > 0 && (i.balance_due ?? 0) > 0)
   const draft = useMemo(
@@ -58,10 +65,17 @@ export function PaymentReminder({
   const wa = whatsappNumber(contact?.phone)
   const email = contact?.email?.trim() || null
 
+  // Logged with what the reminder was built from; the database ignores a
+  // second press of the same button within two minutes
+  function log(channel: ReminderChannel) {
+    if (canLog) logReminder.mutate({ clientId, channel, overdueAmount: draft.overdueTotal, invoices: draft.overdueCount })
+  }
+
   async function copy() {
     try {
       await navigator.clipboard.writeText(text)
       toast.success('Reminder copied')
+      log('copy')
     } catch {
       toast.error('Could not copy. Select the text and copy it yourself.')
     }
@@ -85,6 +99,13 @@ export function PaymentReminder({
           is sent until you press a button below.
         </span>
       </div>
+      {last && (
+        <p className="text-xs text-slate-600">
+          Last: {lastReminderText(last.sent_at, last.channel)}
+          {last.sent_by_name ? ` by ${last.sent_by_name}` : ''}, for {formatCurrency(last.overdue_amount)} over {last.invoices}{' '}
+          {last.invoices === 1 ? 'invoice' : 'invoices'}.{last.last_30_days > 1 ? ` ${last.last_30_days} reminders in the last 30 days.` : ''}
+        </p>
+      )}
       <textarea
         aria-label="Reminder text"
         value={text}
@@ -98,7 +119,7 @@ export function PaymentReminder({
           Copy
         </Button>
         {wa && (
-          <a href={`https://wa.me/${wa}?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer">
+          <a href={`https://wa.me/${wa}?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" onClick={() => log('whatsapp')}>
             <Button variant="outline" size="sm">
               <MessageCircle className="w-4 h-4" />
               WhatsApp
@@ -106,7 +127,10 @@ export function PaymentReminder({
           </a>
         )}
         {email && (
-          <a href={`mailto:${encodeURIComponent(email).replace('%40', '@')}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(text)}`}>
+          <a
+            href={`mailto:${encodeURIComponent(email).replace('%40', '@')}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(text)}`}
+            onClick={() => log('email')}
+          >
             <Button variant="outline" size="sm">
               <Mail className="w-4 h-4" />
               Email

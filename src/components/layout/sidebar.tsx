@@ -33,6 +33,7 @@ import {
   Receipt,
   HandCoins,
   PiggyBank,
+  Armchair,
   Wallet,
   Landmark,
   FileSpreadsheet,
@@ -276,6 +277,12 @@ const NAV: (NavItem | NavGroup)[] = [
         label: "Capital & Loans",
         href: "/capital-loans",
         icon: PiggyBank,
+        roles: ["admin", "manager", "viewer"],
+      },
+      {
+        label: "Fixed Assets",
+        href: "/fixed-assets",
+        icon: Armchair,
         roles: ["admin", "manager", "viewer"],
       },
       {

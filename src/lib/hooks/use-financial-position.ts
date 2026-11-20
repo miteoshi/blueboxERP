@@ -23,6 +23,7 @@ export type FinancialPosition = {
   // Loans still owed (counted as owed) and owners' capital (shown, not counted)
   loans: { amount: number; accounts: number }
   capital: { amount: number; accounts: number }
+  fixed_assets: { amount: number; assets: number }
   total_owned: number
   total_owed: number
   net_worth: number

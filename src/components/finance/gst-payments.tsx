@@ -544,8 +544,9 @@ export function GstPaymentList({ rows, canEdit }: { rows: GstPaymentRow[]; canEd
               <td colSpan={3} className="px-4 py-3">
                 Total, cancelled left out
               </td>
-              <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">{formatCurrency(tax)}</td>
-              <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">{formatCurrency(extra)}</td>
+              {/* On phones only the label and the total paid show */}
+              <td data-hide className="px-4 py-3 text-right tabular-nums whitespace-nowrap">{formatCurrency(tax)}</td>
+              <td data-hide className="px-4 py-3 text-right tabular-nums whitespace-nowrap">{formatCurrency(extra)}</td>
               <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">{formatCurrency(r2(tax + extra))}</td>
               <td data-hide />
             </tr>

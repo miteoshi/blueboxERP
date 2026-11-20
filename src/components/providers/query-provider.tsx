@@ -12,7 +12,8 @@ const OFFLINE_MAX_AGE = 7 * 24 * 60 * 60 * 1000
 
 // Bump when the shape of cached data changes in a way old copies would break.
 // 2: financial_position() gained gst, loans and capital
-const CACHE_VERSION = '2'
+// 3: financial_position() gained fixed_assets
+const CACHE_VERSION = '3'
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   // Create client inside component so each browser session gets

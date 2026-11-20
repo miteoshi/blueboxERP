@@ -168,6 +168,42 @@ function useFundingForPeriod(from: string, to: string) {
   })
 }
 
+// Fixed assets bought (paid here) or sold in the period
+function useAssetsForPeriod(from: string, to: string) {
+  const supabase = createClient()
+  const orgId = useOrgId()
+  return useQuery({
+    queryKey: ['cash-book-assets', orgId, from, to],
+    queryFn: async () => {
+      const [bought, sold] = await Promise.all([
+        allRows(supabase
+          .from('fixed_assets')
+          .select('id, asset_no, name, purchase_date, cost, pay_mode, pay_reference, created_at')
+          .neq('status', 'cancelled')
+          .neq('pay_mode', 'none')
+          .gte('purchase_date', from)
+          .lte('purchase_date', to)
+          .order('purchase_date')
+          .order('id')),
+        allRows(supabase
+          .from('fixed_assets')
+          .select('id, asset_no, name, disposed_on, sale_amount, sale_mode, sale_reference, updated_at')
+          .eq('status', 'disposed')
+          .gt('sale_amount', 0)
+          .gte('disposed_on', from)
+          .lte('disposed_on', to)
+          .order('disposed_on')
+          .order('id')),
+      ])
+      if (bought.error) throw bought.error
+      if (sold.error) throw sold.error
+      return { bought: bought.data ?? [], sold: sold.data ?? [] }
+    },
+    enabled: !!orgId && !!from && !!to,
+    staleTime: 60 * 1000,
+  })
+}
+
 export default function CashBookPage() {
   const role = useRole()
   const canEdit = role === 'admin' || role === 'manager'
@@ -183,8 +219,9 @@ export default function CashBookPage() {
   const { data: income, isLoading: loadingIncome } = useIncomeForPeriod(from, to)
   const { data: gstPaid, isLoading: loadingGst } = useGstPaidForPeriod(from, to)
   const { data: funding, isLoading: loadingFunding } = useFundingForPeriod(from, to)
+  const { data: assetFlows, isLoading: loadingAssets } = useAssetsForPeriod(from, to)
   const { data: transfers, isLoading: loadingTransfers } = useMoneyTransfers(from, to)
-  const isLoading = loadingReceipts || loadingPayments || loadingExpenses || loadingIncome || loadingGst || loadingFunding || loadingTransfers
+  const isLoading = loadingReceipts || loadingPayments || loadingExpenses || loadingIncome || loadingGst || loadingFunding || loadingAssets || loadingTransfers
 
   // One list in the order the money moved
   const entries = useMemo(() => {
@@ -265,9 +302,35 @@ export default function CashBookPage() {
         moneyIn: f.direction === 'in' ? Number(f.total) : 0,
         moneyOut: f.direction === 'out' ? Number(f.total) : 0,
       })),
+      ...(assetFlows?.bought ?? []).map((a) => ({
+        key: `ab${a.id}`,
+        date: a.purchase_date,
+        at: a.created_at,
+        no: a.asset_no,
+        kind: 'Asset' as const,
+        party: a.name,
+        head: 'Fixed asset bought',
+        mode: a.pay_mode,
+        reference: a.pay_reference ?? '',
+        moneyIn: 0,
+        moneyOut: Number(a.cost),
+      })),
+      ...(assetFlows?.sold ?? []).map((a) => ({
+        key: `as${a.id}`,
+        date: a.disposed_on as string,
+        at: a.updated_at,
+        no: a.asset_no,
+        kind: 'Asset' as const,
+        party: a.name,
+        head: 'Fixed asset sold',
+        mode: a.sale_mode as string,
+        reference: a.sale_reference ?? '',
+        moneyIn: Number(a.sale_amount),
+        moneyOut: 0,
+      })),
     ]
     return list.sort(byWhen)
-  }, [receipts, payments, expenses, income, gstPaid, funding])
+  }, [receipts, payments, expenses, income, gstPaid, funding, assetFlows])
 
   // Transfers between cash and bank are not money in or out of the business:
   // they appear in the day book but stay out of the totals, by mode and by day
@@ -303,6 +366,8 @@ export default function CashBookPage() {
     gst: gstPaid?.length ?? 0,
     fundingIn: (funding ?? []).filter((f) => f.direction === 'in').length,
     fundingOut: (funding ?? []).filter((f) => f.direction === 'out').length,
+    assetsBought: assetFlows?.bought.length ?? 0,
+    assetsSold: assetFlows?.sold.length ?? 0,
   }
   const net = r2(totals.moneyIn - totals.moneyOut)
 
@@ -387,7 +452,7 @@ export default function CashBookPage() {
 
   return (
     <div>
-      <PageHeader title="Cash & Bank Book" description="Money received from customers and as other income, and paid to suppliers, on expenses and as GST, with capital and loans, by day and by mode">
+      <PageHeader title="Cash & Bank Book" description="Money received from customers and as other income, and paid to suppliers, on expenses and as GST, with capital, loans and fixed assets, by day and by mode">
         <Button variant="outline" size="sm" onClick={exportTab} disabled={isLoading}>
           <Download className="w-4 h-4" />
           Export {tab.toLowerCase()} CSV
@@ -428,12 +493,12 @@ export default function CashBookPage() {
         <StatCard
           label="Money in"
           value={formatCurrency(totals.moneyIn)}
-          sub={`${totals.receipts} ${totals.receipts === 1 ? 'receipt' : 'receipts'}${totals.income ? `, ${totals.income} other income` : ''}${totals.fundingIn ? `, ${totals.fundingIn} capital/loan` : ''}`}
+          sub={`${totals.receipts} ${totals.receipts === 1 ? 'receipt' : 'receipts'}${totals.income ? `, ${totals.income} other income` : ''}${totals.fundingIn ? `, ${totals.fundingIn} capital/loan` : ''}${totals.assetsSold ? `, ${totals.assetsSold} asset sold` : ''}`}
         />
         <StatCard
           label="Money out"
           value={formatCurrency(totals.moneyOut)}
-          sub={`${totals.payments} supplier ${totals.payments === 1 ? 'payment' : 'payments'}, ${totals.expenses} ${totals.expenses === 1 ? 'expense' : 'expenses'}${totals.gst ? `, ${totals.gst} GST` : ''}${totals.fundingOut ? `, ${totals.fundingOut} capital/loan` : ''}`}
+          sub={`${totals.payments} supplier ${totals.payments === 1 ? 'payment' : 'payments'}, ${totals.expenses} ${totals.expenses === 1 ? 'expense' : 'expenses'}${totals.gst ? `, ${totals.gst} GST` : ''}${totals.fundingOut ? `, ${totals.fundingOut} capital/loan` : ''}${totals.assetsBought ? `, ${totals.assetsBought} asset bought` : ''}`}
         />
         <StatCard
           label="Net movement"
@@ -507,7 +572,7 @@ export default function CashBookPage() {
                           ? 'Receipt from customer'
                           : e.kind === 'Payment'
                             ? 'Payment to supplier'
-                            : e.kind === 'Funding'
+                            : e.kind === 'Funding' || e.kind === 'Asset'
                               ? ('head' in e && e.head) || 'Capital / loan'
                               : `${e.kind === 'Income' ? 'Other income' : e.kind === 'GST' ? 'GST challan' : 'Expense'}${'head' in e && e.head ? ` · ${e.head}` : ''}`}
                       </div>

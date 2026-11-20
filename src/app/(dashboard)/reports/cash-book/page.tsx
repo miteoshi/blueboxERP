@@ -21,6 +21,7 @@ import { MoneyBalances } from '@/components/finance/money-balances'
 import { TransferForm, TransferList } from '@/components/finance/money-transfers'
 import { TRANSFER_LABEL, useMoneyTransfers } from '@/lib/hooks/use-money-transfers'
 import { useRole } from '@/lib/hooks/use-profile'
+import { returnPeriodLabel } from '@/lib/gst-payments'
 
 const TABS = ['Day book', 'By mode', 'By day', 'Transfers'] as const
 type Tab = (typeof TABS)[number]
@@ -120,6 +121,29 @@ function useIncomeForPeriod(from: string, to: string) {
   })
 }
 
+// GST challans paid in the period (cancelled ones left out)
+function useGstPaidForPeriod(from: string, to: string) {
+  const supabase = createClient()
+  const orgId = useOrgId()
+  return useQuery({
+    queryKey: ['cash-book-gst', orgId, from, to],
+    queryFn: async () => {
+      const { data, error } = await allRows(supabase
+        .from('gst_payments')
+        .select('id, payment_no, payment_date, amount, mode, reference, period, created_at')
+        .eq('status', 'active')
+        .gte('payment_date', from)
+        .lte('payment_date', to)
+        .order('payment_date')
+        .order('id'))
+      if (error) throw error
+      return data
+    },
+    enabled: !!orgId && !!from && !!to,
+    staleTime: 60 * 1000,
+  })
+}
+
 export default function CashBookPage() {
   const role = useRole()
   const canEdit = role === 'admin' || role === 'manager'
@@ -133,8 +157,9 @@ export default function CashBookPage() {
   const { data: payments, isLoading: loadingPayments } = usePaymentsForPeriod(from, to)
   const { data: expenses, isLoading: loadingExpenses } = useExpensesForPeriod(from, to)
   const { data: income, isLoading: loadingIncome } = useIncomeForPeriod(from, to)
+  const { data: gstPaid, isLoading: loadingGst } = useGstPaidForPeriod(from, to)
   const { data: transfers, isLoading: loadingTransfers } = useMoneyTransfers(from, to)
-  const isLoading = loadingReceipts || loadingPayments || loadingExpenses || loadingIncome || loadingTransfers
+  const isLoading = loadingReceipts || loadingPayments || loadingExpenses || loadingIncome || loadingGst || loadingTransfers
 
   // One list in the order the money moved
   const entries = useMemo(() => {
@@ -189,9 +214,22 @@ export default function CashBookPage() {
         moneyIn: Number(i.amount),
         moneyOut: 0,
       })),
+      ...(gstPaid ?? []).map((g) => ({
+        key: `g${g.id}`,
+        date: g.payment_date,
+        at: g.created_at,
+        no: g.payment_no,
+        kind: 'GST' as const,
+        party: 'GST payment',
+        head: g.period ? `for ${returnPeriodLabel(g.period)}` : '',
+        mode: g.mode,
+        reference: g.reference ?? '',
+        moneyIn: 0,
+        moneyOut: Number(g.amount),
+      })),
     ]
     return list.sort(byWhen)
-  }, [receipts, payments, expenses, income])
+  }, [receipts, payments, expenses, income, gstPaid])
 
   // Transfers between cash and bank are not money in or out of the business:
   // they appear in the day book but stay out of the totals, by mode and by day
@@ -224,6 +262,7 @@ export default function CashBookPage() {
     payments: payments?.length ?? 0,
     expenses: expenses?.length ?? 0,
     income: income?.length ?? 0,
+    gst: gstPaid?.length ?? 0,
   }
   const net = r2(totals.moneyIn - totals.moneyOut)
 
@@ -308,7 +347,7 @@ export default function CashBookPage() {
 
   return (
     <div>
-      <PageHeader title="Cash & Bank Book" description="Money received from customers and as other income, and paid to suppliers and on expenses, by day and by mode">
+      <PageHeader title="Cash & Bank Book" description="Money received from customers and as other income, and paid to suppliers, on expenses and as GST, by day and by mode">
         <Button variant="outline" size="sm" onClick={exportTab} disabled={isLoading}>
           <Download className="w-4 h-4" />
           Export {tab.toLowerCase()} CSV
@@ -354,7 +393,7 @@ export default function CashBookPage() {
         <StatCard
           label="Money out"
           value={formatCurrency(totals.moneyOut)}
-          sub={`${totals.payments} supplier ${totals.payments === 1 ? 'payment' : 'payments'}, ${totals.expenses} ${totals.expenses === 1 ? 'expense' : 'expenses'}`}
+          sub={`${totals.payments} supplier ${totals.payments === 1 ? 'payment' : 'payments'}, ${totals.expenses} ${totals.expenses === 1 ? 'expense' : 'expenses'}${totals.gst ? `, ${totals.gst} GST` : ''}`}
         />
         <StatCard
           label="Net movement"
@@ -428,7 +467,7 @@ export default function CashBookPage() {
                           ? 'Receipt from customer'
                           : e.kind === 'Payment'
                             ? 'Payment to supplier'
-                            : `${e.kind === 'Income' ? 'Other income' : 'Expense'}${'head' in e && e.head ? ` · ${e.head}` : ''}`}
+                            : `${e.kind === 'Income' ? 'Other income' : e.kind === 'GST' ? 'GST challan' : 'Expense'}${'head' in e && e.head ? ` · ${e.head}` : ''}`}
                       </div>
                     </td>
                     <td data-label="Party" className="px-4 py-3 font-medium text-slate-900">{e.party}</td>

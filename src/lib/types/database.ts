@@ -1450,6 +1450,171 @@ export type Database = {
           },
         ]
       }
+      gst_openings: {
+        Row: {
+          as_of: string
+          credit_cgst: number
+          credit_igst: number
+          credit_sgst: number
+          id: string
+          org_id: string
+          payable_cgst: number
+          payable_igst: number
+          payable_sgst: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          as_of: string
+          credit_cgst?: number
+          credit_igst?: number
+          credit_sgst?: number
+          id?: string
+          org_id: string
+          payable_cgst?: number
+          payable_igst?: number
+          payable_sgst?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          as_of?: string
+          credit_cgst?: number
+          credit_igst?: number
+          credit_sgst?: number
+          id?: string
+          org_id?: string
+          payable_cgst?: number
+          payable_igst?: number
+          payable_sgst?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gst_openings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gst_openings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "gst_openings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gst_payments: {
+        Row: {
+          amount: number | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cgst: number
+          created_at: string
+          created_by: string | null
+          financial_year: string
+          id: string
+          igst: number
+          interest: number
+          late_fee: number
+          mode: string
+          notes: string | null
+          org_id: string
+          payment_date: string
+          payment_no: string
+          period: string | null
+          reference: string | null
+          sgst: number
+          status: string
+        }
+        Insert: {
+          amount?: number | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cgst?: number
+          created_at?: string
+          created_by?: string | null
+          financial_year: string
+          id?: string
+          igst?: number
+          interest?: number
+          late_fee?: number
+          mode: string
+          notes?: string | null
+          org_id: string
+          payment_date: string
+          payment_no: string
+          period?: string | null
+          reference?: string | null
+          sgst?: number
+          status?: string
+        }
+        Update: {
+          amount?: number | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cgst?: number
+          created_at?: string
+          created_by?: string | null
+          financial_year?: string
+          id?: string
+          igst?: number
+          interest?: number
+          late_fee?: number
+          mode?: string
+          notes?: string | null
+          org_id?: string
+          payment_date?: string
+          payment_no?: string
+          period?: string | null
+          reference?: string | null
+          sgst?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gst_payments_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gst_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gst_payments_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gst_payments_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
       gst_states: {
         Row: {
           alpha_code: string
@@ -5357,6 +5522,10 @@ export type Database = {
         Args: { p_expense_id: string; p_reason: string }
         Returns: Json
       }
+      cancel_gst_payment: {
+        Args: { p_payment_id: string; p_reason: string }
+        Returns: Json
+      }
       cancel_money_transfer: {
         Args: { p_reason: string; p_transfer_id: string }
         Returns: Json
@@ -5579,6 +5748,7 @@ export type Database = {
           unit_name: string
         }[]
       }
+      gst_ledger: { Args: { p_as_of: string }; Returns: Json }
       is_valid_gstin: { Args: { p_gstin: string }; Returns: boolean }
       issue_purchase_order: { Args: { p_po_id: string }; Returns: Json }
       lock_inventory_balance: {
@@ -5693,6 +5863,22 @@ export type Database = {
         }
         Returns: Json
       }
+      record_gst_payment: {
+        Args: {
+          p_cgst?: number
+          p_igst?: number
+          p_interest?: number
+          p_late_fee?: number
+          p_mode?: string
+          p_notes?: string
+          p_payment_date: string
+          p_period?: string
+          p_reference?: string
+          p_request_id?: string
+          p_sgst?: number
+        }
+        Returns: Json
+      }
       record_money_transfer: {
         Args: {
           p_amount: number
@@ -5769,6 +5955,18 @@ export type Database = {
         Returns: Json
       }
       set_bank_dates: { Args: { p_entries: Json }; Returns: Json }
+      set_gst_opening: {
+        Args: {
+          p_as_of: string
+          p_credit_cgst?: number
+          p_credit_igst?: number
+          p_credit_sgst?: number
+          p_payable_cgst?: number
+          p_payable_igst?: number
+          p_payable_sgst?: number
+        }
+        Returns: Json
+      }
       set_invoice_eway_bill: {
         Args: {
           p_eway_bill_date?: string

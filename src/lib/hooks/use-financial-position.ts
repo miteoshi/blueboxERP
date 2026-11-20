@@ -17,6 +17,9 @@ export type FinancialPosition = {
   stock: { amount: number; items_without_cost: number; items_on_price_list: number; items_on_bom: number }
   payables: Parties
   customer_advances: Parties
+  // GST ledger balance: positive is payable (owed), negative is credit in hand
+  // (owned); null until a GST opening position is set on or before the day
+  gst: { set: boolean; balance: number | null; opening_as_of: string | null }
   total_owned: number
   total_owed: number
   net_worth: number

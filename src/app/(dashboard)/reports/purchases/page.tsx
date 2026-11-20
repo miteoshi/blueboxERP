@@ -94,7 +94,8 @@ function useDebitNotesForPeriod(from: string, to: string) {
   })
 }
 
-// Output tax for the same period: issued invoices less issued credit notes
+// Output tax for the same period: issued invoices less issued credit notes.
+// Reverse-charge invoices are left out, with their credit notes: the buyer pays that tax.
 function useOutputTax(from: string, to: string) {
   const supabase = createClient()
   const orgId = useOrgId()
@@ -106,12 +107,13 @@ function useOutputTax(from: string, to: string) {
           .from('sales_invoices')
           .select('id, cgst_amount, sgst_amount, igst_amount')
           .eq('status', 'issued')
+          .eq('reverse_charge', false)
           .gte('invoice_date', from)
           .lte('invoice_date', to)
           .order('id')),
         allRows(supabase
           .from('credit_notes')
-          .select('id, cgst_amount, sgst_amount, igst_amount')
+          .select('id, cgst_amount, sgst_amount, igst_amount, invoice:sales_invoices ( reverse_charge )')
           .eq('status', 'issued')
           .gte('note_date', from)
           .lte('note_date', to)
@@ -119,8 +121,9 @@ function useOutputTax(from: string, to: string) {
       ])
       if (inv.error) throw inv.error
       if (cn.error) throw cn.error
+      const notes = (cn.data ?? []).filter((n) => !n.invoice?.reverse_charge)
       const net = (k: 'cgst_amount' | 'sgst_amount' | 'igst_amount') =>
-        r2(sum(inv.data ?? [], (r) => r[k]) - sum(cn.data ?? [], (r) => r[k]))
+        r2(sum(inv.data ?? [], (r) => r[k]) - sum(notes, (r) => r[k]))
       return { cgst: net('cgst_amount'), sgst: net('sgst_amount'), igst: net('igst_amount') }
     },
     enabled: !!orgId && !!from && !!to,

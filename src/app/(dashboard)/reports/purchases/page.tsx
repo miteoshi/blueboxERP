@@ -14,6 +14,8 @@ import { TableLoader } from '@/components/ui/spinner'
 import { formatCurrency, formatDate, formatQty } from '@/lib/utils/format'
 import { debitNoteReasonLabel } from '@/lib/hooks/use-payables'
 import { setOffInputCredit } from '@/lib/gst'
+import { useGstLedger } from '@/lib/hooks/use-gst-payments'
+import { GST_HEADS, GST_HEAD_LABEL } from '@/lib/gst-payments'
 import { allRows } from '@/lib/utils/all-rows'
 import { monthRange, reportPeriods } from '@/lib/utils/periods'
 import { downloadCsv } from '@/lib/utils/csv'
@@ -24,6 +26,10 @@ type Tab = (typeof TABS)[number]
 
 const sum = <T,>(rows: T[], f: (r: T) => number) => rows.reduce((s, r) => s + (f(r) || 0), 0)
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
+const dayBefore = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10)
+}
 const tax = (b: { cgst_amount: number; sgst_amount: number; igst_amount: number }) =>
   b.cgst_amount + b.sgst_amount + b.igst_amount
 
@@ -141,6 +147,9 @@ export default function PurchaseRegisterPage() {
   const { data: bills, isLoading } = useBillsForPeriod(from, to)
   const { data: notes } = useDebitNotesForPeriod(from, to)
   const { data: output } = useOutputTax(from, to)
+  // Where the GST ledger stood the day before the period, for the credit brought forward
+  const ledgerDay = from ? dayBefore(from) : ''
+  const { data: ledgerBefore } = useGstLedger(ledgerDay, tab === 'GST position' && !!from && from <= to)
   const rows = useMemo(() => bills ?? [], [bills])
   const noteRows = useMemo(() => notes ?? [], [notes])
 
@@ -579,6 +588,13 @@ export default function PurchaseRegisterPage() {
           </div>
         ) : (
           <div>
+            {ledgerBefore?.set && (
+              <LedgerCredit
+                day={ledgerDay}
+                heads={ledgerBefore.heads}
+                onUse={(credit) => setOpening(credit)}
+              />
+            )}
             <div className="overflow-x-auto">
             <table className="stack w-full text-sm">
               <thead>
@@ -654,7 +670,7 @@ export default function PurchaseRegisterPage() {
               (against IGST, then CGST and SGST), then CGST credit against CGST and IGST, then SGST credit against SGST
               and IGST. CGST credit cannot pay SGST or the other way round, which is why one tax can be payable in cash
               while another carries credit forward. Enter the credit left from earlier periods from your electronic
-              credit ledger. The credit you can actually claim is what shows in GSTR-2B once the supplier files —
+              credit ledger, or take it from the GST ledger once its opening position is set. The credit you can actually claim is what shows in GSTR-2B once the supplier files —
               confirm with your accountant before filing GSTR-3B.
             </p>
           </div>
@@ -665,6 +681,49 @@ export default function PurchaseRegisterPage() {
 }
 
 const HEAD = 'bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase'
+
+// The GST ledger's credit in hand at the end of the day before the period,
+// offered as the credit brought forward; tax left unpaid is shown, not filled in
+function LedgerCredit({
+  day,
+  heads,
+  onUse,
+}: {
+  day: string
+  heads: Record<(typeof GST_HEADS)[number], { balance: number }>
+  onUse: (credit: { igst: string; cgst: string; sgst: string }) => void
+}) {
+  const credit = Object.fromEntries(GST_HEADS.map((h) => [h, Math.max(0, -heads[h].balance)])) as Record<(typeof GST_HEADS)[number], number>
+  const unpaid = r2(GST_HEADS.reduce((s, h) => s + Math.max(0, heads[h].balance), 0))
+  const any = GST_HEADS.some((h) => credit[h] > 0)
+  const list = (pick: (h: (typeof GST_HEADS)[number]) => number) =>
+    GST_HEADS.filter((h) => pick(h) > 0)
+      .map((h) => `${GST_HEAD_LABEL[h]} ${formatCurrency(pick(h))}`)
+      .join(', ')
+  return (
+    <div className="px-4 py-3 border-b border-slate-100 bg-teal-50/60 text-sm text-slate-700 flex flex-wrap items-center gap-x-3 gap-y-1">
+      <span>
+        GST ledger at the end of {formatDate(day)}: {any ? `credit in hand ${list((h) => credit[h])}` : 'no credit in hand'}
+        {unpaid > 0 && <span className="text-amber-700"> · {list((h) => Math.max(0, heads[h].balance))} still unpaid</span>}
+      </span>
+      {any && (
+        <button
+          type="button"
+          className="text-teal-700 font-medium hover:underline"
+          onClick={() =>
+            onUse({
+              igst: credit.igst ? String(credit.igst) : '',
+              cgst: credit.cgst ? String(credit.cgst) : '',
+              sgst: credit.sgst ? String(credit.sgst) : '',
+            })
+          }
+        >
+          Use as credit brought forward
+        </button>
+      )}
+    </div>
+  )
+}
 
 function Num({ value, bold, label, hide }: { value: number; bold?: boolean; label?: string; hide?: boolean }) {
   return (

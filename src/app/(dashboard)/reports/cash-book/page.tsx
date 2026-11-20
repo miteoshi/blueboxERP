@@ -22,6 +22,7 @@ import { TransferForm, TransferList } from '@/components/finance/money-transfers
 import { TRANSFER_LABEL, useMoneyTransfers } from '@/lib/hooks/use-money-transfers'
 import { useRole } from '@/lib/hooks/use-profile'
 import { returnPeriodLabel } from '@/lib/gst-payments'
+import { fundingEntryLabel, type FundingDirection, type FundingKind } from '@/lib/funding'
 
 const TABS = ['Day book', 'By mode', 'By day', 'Transfers'] as const
 type Tab = (typeof TABS)[number]
@@ -144,6 +145,29 @@ function useGstPaidForPeriod(from: string, to: string) {
   })
 }
 
+// Capital and loan entries in the period (cancelled ones left out)
+function useFundingForPeriod(from: string, to: string) {
+  const supabase = createClient()
+  const orgId = useOrgId()
+  return useQuery({
+    queryKey: ['cash-book-funding', orgId, from, to],
+    queryFn: async () => {
+      const { data, error } = await allRows(supabase
+        .from('funding_entries')
+        .select('id, entry_no, entry_date, direction, total, mode, reference, created_at, account:funding_accounts ( name, kind )')
+        .eq('status', 'active')
+        .gte('entry_date', from)
+        .lte('entry_date', to)
+        .order('entry_date')
+        .order('id'))
+      if (error) throw error
+      return data
+    },
+    enabled: !!orgId && !!from && !!to,
+    staleTime: 60 * 1000,
+  })
+}
+
 export default function CashBookPage() {
   const role = useRole()
   const canEdit = role === 'admin' || role === 'manager'
@@ -158,8 +182,9 @@ export default function CashBookPage() {
   const { data: expenses, isLoading: loadingExpenses } = useExpensesForPeriod(from, to)
   const { data: income, isLoading: loadingIncome } = useIncomeForPeriod(from, to)
   const { data: gstPaid, isLoading: loadingGst } = useGstPaidForPeriod(from, to)
+  const { data: funding, isLoading: loadingFunding } = useFundingForPeriod(from, to)
   const { data: transfers, isLoading: loadingTransfers } = useMoneyTransfers(from, to)
-  const isLoading = loadingReceipts || loadingPayments || loadingExpenses || loadingIncome || loadingGst || loadingTransfers
+  const isLoading = loadingReceipts || loadingPayments || loadingExpenses || loadingIncome || loadingGst || loadingFunding || loadingTransfers
 
   // One list in the order the money moved
   const entries = useMemo(() => {
@@ -227,9 +252,22 @@ export default function CashBookPage() {
         moneyIn: 0,
         moneyOut: Number(g.amount),
       })),
+      ...(funding ?? []).map((f) => ({
+        key: `f${f.id}`,
+        date: f.entry_date,
+        at: f.created_at,
+        no: f.entry_no,
+        kind: 'Funding' as const,
+        party: f.account?.name ?? '—',
+        head: f.account ? fundingEntryLabel(f.account.kind as FundingKind, f.direction as FundingDirection) : '',
+        mode: f.mode,
+        reference: f.reference ?? '',
+        moneyIn: f.direction === 'in' ? Number(f.total) : 0,
+        moneyOut: f.direction === 'out' ? Number(f.total) : 0,
+      })),
     ]
     return list.sort(byWhen)
-  }, [receipts, payments, expenses, income, gstPaid])
+  }, [receipts, payments, expenses, income, gstPaid, funding])
 
   // Transfers between cash and bank are not money in or out of the business:
   // they appear in the day book but stay out of the totals, by mode and by day
@@ -263,6 +301,8 @@ export default function CashBookPage() {
     expenses: expenses?.length ?? 0,
     income: income?.length ?? 0,
     gst: gstPaid?.length ?? 0,
+    fundingIn: (funding ?? []).filter((f) => f.direction === 'in').length,
+    fundingOut: (funding ?? []).filter((f) => f.direction === 'out').length,
   }
   const net = r2(totals.moneyIn - totals.moneyOut)
 
@@ -347,7 +387,7 @@ export default function CashBookPage() {
 
   return (
     <div>
-      <PageHeader title="Cash & Bank Book" description="Money received from customers and as other income, and paid to suppliers, on expenses and as GST, by day and by mode">
+      <PageHeader title="Cash & Bank Book" description="Money received from customers and as other income, and paid to suppliers, on expenses and as GST, with capital and loans, by day and by mode">
         <Button variant="outline" size="sm" onClick={exportTab} disabled={isLoading}>
           <Download className="w-4 h-4" />
           Export {tab.toLowerCase()} CSV
@@ -388,12 +428,12 @@ export default function CashBookPage() {
         <StatCard
           label="Money in"
           value={formatCurrency(totals.moneyIn)}
-          sub={`${totals.receipts} ${totals.receipts === 1 ? 'receipt' : 'receipts'}${totals.income ? `, ${totals.income} other income` : ''}`}
+          sub={`${totals.receipts} ${totals.receipts === 1 ? 'receipt' : 'receipts'}${totals.income ? `, ${totals.income} other income` : ''}${totals.fundingIn ? `, ${totals.fundingIn} capital/loan` : ''}`}
         />
         <StatCard
           label="Money out"
           value={formatCurrency(totals.moneyOut)}
-          sub={`${totals.payments} supplier ${totals.payments === 1 ? 'payment' : 'payments'}, ${totals.expenses} ${totals.expenses === 1 ? 'expense' : 'expenses'}${totals.gst ? `, ${totals.gst} GST` : ''}`}
+          sub={`${totals.payments} supplier ${totals.payments === 1 ? 'payment' : 'payments'}, ${totals.expenses} ${totals.expenses === 1 ? 'expense' : 'expenses'}${totals.gst ? `, ${totals.gst} GST` : ''}${totals.fundingOut ? `, ${totals.fundingOut} capital/loan` : ''}`}
         />
         <StatCard
           label="Net movement"
@@ -467,7 +507,9 @@ export default function CashBookPage() {
                           ? 'Receipt from customer'
                           : e.kind === 'Payment'
                             ? 'Payment to supplier'
-                            : `${e.kind === 'Income' ? 'Other income' : e.kind === 'GST' ? 'GST challan' : 'Expense'}${'head' in e && e.head ? ` · ${e.head}` : ''}`}
+                            : e.kind === 'Funding'
+                              ? ('head' in e && e.head) || 'Capital / loan'
+                              : `${e.kind === 'Income' ? 'Other income' : e.kind === 'GST' ? 'GST challan' : 'Expense'}${'head' in e && e.head ? ` · ${e.head}` : ''}`}
                       </div>
                     </td>
                     <td data-label="Party" className="px-4 py-3 font-medium text-slate-900">{e.party}</td>

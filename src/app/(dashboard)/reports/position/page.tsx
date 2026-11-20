@@ -84,6 +84,23 @@ const OWED: Line[] = [
     value: (p) => (p.gst.balance === null ? null : Math.max(0, p.gst.balance)),
     href: '/gst-payments',
   },
+  {
+    key: 'loans',
+    label: 'Loans',
+    value: (p) => p.loans.amount,
+    detail: (p) => plural(p.loans.accounts, 'loan', 'loans'),
+    href: '/capital-loans',
+  },
+]
+
+// How net worth splits between what the owners put in and the rest
+const MADE_UP: Line[] = [
+  { key: 'capital', label: "Owners' capital", value: (p) => p.capital.amount, href: '/capital-loans' },
+  {
+    key: 'retained',
+    label: 'Profit kept in the business, and anything not recorded',
+    value: (p) => Math.round((p.net_worth - p.capital.amount) * 100) / 100,
+  },
 ]
 
 export default function FinancialPositionPage() {
@@ -124,6 +141,7 @@ export default function FinancialPositionPage() {
       ...OWED,
       { key: 'owed', label: 'Total owed', value: (p: FinancialPosition) => p.total_owed },
       { key: 'net', label: 'Net worth as per the app', value: (p: FinancialPosition) => p.net_worth },
+      ...(now.capital.accounts > 0 ? MADE_UP : []),
     ]
     downloadCsv(`financial-position-${asOf}`, lines, [
       { header: 'Line', value: (l) => l.label },
@@ -170,7 +188,7 @@ export default function FinancialPositionPage() {
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatCard label="Owned" value={formatCurrency(now.total_owned)} sub="cash, bank, customers, stock, GST credit" />
-            <StatCard label="Owed" value={formatCurrency(now.total_owed)} sub="suppliers, customer advances, GST" />
+            <StatCard label="Owed" value={formatCurrency(now.total_owed)} sub="suppliers, customer advances, GST, loans" />
             <StatCard
               label="Net worth as per the app"
               value={signed(now.net_worth)}
@@ -252,6 +270,14 @@ export default function FinancialPositionPage() {
                   now={now}
                   then={then}
                 />
+                {now.capital.accounts > 0 && (
+                  <>
+                    <Section label="Made up of" cols={cols} />
+                    {MADE_UP.map((l) => (
+                      <Row key={l.key} line={l} now={now} then={then} />
+                    ))}
+                  </>
+                )}
               </tbody>
             </table>
             <div className="px-4 py-3 text-xs text-slate-500 border-t border-slate-100 space-y-1">
@@ -264,9 +290,9 @@ export default function FinancialPositionPage() {
                 Customer and supplier balances include GST. Once a GST opening position is set, the GST you owe the government
                 — or the input credit you hold — is shown from the GST ledger, and the change in net worth between two days
                 after it is the profit for the period, less any GST charged by unregistered suppliers (no credit can be claimed
-                on it). Without it, the change also includes GST collected less GST paid on purchases. Fixed assets, loans,
-                capital put in or drawn and anything else not recorded in the app are outside this view, so it is not your
-                balance sheet.
+                on it), plus capital put in less drawings. Without it, the change also includes GST collected less GST paid
+                on purchases. Loans count once their account is set up under Capital &amp; Loans. Fixed assets and anything
+                else not recorded in the app are outside this view, so it is not yet your balance sheet.
               </p>
             </div>
           </div>

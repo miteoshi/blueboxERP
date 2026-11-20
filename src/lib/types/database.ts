@@ -1450,6 +1450,172 @@ export type Database = {
           },
         ]
       }
+      funding_accounts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          kind: string
+          name: string
+          notes: string | null
+          opening_as_of: string
+          opening_balance: number
+          org_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          kind: string
+          name: string
+          notes?: string | null
+          opening_as_of: string
+          opening_balance?: number
+          org_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name?: string
+          notes?: string | null
+          opening_as_of?: string
+          opening_balance?: number
+          org_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funding_accounts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funding_accounts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funding_accounts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
+      funding_entries: {
+        Row: {
+          account_id: string
+          amount: number
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          created_by: string | null
+          direction: string
+          entry_date: string
+          entry_no: string
+          financial_year: string
+          id: string
+          interest: number
+          mode: string
+          notes: string | null
+          org_id: string
+          reference: string | null
+          status: string
+          total: number | null
+        }
+        Insert: {
+          account_id: string
+          amount?: number
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          direction: string
+          entry_date: string
+          entry_no: string
+          financial_year: string
+          id?: string
+          interest?: number
+          mode: string
+          notes?: string | null
+          org_id: string
+          reference?: string | null
+          status?: string
+          total?: number | null
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          entry_date?: string
+          entry_no?: string
+          financial_year?: string
+          id?: string
+          interest?: number
+          mode?: string
+          notes?: string | null
+          org_id?: string
+          reference?: string | null
+          status?: string
+          total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funding_entries_account_fkey"
+            columns: ["org_id", "account_id"]
+            isOneToOne: false
+            referencedRelation: "funding_accounts"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "funding_entries_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funding_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funding_entries_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funding_entries_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
       gst_openings: {
         Row: {
           as_of: string
@@ -5434,6 +5600,10 @@ export type Database = {
         Args: { p_operation: string; p_request_id: string }
         Returns: undefined
       }
+      _loan_outstanding: {
+        Args: { p_account_id: string; p_skip_entry?: string }
+        Returns: number
+      }
       _po_is_interstate: {
         Args: { p_org_id: string; p_supplier_id: string }
         Returns: boolean
@@ -5520,6 +5690,10 @@ export type Database = {
       }
       cancel_expense: {
         Args: { p_expense_id: string; p_reason: string }
+        Returns: Json
+      }
+      cancel_funding_entry: {
+        Args: { p_entry_id: string; p_reason: string }
         Returns: Json
       }
       cancel_gst_payment: {
@@ -5732,6 +5906,7 @@ export type Database = {
       expire_stale_reservations: { Args: never; Returns: number }
       financial_position: { Args: { p_as_of: string }; Returns: Json }
       financial_year: { Args: { p_date: string }; Returns: string }
+      funding_balances: { Args: { p_as_of: string }; Returns: Json }
       gst_hsn_summary: {
         Args: { p_from: string; p_to: string }
         Returns: {
@@ -5863,6 +6038,20 @@ export type Database = {
         }
         Returns: Json
       }
+      record_funding_entry: {
+        Args: {
+          p_account_id: string
+          p_amount: number
+          p_direction: string
+          p_entry_date?: string
+          p_interest?: number
+          p_mode?: string
+          p_notes?: string
+          p_reference?: string
+          p_request_id?: string
+        }
+        Returns: Json
+      }
       record_gst_payment: {
         Args: {
           p_cgst?: number
@@ -5948,6 +6137,18 @@ export type Database = {
       }
       save_expense_head: {
         Args: { p_id?: string; p_is_active?: boolean; p_name: string }
+        Returns: Json
+      }
+      save_funding_account: {
+        Args: {
+          p_id?: string
+          p_is_active?: boolean
+          p_kind: string
+          p_name: string
+          p_notes?: string
+          p_opening_as_of: string
+          p_opening_balance?: number
+        }
         Returns: Json
       }
       save_income_head: {

@@ -10,7 +10,7 @@ import { formatCurrency, todayISO } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { Wallet } from 'lucide-react'
 import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
-import { TDS_CODES, tdsAmount, tdsCode } from '@/lib/tds'
+import { useTdsFields } from '@/components/finance/tds-fields'
 
 interface SupplierOption {
   id: string
@@ -18,7 +18,6 @@ interface SupplierOption {
   outstanding?: number
 }
 
-const SELECT = 'w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
 const r2 = (n: number) => Math.round(n * 100) / 100
 
 // Records a payment to a supplier, optionally deducting TDS. The money paid
@@ -44,55 +43,30 @@ export function SupplierPaymentForm({
   const [reference, setReference] = useState('')
   const [notes, setNotes] = useState('')
 
-  // TDS: the code sets the rate; the base defaults to the value before GST of
-  // what is still due on the bill; the amount follows until typed over
+  // TDS: the base defaults to the value before GST of what is still due on the bill
   const billBase =
     bill?.taxable_value && bill.total_amount ? r2((bill.taxable_value * bill.balance_due) / bill.total_amount) : undefined
-  const [withTds, setWithTds] = useState(false)
-  const [code, setCode] = useState(TDS_CODES[0].code)
-  const [rate, setRate] = useState(String(TDS_CODES[0].rate))
-  const [base, setBase] = useState(billBase ? String(billBase) : '')
-  const [tdsTyped, setTdsTyped] = useState<string | null>(null)
+  const tdsFields = useTdsFields({
+    initialBase: billBase,
+    onToggle: (on, defaultTds) => {
+      // Paying a bill in full: the supplier gets what is due less the TDS
+      if (on && bill && Number(amount) === bill.balance_due && billBase) setAmount(String(r2(bill.balance_due - defaultTds)))
+      else if (!on && bill && Number(amount) < bill.balance_due) setAmount(String(bill.balance_due))
+    },
+  })
+  const withTds = tdsFields.on
+  const tds = tdsFields.tds
 
   const outstanding = suppliers?.find((s) => s.id === supplierId)?.outstanding
   const value = Number(amount)
-  const rateValue = Number(rate)
-  const baseValue = Number(base)
-  const tds = withTds ? (tdsTyped !== null ? Number(tdsTyped) : tdsAmount(baseValue, rateValue)) : 0
-  const settles = r2((Number.isFinite(value) ? value : 0) + (Number.isFinite(tds) ? tds : 0))
-
-  function chooseCode(next: string) {
-    setCode(next)
-    const c = tdsCode(next)
-    if (c) setRate(String(c.rate))
-    setTdsTyped(null)
-  }
-
-  function toggleTds(on: boolean) {
-    setWithTds(on)
-    setTdsTyped(null)
-    // Paying a bill in full: the supplier gets what is due less the TDS
-    if (on && bill && Number(amount) === bill.balance_due && billBase) {
-      setAmount(String(r2(bill.balance_due - tdsAmount(billBase, Number(rate)))))
-    } else if (!on && bill && Number(amount) < bill.balance_due) {
-      setAmount(String(bill.balance_due))
-    }
-  }
+  const settles = r2((Number.isFinite(value) ? value : 0) + tds)
 
   function submit() {
     if (!supplierId) return toast.error('Select a supplier')
     if (!(value > 0)) return toast.error('Enter the amount paid')
     if (Math.round(value * 100) / 100 !== value) return toast.error('Amount can have at most 2 decimals')
-    if (withTds) {
-      if (!tdsCode(code) && !/^[0-9]{4}$/.test(code)) return toast.error('Choose the TDS payment code')
-      if (!(rateValue > 0 && rateValue <= 100)) return toast.error('Give the TDS rate in percent, like 1 or 0.1')
-      if (!(baseValue > 0)) return toast.error('Give the amount TDS is worked out on')
-      if (!(tds > 0) || r2(tds) !== tds) return toast.error('Give the TDS amount')
-      if (tds > baseValue) return toast.error('TDS cannot be more than the amount it is worked out on')
-      if (Math.abs(tds - (baseValue * rateValue) / 100) > 1) {
-        return toast.error(`TDS at ${rateValue}% of ${formatCurrency(baseValue)} is ${formatCurrency(r2((baseValue * rateValue) / 100))}`)
-      }
-    }
+    const tdsProblem = tdsFields.problem()
+    if (tdsProblem) return toast.error(tdsProblem)
     if (bill && settles > bill.balance_due + 0.005) {
       return toast.error(
         withTds
@@ -112,7 +86,7 @@ export function SupplierPaymentForm({
         reference,
         notes,
         billId: bill?.id,
-        tds: withTds ? { code, rate: rateValue, base: baseValue, amount: tds } : undefined,
+        tds: tdsFields.input,
       },
       { onSuccess: onDone },
     )
@@ -186,84 +160,26 @@ export function SupplierPaymentForm({
           <Input label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
 
-        <div className="rounded-lg border border-slate-200 p-3 space-y-3">
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-            <input type="checkbox" checked={withTds} onChange={(e) => toggleTds(e.target.checked)} className="rounded border-slate-300" />
-            Deduct TDS
-          </label>
-          {withTds && (
+        {tdsFields.fields({
+          summary: (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <div className="sm:col-span-2">
-                  <label htmlFor="tds-code" className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Payment code
-                  </label>
-                  <select id="tds-code" value={code} onChange={(e) => chooseCode(e.target.value)} className={SELECT}>
-                    {TDS_CODES.map((c) => (
-                      <option key={c.code} value={c.code}>
-                        {c.code} · {c.label} ({c.was}) — {c.rate}%
-                      </option>
-                    ))}
-                  </select>
-                  {tdsCode(code) && <p className="mt-1 text-xs text-slate-500">Applies above: {tdsCode(code)!.threshold}</p>}
-                </div>
-                <Input
-                  label="Rate (%)"
-                  type="number"
-                  min="0"
-                  step="0.001"
-                  inputMode="decimal"
-                  value={rate}
-                  onChange={(e) => {
-                    setRate(e.target.value)
-                    setTdsTyped(null)
-                  }}
-                  hint={tdsCode(code) ? `${tdsCode(code)!.rateWithoutPan}% if no PAN` : undefined}
-                />
-                <Input
-                  label="TDS on (₹)"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  inputMode="decimal"
-                  value={base}
-                  onChange={(e) => {
-                    setBase(e.target.value)
-                    setTdsTyped(null)
-                  }}
-                  hint="Usually the value before GST"
-                />
-              </div>
-              <div className="flex flex-wrap items-end gap-4">
-                <div className="w-40">
-                  <Input
-                    label="TDS (₹)"
-                    type="number"
-                    min="0"
-                    step="1"
-                    inputMode="decimal"
-                    value={tdsTyped ?? (tds > 0 ? String(tds) : '')}
-                    onChange={(e) => setTdsTyped(e.target.value)}
-                  />
-                </div>
-                <p className="text-sm text-slate-600 pb-2">
-                  Supplier gets <span className="font-semibold tabular-nums">{formatCurrency(Number.isFinite(value) ? value : 0)}</span>
-                  {' · '}TDS <span className="font-semibold tabular-nums">{formatCurrency(Number.isFinite(tds) ? tds : 0)}</span>
-                  {' · '}settles <span className="font-semibold tabular-nums">{formatCurrency(settles)}</span>
-                </p>
-                {bill && Number.isFinite(tds) && tds > 0 && Math.abs(settles - bill.balance_due) > 0.005 && (
-                  <button
-                    type="button"
-                    className="text-xs text-blue-600 hover:underline pb-2.5"
-                    onClick={() => setAmount(String(r2(bill.balance_due - tds)))}
-                  >
-                    Pay the rest of the bill: {formatCurrency(r2(bill.balance_due - tds))}
-                  </button>
-                )}
-              </div>
+              <p className="text-sm text-slate-600 pb-2">
+                Supplier gets <span className="font-semibold tabular-nums">{formatCurrency(Number.isFinite(value) ? value : 0)}</span>
+                {' · '}TDS <span className="font-semibold tabular-nums">{formatCurrency(tds)}</span>
+                {' · '}settles <span className="font-semibold tabular-nums">{formatCurrency(settles)}</span>
+              </p>
+              {bill && tds > 0 && Math.abs(settles - bill.balance_due) > 0.005 && (
+                <button
+                  type="button"
+                  className="text-xs text-blue-600 hover:underline pb-2.5"
+                  onClick={() => setAmount(String(r2(bill.balance_due - tds)))}
+                >
+                  Pay the rest of the bill: {formatCurrency(r2(bill.balance_due - tds))}
+                </button>
+              )}
             </>
-          )}
-        </div>
+          ),
+        })}
 
         <div className="flex gap-2 justify-end">
           <Button variant="outline" onClick={onDone}>

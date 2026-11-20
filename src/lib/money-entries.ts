@@ -13,7 +13,12 @@ export type MoneyEntry = {
   head_id: string
   head_name: string | null
   party: string | null
+  // What it cost: for an expense with TDS, the money paid plus the TDS
   amount: number
+  // Money paid and TDS deducted, when the entry can carry TDS
+  paid?: number
+  tds?: number
+  tds_code?: string | null
   mode: string
   reference: string | null
   notes: string | null
@@ -28,8 +33,11 @@ export type RecordMoneyEntry = {
   mode: PaymentMode
   date?: string
   party?: string
+  partyPan?: string
   reference?: string
   notes?: string
+  // TDS deducted from the payee; amount is then the money paid
+  tds?: { code: string; rate: number; base: number; amount: number }
 }
 
 export type RecordedMoneyEntry = { id: string; no: string; amount: number }

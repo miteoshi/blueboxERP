@@ -10,7 +10,7 @@ import { isAlreadySaved, rpcFailure } from '@/lib/utils/rpc'
 import type { MoneyEntry, MoneyHead, RecordMoneyEntry, RecordedMoneyEntry } from '@/lib/money-entries'
 
 // Everything that shows expenses, so a change refreshes all of it
-const EXPENSE_KEYS = [['expense-heads'], ['expenses'], ['cash-book-expenses'], ['money-balances'], ['profit-and-loss'], ['bank-book'], ['bank-reconciliation'], ['financial-position']] as const
+const EXPENSE_KEYS = [['expense-heads'], ['expenses'], ['cash-book-expenses'], ['money-balances'], ['profit-and-loss'], ['bank-book'], ['bank-reconciliation'], ['financial-position'], ['tds-ledger'], ['tds-deductions']] as const
 
 function useInvalidateExpenses() {
   const qc = useQueryClient()
@@ -45,7 +45,7 @@ export function useExpenses(from: string, to: string) {
       const { data, error } = await allRows(supabase
         .from('expenses')
         .select(`
-          id, expense_no, expense_date, head_id, payee, amount, mode, reference, notes,
+          id, expense_no, expense_date, head_id, payee, amount, tds_amount, tds_code, cost, mode, reference, notes,
           status, cancel_reason, created_at,
           head:expense_heads ( name ),
           creator:profiles!expenses_created_by_fkey ( full_name )
@@ -64,7 +64,10 @@ export function useExpenses(from: string, to: string) {
           head_id: e.head_id,
           head_name: e.head?.name ?? null,
           party: e.payee,
-          amount: Number(e.amount),
+          amount: Number(e.cost ?? e.amount),
+          paid: Number(e.amount),
+          tds: Number(e.tds_amount ?? 0),
+          tds_code: e.tds_code,
           mode: e.mode,
           reference: e.reference,
           notes: e.notes,
@@ -95,6 +98,11 @@ export function useRecordExpense() {
         p_reference: input.reference || undefined,
         p_notes: input.notes || undefined,
         p_request_id: requestId.get(),
+        p_payee_pan: input.partyPan || undefined,
+        p_tds_code: input.tds?.code,
+        p_tds_rate: input.tds?.rate,
+        p_tds_base: input.tds?.base,
+        p_tds_amount: input.tds?.amount,
       })
       if (error) throw rpcFailure(error, 'Could not record the expense')
       const saved = data as { id: string; expense_no: string; amount: number }

@@ -415,23 +415,23 @@ export function TdsDepositList({ rows, canEdit }: { rows: TdsDepositRow[]; canEd
 
 // Every payment that deducted TDS in the period: what goes into the quarterly return
 export function TdsDeductionList({ rows }: { rows: TdsDeductionRow[] }) {
-  const tds = r2(rows.reduce((s, p) => s + Number(p.tds_amount), 0))
-  const base = r2(rows.reduce((s, p) => s + Number(p.tds_base ?? 0), 0))
-  const missingPan = rows.filter((p) => !deducteePan(p.supplier?.pan, p.supplier?.gst_number)).length
+  const tds = r2(rows.reduce((s, p) => s + p.tds, 0))
+  const base = r2(rows.reduce((s, p) => s + p.base, 0))
+  const missingPan = rows.filter((p) => !deducteePan(p.pan, p.gstin)).length
 
   return (
     <div className="overflow-x-auto">
       {missingPan > 0 && (
         <p className="px-4 py-3 text-xs text-amber-800 bg-amber-50 border-b border-amber-100">
-          {missingPan} {missingPan === 1 ? 'payment is' : 'payments are'} to a supplier with no PAN (and no GSTIN to take it from). Add the
-          PAN under Suppliers: the return needs it, and without one TDS is due at the higher rate.
+          {missingPan} {missingPan === 1 ? 'deduction has' : 'deductions have'} no PAN for the payee. Add it under Suppliers, or on the
+          expense: the return needs it, and without one TDS is due at the higher rate.
         </p>
       )}
       <table className="stack w-full text-sm">
         <thead>
           <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
-            <th className="text-left px-4 py-3">Payment</th>
-            <th className="text-left px-4 py-3">Supplier</th>
+            <th className="text-left px-4 py-3">Entry</th>
+            <th className="text-left px-4 py-3">Paid to</th>
             <th className="text-left px-4 py-3">Code</th>
             <th className="text-right px-4 py-3">TDS on</th>
             <th className="text-right px-4 py-3">TDS</th>
@@ -448,24 +448,26 @@ export function TdsDeductionList({ rows }: { rows: TdsDeductionRow[] }) {
             </tr>
           )}
           {rows.map((p) => {
-            const pan = deducteePan(p.supplier?.pan, p.supplier?.gst_number)
+            const pan = deducteePan(p.pan, p.gstin)
             return (
-              <tr key={p.id}>
+              <tr key={`${p.kind}-${p.id}`}>
                 <td data-main className="px-4 py-3">
-                  <span className="font-mono font-semibold text-slate-900 whitespace-nowrap">{p.payment_no}</span>
-                  <div className="text-xs text-slate-400">{formatDate(p.payment_date)}</div>
+                  <span className="font-mono font-semibold text-slate-900 whitespace-nowrap">{p.no}</span>
+                  <div className="text-xs text-slate-400">
+                    {formatDate(p.date)} · {p.kind === 'expense' ? 'Expense' : 'Supplier payment'}
+                  </div>
                 </td>
-                <td data-label="Supplier" className="px-4 py-3">
-                  <span className="text-slate-900">{p.supplier?.name}</span>
+                <td data-label="Paid to" className="px-4 py-3">
+                  <span className="text-slate-900">{p.party}</span>
                   <div className={`text-xs font-mono ${pan ? 'text-slate-400' : 'text-amber-700'}`}>{pan ?? 'PAN missing'}</div>
                 </td>
                 <td data-label="Code" className="px-4 py-3 text-slate-600">
-                  <span className="font-mono">{p.tds_code}</span>
-                  <span className="text-xs text-slate-400"> at {Number(p.tds_rate)}%</span>
+                  <span className="font-mono">{p.code}</span>
+                  <span className="text-xs text-slate-400"> at {p.rate}%</span>
                 </td>
-                <td data-label="TDS on" className="px-4 py-3 text-right tabular-nums">{formatCurrency(Number(p.tds_base ?? 0))}</td>
-                <td data-label="TDS" className="px-4 py-3 text-right tabular-nums font-semibold">{formatCurrency(Number(p.tds_amount))}</td>
-                <td data-label="Paid" className="px-4 py-3 text-right tabular-nums text-slate-600">{formatCurrency(Number(p.amount))}</td>
+                <td data-label="TDS on" className="px-4 py-3 text-right tabular-nums">{formatCurrency(p.base)}</td>
+                <td data-label="TDS" className="px-4 py-3 text-right tabular-nums font-semibold">{formatCurrency(p.tds)}</td>
+                <td data-label="Paid" className="px-4 py-3 text-right tabular-nums text-slate-600">{formatCurrency(p.paid)}</td>
               </tr>
             )
           })}

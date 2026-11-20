@@ -13,6 +13,7 @@ import { useOrgId } from '@/lib/hooks/use-tenant'
 import { useCan, useRole } from '@/lib/hooks/use-profile'
 import { FinanceSummary } from '@/components/finance/finance-summary'
 import { SetupChecklist } from '@/components/settings/setup-checklist'
+import { ComplianceCalendar } from '@/components/finance/compliance-calendar'
 
 // ── Data hooks ────────────────────────────────────────────────
 
@@ -178,6 +179,9 @@ export default function DashboardPage() {
 
       {/* ── Finance (roles that can read invoices and receipts) ── */}
       {role && ['admin', 'manager', 'sales', 'viewer'].includes(role) && <FinanceSummary />}
+
+      {/* ── Tax due dates (roles that can read the TDS and GST ledgers) ── */}
+      {role && ['admin', 'manager', 'viewer'].includes(role) && <ComplianceCalendar />}
 
       {/* ── Stat Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

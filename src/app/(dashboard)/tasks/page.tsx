@@ -13,6 +13,7 @@ import { PageLoader, TableLoader } from '@/components/ui/spinner'
 import { formatDate, formatQty, isPastDate } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { useOrgId } from "@/lib/hooks/use-tenant";
+import { invalidateStockReports } from '@/lib/hooks/stock-reports'
 
 import { Play, CheckCircle, ClipboardList, HardHat, Calendar, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
@@ -172,6 +173,7 @@ export default function TasksPage() {
         qc.invalidateQueries({ queryKey: ['tasks'] }),
         qc.invalidateQueries({ queryKey: ['production-orders'] }),
         qc.invalidateQueries({ queryKey: ['stock-levels'] }),
+        invalidateStockReports(qc),
       ])
       toast.success(`${result.po_number} started — materials consumed`)
 
@@ -194,6 +196,7 @@ export default function TasksPage() {
         qc.invalidateQueries({ queryKey: ['tasks'] }),
         qc.invalidateQueries({ queryKey: ['production-orders'] }),
         qc.invalidateQueries({ queryKey: ['stock-levels'] }),
+        invalidateStockReports(qc),
       ])
       toast.success(`${result.po_number} completed — finished goods added to stock`)
 

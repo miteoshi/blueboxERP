@@ -26,6 +26,7 @@ const PAYABLES_KEYS = [
   ['debit-notes'],
   ['debit-note'],
   ['stock-levels'],
+  ['stock-valuation'],
   ['purchase-register'],
   // Reports built from bills, payments and debit notes
   ['purchase-register-notes'],

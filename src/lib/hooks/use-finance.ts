@@ -48,6 +48,7 @@ const FINANCE_KEYS = [
   ['gst-credit-notes'],
   ['stock-levels'],
   ['reorder-alerts'],
+  ['stock-valuation'],
   // Reports built from invoices, receipts and credit notes
   ['sales-register'],
   ['sales-register-credit-notes'],

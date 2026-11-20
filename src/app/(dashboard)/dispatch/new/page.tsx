@@ -16,6 +16,7 @@ import { Trash2, Save, AlertTriangle } from 'lucide-react'
 import type { Enums } from '@/lib/types/database'
 import { RequirePermission } from '@/components/auth/require-permission'
 import { QUEUED_MESSAGE, saveOrQueue } from '@/lib/offline/outbox'
+import { invalidateStockReports } from '@/lib/hooks/stock-reports'
 
 type TransportMode = Enums<'transport_mode'>
 
@@ -264,6 +265,7 @@ const { data: reservationMap } = useSOReservations(selectedSoId, orgId);
         qc.invalidateQueries({ queryKey: ['so-for-dispatch'] }),
         qc.invalidateQueries({ queryKey: ['so-reservations'] }),
         qc.invalidateQueries({ queryKey: ['stock-levels'] }),
+        invalidateStockReports(qc),
       ])
 
       toast.success(

@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import { rpcFailure } from '@/lib/utils/rpc'
 
-export type BankEntryKind = 'receipt' | 'supplier_payment' | 'expense' | 'income' | 'gst_payment' | 'transfer'
+export type BankEntryKind = 'receipt' | 'supplier_payment' | 'expense' | 'income' | 'gst_payment' | 'funding' | 'transfer'
 
 export type BankEntry = {
   kind: BankEntryKind
@@ -41,6 +41,7 @@ export const BANK_ENTRY_LABEL: Record<BankEntryKind, string> = {
   expense: 'Expense',
   income: 'Other income',
   gst_payment: 'GST payment',
+  funding: 'Capital / loan',
   transfer: 'Cash / bank transfer',
 }
 
@@ -57,6 +58,8 @@ export function bankEntryHref(e: Pick<BankEntry, 'kind'>): string | null {
       return '/income'
     case 'gst_payment':
       return '/gst-payments'
+    case 'funding':
+      return '/capital-loans'
     case 'transfer':
       return '/reports/cash-book'
     default:

@@ -319,7 +319,7 @@ export default function BankReconciliationPage() {
                       <td colSpan={canEdit ? 7 : 6} className="text-center py-12 text-slate-400 text-sm">
                         {show === 'open'
                           ? 'Every bank entry in this period is ticked off'
-                          : 'No receipts, payments, expenses, GST challans or transfers through the bank in this period'}
+                          : 'No receipts, payments, expenses, GST challans, capital or loan entries or transfers through the bank in this period'}
                       </td>
                     </tr>
                   )}
@@ -418,7 +418,7 @@ export default function BankReconciliationPage() {
           )}
 
           <p className="px-4 py-3 text-xs text-slate-500 border-t border-slate-100">
-            Lists customer receipts, other income, supplier payments, expenses and GST challans not made in cash, and cash deposited in or
+            Lists customer receipts, other income, supplier payments, expenses, GST challans and capital and loan entries not made in cash, and cash deposited in or
             drawn from the bank. Entries from before this period appear while they are still not in the bank. Set each one&apos;s bank
             date — the day it shows on your statement — and the reconciliation above works out what the statement should
             say. Entries on or before the bank opening date are part of the opening balance and are not listed.

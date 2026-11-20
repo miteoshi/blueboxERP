@@ -32,6 +32,7 @@ import {
   List,
   Receipt,
   HandCoins,
+  PiggyBank,
   Wallet,
   Landmark,
   FileSpreadsheet,
@@ -269,6 +270,12 @@ const NAV: (NavItem | NavGroup)[] = [
         label: "GST Payments",
         href: "/gst-payments",
         icon: Landmark,
+        roles: ["admin", "manager", "viewer"],
+      },
+      {
+        label: "Capital & Loans",
+        href: "/capital-loans",
+        icon: PiggyBank,
         roles: ["admin", "manager", "viewer"],
       },
       {

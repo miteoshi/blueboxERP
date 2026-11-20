@@ -20,6 +20,9 @@ export type FinancialPosition = {
   // GST ledger balance: positive is payable (owed), negative is credit in hand
   // (owned); null until a GST opening position is set on or before the day
   gst: { set: boolean; balance: number | null; opening_as_of: string | null }
+  // Loans still owed (counted as owed) and owners' capital (shown, not counted)
+  loans: { amount: number; accounts: number }
+  capital: { amount: number; accounts: number }
   total_owned: number
   total_owed: number
   net_worth: number

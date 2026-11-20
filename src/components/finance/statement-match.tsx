@@ -335,10 +335,14 @@ export function StatementMatch({
                     money from customers goes in{' '}
                     <Link href={'/payments' as Route} className="text-blue-600 hover:underline">
                       Payments Received
-                    </Link>{' '}
-                    and GST challans in{' '}
+                    </Link>
+                    , GST challans in{' '}
                     <Link href={'/gst-payments' as Route} className="text-blue-600 hover:underline">
                       GST Payments
+                    </Link>{' '}
+                    and loan EMIs or capital in{' '}
+                    <Link href={'/capital-loans' as Route} className="text-blue-600 hover:underline">
+                      Capital &amp; Loans
                     </Link>
                     , then match the statement again.
                   </p>

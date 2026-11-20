@@ -58,6 +58,8 @@ const FINANCE_KEYS = [
   ['bank-book'],
   ['bank-reconciliation'],
   ['financial-position'],
+  ['gst-ledger'],
+  ['output-tax'],
 ] as const
 
 function useInvalidateFinance() {

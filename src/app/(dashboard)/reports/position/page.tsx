@@ -55,6 +55,12 @@ const OWNED: Line[] = [
     href: '/payables',
   },
   { key: 'stock', label: 'Stock, at average cost', value: (p) => p.stock.amount, href: '/reports/stock-valuation' },
+  {
+    key: 'gst_credit',
+    label: 'GST credit in hand',
+    value: (p) => (p.gst.balance === null ? null : Math.max(0, -p.gst.balance)),
+    href: '/gst-payments',
+  },
 ]
 
 const OWED: Line[] = [
@@ -71,6 +77,12 @@ const OWED: Line[] = [
     value: (p) => p.customer_advances.amount,
     detail: (p) => plural(p.customer_advances.parties, 'customer', 'customers'),
     href: '/receivables',
+  },
+  {
+    key: 'gst_payable',
+    label: 'GST payable',
+    value: (p) => (p.gst.balance === null ? null : Math.max(0, p.gst.balance)),
+    href: '/gst-payments',
   },
 ]
 
@@ -121,6 +133,7 @@ export default function FinancialPositionPage() {
   }
 
   const moneyMissing = now && (!now.cash.set || !now.bank.set)
+  const gstMissing = now && !now.gst.set
   const change = now && then ? r2(now.net_worth - then.net_worth) : null
 
   return (
@@ -156,8 +169,8 @@ export default function FinancialPositionPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <StatCard label="Owned" value={formatCurrency(now.total_owned)} sub="cash, bank, customers, stock" />
-            <StatCard label="Owed" value={formatCurrency(now.total_owed)} sub="suppliers, customer advances" />
+            <StatCard label="Owned" value={formatCurrency(now.total_owned)} sub="cash, bank, customers, stock, GST credit" />
+            <StatCard label="Owed" value={formatCurrency(now.total_owed)} sub="suppliers, customer advances, GST" />
             <StatCard
               label="Net worth as per the app"
               value={signed(now.net_worth)}
@@ -171,7 +184,7 @@ export default function FinancialPositionPage() {
             />
           </div>
 
-          {(moneyMissing || now.stock.items_without_cost > 0) && (
+          {(moneyMissing || gstMissing || now.stock.items_without_cost > 0) && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-sm text-amber-900 flex gap-3">
               <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600" />
               <div className="space-y-1 min-w-0">
@@ -181,6 +194,16 @@ export default function FinancialPositionPage() {
                     no opening balance on or before {formatDate(now.as_of)}. Set it on the{' '}
                     <Link href={'/reports/cash-book' as Route} className="underline">
                       Cash &amp; Bank Book
+                    </Link>
+                    .
+                  </p>
+                )}
+                {gstMissing && (
+                  <p>
+                    GST is left out: there is no GST opening position on or before {formatDate(now.as_of)}, so the tax you owe
+                    the government, or the credit you hold, is not counted. Set it on{' '}
+                    <Link href={'/gst-payments' as Route} className="underline">
+                      GST Payments
                     </Link>
                     .
                   </p>
@@ -238,10 +261,12 @@ export default function FinancialPositionPage() {
                 as in the Profit &amp; Loss.
               </p>
               <p>
-                Customer and supplier balances include GST, but the GST you owe the government — or the input credit you can
-                claim — is not shown, because GST payments are not recorded here (see GST Reports). So the change in net worth
-                is the profit for the period plus GST collected, less GST paid on purchases. Fixed assets, loans, capital put in
-                or drawn and anything else not recorded in the app are also outside this view, so it is not your balance sheet.
+                Customer and supplier balances include GST. Once a GST opening position is set, the GST you owe the government
+                — or the input credit you hold — is shown from the GST ledger, and the change in net worth between two days
+                after it is the profit for the period, less any GST charged by unregistered suppliers (no credit can be claimed
+                on it). Without it, the change also includes GST collected less GST paid on purchases. Fixed assets, loans,
+                capital put in or drawn and anything else not recorded in the app are outside this view, so it is not your
+                balance sheet.
               </p>
             </div>
           </div>

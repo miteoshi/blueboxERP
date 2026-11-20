@@ -36,6 +36,7 @@ import {
   Armchair,
   Wallet,
   Landmark,
+  Percent,
   FileSpreadsheet,
   FileMinus,
   ClipboardCheck,
@@ -271,6 +272,12 @@ const NAV: (NavItem | NavGroup)[] = [
         label: "GST Payments",
         href: "/gst-payments",
         icon: Landmark,
+        roles: ["admin", "manager", "viewer"],
+      },
+      {
+        label: "TDS",
+        href: "/tds",
+        icon: Percent,
         roles: ["admin", "manager", "viewer"],
       },
       {

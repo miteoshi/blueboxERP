@@ -38,6 +38,9 @@ const PAYABLES_KEYS = [
   ['bank-reconciliation'],
   ['financial-position'],
   ['gst-ledger'],
+  // TDS deducted on a payment is owed until deposited
+  ['tds-ledger'],
+  ['tds-deductions'],
 ] as const
 
 function useInvalidatePayables() {
@@ -280,7 +283,7 @@ export function useSupplierPayments() {
       const { data, error } = await allRows(supabase
         .from('supplier_payments')
         .select(`
-          id, payment_no, payment_date, amount, amount_allocated, mode, reference, notes, status, cancel_reason,
+          id, payment_no, payment_date, amount, amount_allocated, tds_amount, tds_code, gross_amount, mode, reference, notes, status, cancel_reason,
           supplier:suppliers ( id, name ),
           supplier_payment_allocations ( amount, bill:supplier_bills ( id, bill_no ) )
         `)
@@ -310,6 +313,8 @@ export function useRecordSupplierPayment() {
       notes?: string
       // Pay one bill; otherwise the oldest due bills are paid first
       billId?: string
+      // TDS deducted from the supplier: the bills are settled by amount + TDS
+      tds?: { code: string; rate: number; base: number; amount: number }
     }) => {
       const { data, error } = await supabase.rpc('record_supplier_payment', {
         p_supplier_id: input.supplierId,
@@ -318,11 +323,17 @@ export function useRecordSupplierPayment() {
         p_payment_date: input.paymentDate || undefined,
         p_reference: input.reference || undefined,
         p_notes: input.notes || undefined,
-        p_allocations: input.billId ? [{ bill_id: input.billId, amount: input.amount }] : undefined,
+        p_allocations: input.billId
+          ? [{ bill_id: input.billId, amount: Math.round((input.amount + (input.tds?.amount ?? 0)) * 100) / 100 }]
+          : undefined,
         p_request_id: requestId.get(),
+        p_tds_code: input.tds?.code,
+        p_tds_rate: input.tds?.rate,
+        p_tds_base: input.tds?.base,
+        p_tds_amount: input.tds?.amount,
       })
       if (error) throw rpcFailure(error, 'Could not record the payment')
-      return data as { id: string; payment_no: string; amount: number; allocated: number; unallocated: number }
+      return data as { id: string; payment_no: string; amount: number; tds: number; allocated: number; unallocated: number }
     },
     onSuccess: (data) => {
       requestId.clear()

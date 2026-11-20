@@ -16,6 +16,7 @@ import { useOrgId } from '@/lib/hooks/use-tenant'
 import { ilikeAny } from '@/lib/utils/search'
 import { allRows } from '@/lib/utils/all-rows'
 import { ListCard, ListCards } from '@/components/ui/list-card'
+import { deducteePan, isPan } from '@/lib/tds'
 
 function useSuppliers(search: string, orgId: string | null) {
   const supabase = createClient();
@@ -45,6 +46,7 @@ interface SupplierForm {
   city:           string
   state:          string
   gst_number:     string
+  pan:            string
   payment_terms:  string
   credit_days:    string
   notes:          string
@@ -53,7 +55,7 @@ interface SupplierForm {
 const EMPTY: SupplierForm = {
   name: '', contact_person: '', phone: '', email: '',
   address: '', city: '', state: 'Gujarat',
-  gst_number: '', payment_terms: '', credit_days: '30', notes: '',
+  gst_number: '', pan: '', payment_terms: '', credit_days: '30', notes: '',
 }
 
 export default function SuppliersPage() {
@@ -83,6 +85,7 @@ export default function SuppliersPage() {
       city:           s.city           ?? '',
       state:          s.state          ?? 'Gujarat',
       gst_number:     s.gst_number     ?? '',
+      pan:            s.pan            ?? '',
       payment_terms:  s.payment_terms  ?? '',
       credit_days:    String(s.credit_days ?? 30),
       notes:          s.notes          ?? '',
@@ -97,6 +100,8 @@ export default function SuppliersPage() {
     if (!Number.isInteger(creditDays) || creditDays < 0 || creditDays > 365) {
       toast.error('Credit days must be a whole number from 0 to 365'); return
     }
+    const pan = form.pan.trim().toUpperCase()
+    if (pan && !isPan(pan)) { toast.error('A PAN is 5 letters, 4 digits and a letter, like ABCDE1234F'); return }
     if (!orgId) {
       toast.error("Organization not loaded");
       return;
@@ -112,6 +117,7 @@ export default function SuppliersPage() {
         city:           form.city           || null,
         state:          form.state          || null,
         gst_number:     form.gst_number     || null,
+        pan:            pan                 || null,
         payment_terms:  form.payment_terms  || null,
         credit_days:    creditDays,
         notes:          form.notes          || null,
@@ -173,7 +179,21 @@ export default function SuppliersPage() {
                 <Input label="Phone" value={form.phone} onChange={f('phone')} />
                 <Input label="Email" type="email" value={form.email} onChange={f('email')} />
               </div>
-              <Input label="GST Number" value={form.gst_number} onChange={f('gst_number')} placeholder="24XXXXX1234X1ZX" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input label="GST Number" value={form.gst_number} onChange={f('gst_number')} placeholder="24XXXXX1234X1ZX" />
+                <Input
+                  label="PAN"
+                  value={form.pan}
+                  onChange={f('pan')}
+                  placeholder="ABCDE1234F"
+                  maxLength={10}
+                  hint={
+                    !form.pan.trim() && deducteePan(null, form.gst_number)
+                      ? `${deducteePan(null, form.gst_number)} from the GSTIN is used for TDS`
+                      : 'Needed for TDS when there is no GSTIN'
+                  }
+                />
+              </div>
               <Textarea label="Address" value={form.address} onChange={f('address')} />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input label="City" value={form.city} onChange={f('city')} />

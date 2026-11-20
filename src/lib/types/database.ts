@@ -5044,6 +5044,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           financial_year: string
+          gross_amount: number | null
           id: string
           mode: string
           notes: string | null
@@ -5053,6 +5054,10 @@ export type Database = {
           reference: string | null
           status: string
           supplier_id: string
+          tds_amount: number
+          tds_base: number | null
+          tds_code: string | null
+          tds_rate: number | null
         }
         Insert: {
           amount: number
@@ -5063,6 +5068,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           financial_year: string
+          gross_amount?: number | null
           id?: string
           mode: string
           notes?: string | null
@@ -5072,6 +5078,10 @@ export type Database = {
           reference?: string | null
           status?: string
           supplier_id: string
+          tds_amount?: number
+          tds_base?: number | null
+          tds_code?: string | null
+          tds_rate?: number | null
         }
         Update: {
           amount?: number
@@ -5082,6 +5092,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           financial_year?: string
+          gross_amount?: number | null
           id?: string
           mode?: string
           notes?: string | null
@@ -5091,6 +5102,10 @@ export type Database = {
           reference?: string | null
           status?: string
           supplier_id?: string
+          tds_amount?: number
+          tds_base?: number | null
+          tds_code?: string | null
+          tds_rate?: number | null
         }
         Relationships: [
           {
@@ -5151,6 +5166,7 @@ export type Database = {
           name: string
           notes: string | null
           org_id: string
+          pan: string | null
           payment_terms: string | null
           phone: string | null
           state: string | null
@@ -5170,6 +5186,7 @@ export type Database = {
           name: string
           notes?: string | null
           org_id: string
+          pan?: string | null
           payment_terms?: string | null
           phone?: string | null
           state?: string | null
@@ -5189,6 +5206,7 @@ export type Database = {
           name?: string
           notes?: string | null
           org_id?: string
+          pan?: string | null
           payment_terms?: string | null
           phone?: string | null
           state?: string | null
@@ -5216,6 +5234,153 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "gst_states"
             referencedColumns: ["code"]
+          },
+        ]
+      }
+      tds_deposits: {
+        Row: {
+          amount: number | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          created_by: string | null
+          deposit_date: string
+          deposit_no: string
+          financial_year: string
+          id: string
+          interest: number
+          late_fee: number
+          mode: string
+          notes: string | null
+          org_id: string
+          period: string
+          reference: string | null
+          status: string
+          tax: number
+          tds_code: string | null
+        }
+        Insert: {
+          amount?: number | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          deposit_date: string
+          deposit_no: string
+          financial_year: string
+          id?: string
+          interest?: number
+          late_fee?: number
+          mode: string
+          notes?: string | null
+          org_id: string
+          period: string
+          reference?: string | null
+          status?: string
+          tax?: number
+          tds_code?: string | null
+        }
+        Update: {
+          amount?: number | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          deposit_date?: string
+          deposit_no?: string
+          financial_year?: string
+          id?: string
+          interest?: number
+          late_fee?: number
+          mode?: string
+          notes?: string | null
+          org_id?: string
+          period?: string
+          reference?: string | null
+          status?: string
+          tax?: number
+          tds_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tds_deposits_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tds_deposits_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tds_deposits_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tds_deposits_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
+      tds_openings: {
+        Row: {
+          amount: number
+          as_of: string
+          id: string
+          org_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount: number
+          as_of: string
+          id?: string
+          org_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount?: number
+          as_of?: string
+          id?: string
+          org_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tds_openings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tds_openings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "tds_openings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -5824,6 +5989,7 @@ export type Database = {
           paid: number | null
           supplier_id: string | null
           supplier_name: string | null
+          tds: number | null
         }
         Relationships: [
           {
@@ -5987,6 +6153,10 @@ export type Database = {
       }
       cancel_supplier_payment: {
         Args: { p_payment_id: string; p_reason: string }
+        Returns: Json
+      }
+      cancel_tds_deposit: {
+        Args: { p_deposit_id: string; p_reason: string }
         Returns: Json
       }
       check_bom_availability: {
@@ -6407,6 +6577,25 @@ export type Database = {
           p_reference?: string
           p_request_id?: string
           p_supplier_id: string
+          p_tds_amount?: number
+          p_tds_base?: number
+          p_tds_code?: string
+          p_tds_rate?: number
+        }
+        Returns: Json
+      }
+      record_tds_deposit: {
+        Args: {
+          p_deposit_date: string
+          p_interest?: number
+          p_late_fee?: number
+          p_mode?: string
+          p_notes?: string
+          p_period: string
+          p_reference?: string
+          p_request_id?: string
+          p_tax?: number
+          p_tds_code?: string
         }
         Returns: Json
       }
@@ -6519,6 +6708,10 @@ export type Database = {
         }
         Returns: Json
       }
+      set_tds_opening: {
+        Args: { p_amount: number; p_as_of: string }
+        Returns: Json
+      }
       start_production_order: {
         Args: { p_production_order_id: string }
         Returns: Json
@@ -6537,6 +6730,8 @@ export type Database = {
           seq: number
         }[]
       }
+      tds_due_date: { Args: { p_period: string }; Returns: string }
+      tds_ledger: { Args: { p_as_of: string }; Returns: Json }
       undo_asset_disposal: {
         Args: { p_id: string; p_reason: string }
         Returns: Json

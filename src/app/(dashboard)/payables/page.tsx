@@ -248,7 +248,8 @@ export default function PayablesPage() {
               )}
               {(payments ?? []).map((p) => {
                 const active = p.status === 'active'
-                const advance = active ? p.amount - p.amount_allocated : 0
+                // Money paid and TDS together settle bills; what is left is an advance
+                const advance = active ? Number(p.gross_amount ?? p.amount) - p.amount_allocated : 0
                 return (
                   <Fragment key={p.id}>
                     <tr className={active ? '' : 'opacity-60'}>
@@ -278,7 +279,15 @@ export default function PayablesPage() {
                           </>
                         )}
                       </td>
-                      <td data-label="Amount" className="px-4 py-3 text-right tabular-nums font-semibold">{formatCurrency(p.amount)}</td>
+                      <td data-label="Amount" className="px-4 py-3 text-right tabular-nums font-semibold">
+                        {formatCurrency(p.amount)}
+                        {Number(p.tds_amount) > 0 && (
+                          <div className="text-xs font-normal text-slate-500">
+                            + TDS {formatCurrency(Number(p.tds_amount))}
+                            {p.tds_code ? ` (${p.tds_code})` : ''}
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         {active && canManage && (
                           <>

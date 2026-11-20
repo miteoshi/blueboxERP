@@ -317,6 +317,55 @@ export type Database = {
           },
         ]
       }
+      books_lock: {
+        Row: {
+          id: string
+          locked_until: string
+          org_id: string
+          reason: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          locked_until: string
+          org_id: string
+          reason?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          locked_until?: string
+          org_id?: string
+          reason?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "books_lock_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "books_lock_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "books_lock_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -6304,6 +6353,10 @@ export type Database = {
         Returns: Json
       }
       set_bank_dates: { Args: { p_entries: Json }; Returns: Json }
+      set_books_lock: {
+        Args: { p_locked_until: string; p_reason?: string }
+        Returns: Json
+      }
       set_gst_opening: {
         Args: {
           p_as_of: string

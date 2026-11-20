@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import { CompanyProfile } from '@/components/settings/company-profile'
+import { BooksLockSettings } from '@/components/settings/books-lock'
 
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -23,7 +24,7 @@ import { allRows } from "@/lib/utils/all-rows"
 
 type UserRole = Enums<"user_role">
 // ── Tabs ──────────────────────────────────────────────────────
-const TABS = ['Company', 'Users', 'Price Update', 'Reconcile'] as const
+const TABS = ['Company', 'Users', 'Price Update', 'Close the books', 'Reconcile'] as const
 type Tab = typeof TABS[number]
 
 // ── Role badge colors ─────────────────────────────────────────
@@ -294,6 +295,7 @@ export default function SettingsPage() {
       </div>
 
       {activeTab === "Company" && <CompanyProfile />}
+      {activeTab === "Close the books" && <BooksLockSettings />}
 
       {/* ══ USERS ══════════════════════════════════════════════ */}
       {activeTab === "Users" && (

@@ -3081,6 +3081,75 @@ export type Database = {
           },
         ]
       }
+      payment_reminders: {
+        Row: {
+          channel: string
+          client_id: string
+          id: string
+          invoices: number
+          org_id: string
+          overdue_amount: number
+          sent_at: string
+          sent_by: string | null
+        }
+        Insert: {
+          channel: string
+          client_id: string
+          id?: string
+          invoices: number
+          org_id: string
+          overdue_amount: number
+          sent_at?: string
+          sent_by?: string | null
+        }
+        Update: {
+          channel?: string
+          client_id?: string
+          id?: string
+          invoices?: number
+          org_id?: string
+          overdue_amount?: number
+          sent_at?: string
+          sent_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_reminders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_receivables"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       production_assignments: {
         Row: {
           assigned_date: string
@@ -5510,6 +5579,48 @@ export type Database = {
           },
         ]
       }
+      v_last_payment_reminders: {
+        Row: {
+          channel: string | null
+          client_id: string | null
+          invoices: number | null
+          last_30_days: number | null
+          org_id: string | null
+          overdue_amount: number | null
+          sent_at: string | null
+          sent_by_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_reminders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_receivables"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "v_setup_readiness"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
       v_reorder_alerts: {
         Row: {
           balance_updated_at: string | null
@@ -6122,6 +6233,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      log_payment_reminder: {
+        Args: {
+          p_channel: string
+          p_client_id: string
+          p_invoices: number
+          p_overdue_amount: number
+        }
+        Returns: Json
       }
       mark_challan_delivered: { Args: { p_challan_id: string }; Returns: Json }
       money_balances: { Args: { p_from: string; p_to: string }; Returns: Json }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildPaymentReminder, whatsappNumber } from './reminder'
+import { buildPaymentReminder, whatsappNumber, lastReminderText } from './reminder'
 
 const company = { name: 'High Power Electricals', phone: '98250 12345', bank_name: 'HDFC Bank', bank_branch: 'Vadodara', bank_account_no: '50100012345678', bank_ifsc: 'HDFC0000123' }
 
@@ -48,5 +48,21 @@ describe('whatsappNumber', () => {
 
   it.each(['0265 2345678', '12345', '', null, '5825012345'])('rejects %j', (input) => {
     expect(whatsappNumber(input)).toBeNull()
+  })
+})
+
+describe('lastReminderText', () => {
+  const now = new Date('2026-11-20T10:00:00+05:30')
+  it('says today for earlier the same day in India', () => {
+    expect(lastReminderText('2026-11-20T00:30:00+05:30', 'whatsapp', now)).toBe('Reminded today on WhatsApp')
+  })
+  it('says yesterday for last evening, though under 24 hours ago', () => {
+    expect(lastReminderText('2026-11-19T21:00:00+05:30', 'email', now)).toBe('Reminded yesterday by email')
+  })
+  it('counts days', () => {
+    expect(lastReminderText('2026-11-17T12:00:00+05:30', 'whatsapp', now)).toBe('Reminded 3 days ago on WhatsApp')
+  })
+  it('words a copied reminder differently', () => {
+    expect(lastReminderText('2026-11-20T09:00:00+05:30', 'copy', now)).toBe('Reminder copied today')
   })
 })

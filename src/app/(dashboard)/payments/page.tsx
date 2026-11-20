@@ -28,6 +28,7 @@ import { downloadCsv } from '@/lib/utils/csv'
 import { toast } from 'sonner'
 import { Download, Plus, Wallet, X } from 'lucide-react'
 import { allRows } from "@/lib/utils/all-rows"
+import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
 
 function useActiveClients() {
   const supabase = createClient()
@@ -268,6 +269,7 @@ function RecordPaymentForm({ onClose }: { onClose: () => void }) {
   const [amount, setAmount] = useState('')
   const [mode, setMode] = useState<PaymentMode>('bank_transfer')
   const [date, setDate] = useState(todayISO)
+  const closed = useClosedPeriod()
   const [reference, setReference] = useState('')
   const [manual, setManual] = useState(false)
   const [alloc, setAlloc] = useState<Record<string, string>>({})
@@ -375,7 +377,7 @@ function RecordPaymentForm({ onClose }: { onClose: () => void }) {
               ))}
             </select>
           </div>
-          <Input label="Date" type="date" max={todayISO()} value={date} onChange={(e) => setDate(e.target.value)} />
+          <Input label="Date" type="date" min={closed.min()} error={closed.error(date)} max={todayISO()} value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
         <Input
           label="Reference"

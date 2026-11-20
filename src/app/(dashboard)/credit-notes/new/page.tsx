@@ -23,6 +23,7 @@ import { formatCurrency, formatDate, formatQty, todayISO } from '@/lib/utils/for
 import { amountInWords } from '@/lib/gst'
 import { toast } from 'sonner'
 import { AlertTriangle, ArrowLeft, FileMinus } from 'lucide-react'
+import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
 
 // Same rounding as create_credit_note(): per line, to the paisa
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
@@ -48,6 +49,7 @@ function NewCreditNote() {
   const [reason, setReason] = useState<CreditNoteReason>('sales_return')
   const [restock, setRestock] = useState(true)
   const [noteDate, setNoteDate] = useState(todayISO)
+  const closed = useClosedPeriod()
   const [notes, setNotes] = useState('')
   // Per invoice line: quantity (returns) or taxable value (other reasons), as typed
   const [entries, setEntries] = useState<Record<string, string>>({})
@@ -323,7 +325,8 @@ function NewCreditNote() {
                 <Input
                   label="Credit note date"
                   type="date"
-                  min={inv.invoice_date}
+                  min={closed.min(inv.invoice_date)}
+                  error={closed.error(noteDate)}
                   max={maxDate}
                   value={noteDate}
                   onChange={(e) => setNoteDate(e.target.value)}

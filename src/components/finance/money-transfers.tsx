@@ -14,6 +14,7 @@ import {
 } from '@/lib/hooks/use-money-transfers'
 import { formatCurrency, formatDate, todayISO } from '@/lib/utils/format'
 import { ArrowLeftRight } from 'lucide-react'
+import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
 
 export type TransferRow = {
   id: string
@@ -39,6 +40,7 @@ export function TransferForm({ onDone }: { onDone: () => void }) {
   const [direction, setDirection] = useState<TransferDirection>('cash_to_bank')
   const [amount, setAmount] = useState('')
   const [transferDate, setTransferDate] = useState(todayISO)
+  const closed = useClosedPeriod()
   const [reference, setReference] = useState('')
   const [notes, setNotes] = useState('')
   const value = Number(amount)
@@ -48,6 +50,7 @@ export function TransferForm({ onDone }: { onDone: () => void }) {
     if (Math.round(value * 100) / 100 !== value) return toast.error('Amount can have at most 2 decimals')
     if (!transferDate) return toast.error('Give the date')
     if (transferDate > todayISO()) return toast.error('Transfer date cannot be in the future')
+    if (closed.error(transferDate)) return toast.error(closed.error(transferDate))
     record.mutate({ direction, amount: value, transferDate, reference, notes }, { onSuccess: onDone })
   }
 
@@ -79,7 +82,7 @@ export function TransferForm({ onDone }: { onDone: () => void }) {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Input label="Amount (₹)" type="number" min="0" step="0.01" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
-          <Input label="Date" type="date" max={todayISO()} value={transferDate} onChange={(e) => setTransferDate(e.target.value)} />
+          <Input label="Date" type="date" min={closed.min()} error={closed.error(transferDate)} max={todayISO()} value={transferDate} onChange={(e) => setTransferDate(e.target.value)} />
           <Input
             label={direction === 'cash_to_bank' ? 'Deposit slip no. (optional)' : 'Cheque / ATM ref. (optional)'}
             value={reference}

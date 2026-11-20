@@ -23,6 +23,7 @@ import { amountInWords } from '@/lib/gst'
 import type { Enums } from '@/lib/types/database'
 import { toast } from 'sonner'
 import { ArrowLeft, PackageCheck, Pencil, Printer, Send, XCircle } from 'lucide-react'
+import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
 
 type TransportMode = Enums<'transport_mode'>
 
@@ -357,6 +358,7 @@ function ReceiveForm({
     Object.fromEntries(open.map((l) => [l.id, String(l.outstanding)])),
   )
   const [receiptDate, setReceiptDate] = useState(todayISO)
+  const closed = useClosedPeriod()
   const [transportMode, setTransportMode] = useState<TransportMode>('supplier_truck')
   const [vehicleNo, setVehicleNo] = useState('')
   const [driverName, setDriverName] = useState('')
@@ -366,6 +368,7 @@ function ReceiveForm({
 
   function submit() {
     if (receiptDate > todayISO()) return toast.error('Receipt date cannot be in the future')
+    if (closed.error(receiptDate)) return toast.error(closed.error(receiptDate))
     if (receiptDate < po.po_date) return toast.error('Receipt date cannot be before the order date')
     const entries = open
       .map((l) => ({ line: l, value: Number(qty[l.id] || 0) }))
@@ -441,7 +444,8 @@ function ReceiveForm({
           <Input
             label="Receipt date"
             type="date"
-            min={po.po_date}
+            min={closed.min(po.po_date)}
+            error={closed.error(receiptDate)}
             max={todayISO()}
             value={receiptDate}
             onChange={(e) => setReceiptDate(e.target.value)}

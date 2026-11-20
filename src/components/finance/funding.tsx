@@ -24,6 +24,7 @@ import {
 } from '@/lib/funding'
 import { formatCurrency, formatDate, todayISO } from '@/lib/utils/format'
 import { Landmark, Pencil } from 'lucide-react'
+import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
 
 const r2 = (n: number) => Math.round(n * 100) / 100
 const SELECT = 'w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
@@ -171,6 +172,7 @@ export function FundingAccountForm({ account, onDone }: { account?: FundingAccou
   const [kind, setKind] = useState<FundingKind>(account?.kind ?? 'capital')
   const [name, setName] = useState(account?.name ?? '')
   const [openingAsOf, setOpeningAsOf] = useState(account?.opening_as_of ?? todayISO())
+  const closed = useClosedPeriod()
   const [opening, setOpening] = useState(account ? String(Number(account.opening_balance) || '') : '')
   const [active, setActive] = useState(account?.is_active ?? true)
 
@@ -179,6 +181,7 @@ export function FundingAccountForm({ account, onDone }: { account?: FundingAccou
     if (!name.trim()) return toast.error('Give the account a name')
     if (!openingAsOf) return toast.error('Choose the opening date')
     if (openingAsOf > todayISO()) return toast.error('The opening date cannot be in the future')
+    if (closed.error(openingAsOf)) return toast.error(closed.error(openingAsOf))
     if (!validAmount(amount)) return toast.error('Enter an opening balance of nil or more, with at most 2 decimals')
     save.mutate(
       { id: account?.id, kind, name: name.trim(), openingAsOf, openingBalance: amount, isActive: active },
@@ -210,7 +213,7 @@ export function FundingAccountForm({ account, onDone }: { account?: FundingAccou
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <Input label="Opening date" type="date" max={todayISO()} value={openingAsOf} onChange={(e) => setOpeningAsOf(e.target.value)} />
+          <Input label="Opening date" type="date" min={closed.min()} error={closed.error(openingAsOf)} max={todayISO()} value={openingAsOf} onChange={(e) => setOpeningAsOf(e.target.value)} />
           <Input
             label={kind === 'capital' ? 'Capital on that day (₹)' : 'Principal owed on that day (₹)'}
             type="number"
@@ -250,6 +253,7 @@ export function FundingEntryForm({ accounts, onDone }: { accounts: FundingAccoun
   const [amount, setAmount] = useState('')
   const [interest, setInterest] = useState('')
   const [entryDate, setEntryDate] = useState(todayISO)
+  const closed = useClosedPeriod()
   const [mode, setMode] = useState<PaymentMode>('bank_transfer')
   const [reference, setReference] = useState('')
   const [notes, setNotes] = useState('')
@@ -267,6 +271,7 @@ export function FundingEntryForm({ accounts, onDone }: { accounts: FundingAccoun
     if (!(principal + extra > 0)) return toast.error('Enter the amount')
     if (!entryDate) return toast.error('Give the date')
     if (entryDate > todayISO()) return toast.error('The date cannot be in the future')
+    if (closed.error(entryDate)) return toast.error(closed.error(entryDate))
     if (minDate && entryDate < minDate) {
       return toast.error(`The date must be after ${formatDate(account.opening_as_of)}, the opening date of ${account.name}`)
     }
@@ -351,7 +356,7 @@ export function FundingEntryForm({ accounts, onDone }: { accounts: FundingAccoun
                   onChange={(e) => setInterest(e.target.value)}
                 />
               )}
-              <Input label="Date" type="date" min={minDate} max={todayISO()} value={entryDate} onChange={(e) => setEntryDate(e.target.value)} />
+              <Input label="Date" type="date" min={closed.min(minDate)} error={closed.error(entryDate)} max={todayISO()} value={entryDate} onChange={(e) => setEntryDate(e.target.value)} />
               <div>
                 <label htmlFor="funding-mode" className="block text-sm font-medium text-slate-700 mb-1.5">
                   Mode

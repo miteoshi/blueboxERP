@@ -16,6 +16,7 @@ import { formatCurrency, formatDate, todayISO } from '@/lib/utils/format'
 import { monthRange, reportPeriods } from '@/lib/utils/periods'
 import { downloadCsv } from '@/lib/utils/csv'
 import { Download, Plus, Receipt, Tags, type LucideIcon } from 'lucide-react'
+import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
 
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
 
@@ -362,6 +363,7 @@ function EntryForm({ config: c, heads, onDone }: { config: MoneyEntriesConfig; h
   const [amount, setAmount] = useState('')
   const [mode, setMode] = useState<PaymentMode>('cash')
   const [entryDate, setEntryDate] = useState(todayISO)
+  const closed = useClosedPeriod()
   const [party, setParty] = useState('')
   const [reference, setReference] = useState('')
   const [notes, setNotes] = useState('')
@@ -372,6 +374,7 @@ function EntryForm({ config: c, heads, onDone }: { config: MoneyEntriesConfig; h
     if (!(value > 0)) return toast.error(c.amountMissing)
     if (Math.round(value * 100) / 100 !== value) return toast.error('Amount can have at most 2 decimals')
     if (entryDate > todayISO()) return toast.error(`${c.dateLabel} date cannot be in the future`)
+    if (closed.error(entryDate)) return toast.error(closed.error(entryDate))
     record.mutate(
       { headId, amount: value, mode, date: entryDate, party, reference, notes },
       {
@@ -414,7 +417,7 @@ function EntryForm({ config: c, heads, onDone }: { config: MoneyEntriesConfig; h
             </select>
           </div>
           <Input label="Amount (₹)" type="number" min="0" step="0.01" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
-          <Input label="Date" type="date" max={todayISO()} value={entryDate} onChange={(e) => setEntryDate(e.target.value)} />
+          <Input label="Date" type="date" min={closed.min()} error={closed.error(entryDate)} max={todayISO()} value={entryDate} onChange={(e) => setEntryDate(e.target.value)} />
           <Input label={c.partyLabel} placeholder={c.partyPlaceholder} value={party} onChange={(e) => setParty(e.target.value)} />
           <div>
             <label htmlFor="entry-mode" className="block text-sm font-medium text-slate-700 mb-1.5">

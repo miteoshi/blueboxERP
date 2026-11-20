@@ -12,6 +12,7 @@ import {
 } from '@/lib/hooks/use-money-balances'
 import { formatCurrency, formatDate, todayISO } from '@/lib/utils/format'
 import { Banknote, Landmark } from 'lucide-react'
+import { useClosedPeriod } from '@/lib/hooks/use-books-lock'
 
 const LABEL: Record<MoneyAccount, string> = { cash: 'Cash in hand', bank: 'Bank' }
 const signed = (n: number) => `${n < 0 ? '−' : ''}${formatCurrency(Math.abs(n))}`
@@ -130,6 +131,7 @@ function Position({
 function OpeningForm({ account, current, onDone }: { account: MoneyAccount; current: MoneyPosition; onDone: () => void }) {
   const save = useSetMoneyOpening()
   const [asOf, setAsOf] = useState(current.set ? current.as_of : dayBefore(todayISO()))
+  const closed = useClosedPeriod()
   const [amount, setAmount] = useState(current.set ? String(current.opening_amount) : '')
 
   function submit() {
@@ -139,6 +141,7 @@ function OpeningForm({ account, current, onDone }: { account: MoneyAccount; curr
     if (account === 'cash' && value < 0) return toast.error('Cash in hand cannot be below zero')
     if (!asOf) return toast.error('Give the date the balance is as at')
     if (asOf > todayISO()) return toast.error('The opening date cannot be in the future')
+    if (closed.error(asOf)) return toast.error(closed.error(asOf))
     save.mutate({ account, asOf, amount: value }, { onSuccess: onDone })
   }
 
@@ -150,7 +153,7 @@ function OpeningForm({ account, current, onDone }: { account: MoneyAccount; curr
         Payments dated on or before that day are taken to be inside this figure.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Input label="As at the end of" type="date" max={todayISO()} value={asOf} onChange={(e) => setAsOf(e.target.value)} />
+        <Input label="As at the end of" type="date" min={closed.min()} error={closed.error(asOf)} max={todayISO()} value={asOf} onChange={(e) => setAsOf(e.target.value)} />
         <Input label="Balance (₹)" type="number" step="0.01" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
       </div>
       <div className="flex gap-2 justify-end">

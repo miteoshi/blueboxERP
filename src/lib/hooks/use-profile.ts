@@ -86,6 +86,7 @@ const PERMISSIONS = {
   adjustStock: ['admin', 'manager', 'store'],          // adjust_inventory()
   createProduction: ['admin', 'manager'],              // create_production_order()
   sell: ['admin', 'manager', 'sales'],                 // create_quotation(), sales orders
+  viewCredit: ['admin', 'manager', 'sales', 'viewer'], // client_credit_status()
   dispatch: ['admin', 'manager', 'store'],             // create_delivery_challan()
 } as const satisfies Record<string, readonly UserRole[]>
 

@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useQuotation, useUpdateQuotationStatus } from '@/lib/hooks/use-quotations'
+import { useQuotation, useQuotationTrail, useUpdateQuotationStatus } from '@/lib/hooks/use-quotations'
+import { approvalLabel, isOverride } from '@/lib/approvals'
 import { useCan, useCanApprove, useCanSell } from '@/lib/hooks/use-profile'
 import { useClientCreditStatus } from '@/lib/hooks/use-finance'
 import { creditCheck } from '@/lib/credit'
@@ -15,7 +16,7 @@ import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { DocumentStatusBadge } from '@/components/ui/badge'
 import { PageLoader } from '@/components/ui/spinner'
-import { formatCurrency, formatDate, formatQty, isPastDate } from '@/lib/utils/format'
+import { formatCurrency, formatDate, formatDateTime, formatQty, isPastDate } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { CheckCircle, XCircle, ShoppingCart, ArrowLeft, Clock, User, Calendar, Printer } from 'lucide-react'
 
@@ -30,6 +31,7 @@ export default function QuotationDetailPage() {
   const canViewCredit = useCan('viewCredit')
 
   const { data: qt, isLoading } = useQuotation(id)
+  const { data: trail } = useQuotationTrail(id)
   // Credit only matters while the quotation can still become an order
   const creditOpen = canViewCredit && !!qt && ['draft', 'pending_approval', 'approved'].includes(qt.status)
   const { data: credit } = useClientCreditStatus(creditOpen ? qt?.client_id : null)
@@ -337,7 +339,7 @@ export default function QuotationDetailPage() {
           </Card>
 
           {/* Approval info */}
-          {(creator || approver) && (
+          {(creator || approver || !!trail?.length) && (
             <Card>
               <CardHeader>
                 <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
@@ -363,6 +365,27 @@ export default function QuotationDetailPage() {
                     <span className="text-slate-400 shrink-0">Approved at</span>
                     <span className="text-slate-700 text-right">{formatDate(qt.approved_at)}</span>
                   </div>
+                )}
+                {!!trail?.length && (
+                  <ol className="border-t border-slate-100 pt-3 mt-1 space-y-3">
+                    {trail.map((t) => {
+                      const override = isOverride(t.action)
+                      return (
+                        <li key={t.id} className="flex gap-2.5">
+                          <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${override ? 'bg-amber-500' : 'bg-slate-300'}`} />
+                          <div className="min-w-0">
+                            <div className={override ? 'font-medium text-amber-800' : 'text-slate-700'}>
+                              {approvalLabel(t.action)}
+                            </div>
+                            <div className="text-xs text-slate-400">
+                              {t.actor?.full_name ?? 'Unknown user'} · {formatDateTime(t.actioned_at)}
+                            </div>
+                            {t.comments && <div className="text-xs text-slate-600 mt-0.5 break-words">{t.comments}</div>}
+                          </div>
+                        </li>
+                      )
+                    })}
+                  </ol>
                 )}
               </CardBody>
             </Card>

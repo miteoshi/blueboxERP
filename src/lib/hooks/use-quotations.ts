@@ -95,6 +95,31 @@ export function useQuotation(id: string | null) {
   })
 }
 
+// ── Approvals trail ───────────────────────────────────────────
+// Written only by the database (create_quotation, set_quotation_status,
+// convert_quotation_to_sales_order); sits under ['quotations'] so every
+// status change or conversion refreshes it.
+export function useQuotationTrail(id: string | null) {
+  const supabase = createClient()
+  const orgId = useOrgId()
+
+  return useQuery({
+    queryKey: ['quotations', orgId, 'trail', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('approvals')
+        .select('id, action, comments, actioned_at, actor:profiles!approvals_actioned_by_fkey ( full_name )')
+        .eq('ref_type', 'quotation')
+        .eq('ref_id', id!)
+        .order('actioned_at')
+      if (error) throw error
+      return data
+    },
+    enabled: !!id && !!orgId,
+    staleTime: 30 * 1000,
+  })
+}
+
 // ── Update quotation status ───────────────────────────────────
 export function useUpdateQuotationStatus() {
   const supabase = createClient()

@@ -44,6 +44,7 @@ import {
   Menu,
   X,
   ScrollText,
+  FileCheck,
 } from 'lucide-react'
 import type { Enums } from '@/lib/types/database'
 import { Route } from 'next'
@@ -266,6 +267,12 @@ const NAV: (NavItem | NavGroup)[] = [
         label: "GST Reports",
         href: "/reports/gst",
         icon: FileSpreadsheet,
+        roles: ["admin", "manager", "viewer"],
+      },
+      {
+        label: "GSTR-2B Match",
+        href: "/reports/gstr-2b",
+        icon: FileCheck,
         roles: ["admin", "manager", "viewer"],
       },
       {

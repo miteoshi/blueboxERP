@@ -3,7 +3,10 @@
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuotation, useUpdateQuotationStatus } from '@/lib/hooks/use-quotations'
-import { useCanApprove, useCanSell } from '@/lib/hooks/use-profile'
+import { useCan, useCanApprove, useCanSell } from '@/lib/hooks/use-profile'
+import { useClientCreditStatus } from '@/lib/hooks/use-finance'
+import { creditCheck } from '@/lib/credit'
+import { CreditCheckCard } from '@/components/finance/credit-check'
 import { useOrgId } from '@/lib/hooks/use-tenant'
 import { useQueryClient } from '@tanstack/react-query'
 import { convertQuotationToSalesOrder } from '@/lib/utils/inventory'
@@ -24,8 +27,12 @@ export default function QuotationDetailPage() {
 
   const canApprove  = useCanApprove()
   const canSell     = useCanSell()
+  const canViewCredit = useCan('viewCredit')
 
   const { data: qt, isLoading } = useQuotation(id)
+  // Credit only matters while the quotation can still become an order
+  const creditOpen = canViewCredit && !!qt && ['draft', 'pending_approval', 'approved'].includes(qt.status)
+  const { data: credit } = useClientCreditStatus(creditOpen ? qt?.client_id : null)
   const { mutate: updateStatus, isPending: isUpdatingStatus } = useUpdateQuotationStatus()
 
   const [convertingToSO, setConvertingToSO] = useState(false)
@@ -49,6 +56,9 @@ export default function QuotationDetailPage() {
   // convert one as it stands, and that is recorded in the approvals trail.
   const isExpired = !isConverted && isPastDate(qt.valid_until)
   const canOverrideExpiry = canApprove
+  // Mirrors the database: a sales user can't take a customer over their limit
+  const creditView = creditOpen && credit ? creditCheck(credit, qt.total_amount, canApprove) : null
+  const creditBlocked = !!creditView?.blocked
 
   // ── Convert to Sales Order ────────────────────────────────
   async function convertToSO() {
@@ -67,6 +77,7 @@ export default function QuotationDetailPage() {
     await Promise.all([
       qc.invalidateQueries({ queryKey: ["quotations"] }),
       qc.invalidateQueries({ queryKey: ["sales-orders"] }),
+      qc.invalidateQueries({ queryKey: ["client-credit"] }),
     ]);
 
     toast.success(
@@ -161,6 +172,8 @@ export default function QuotationDetailPage() {
             size="sm"
             loading={convertingToSO}
             onClick={convertToSO}
+            disabled={creditBlocked}
+            title={creditBlocked ? 'Over the customer\'s credit limit — a manager can convert it' : undefined}
             className="bg-teal-600 hover:bg-teal-700"
           >
             <ShoppingCart className="w-4 h-4" />
@@ -292,6 +305,10 @@ export default function QuotationDetailPage() {
             </CardBody>
           </Card>
 
+          {credit && creditView && (
+            <CreditCheckCard status={credit} check={creditView} canOverride={canApprove} />
+          )}
+
           {/* Terms card */}
           <Card>
             <CardHeader>
@@ -330,21 +347,21 @@ export default function QuotationDetailPage() {
               </CardHeader>
               <CardBody className="space-y-2 text-sm">
                 {creator && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Created by</span>
-                    <span className="text-slate-700">{creator.full_name}</span>
+                  <div className="flex justify-between gap-3">
+                    <span className="text-slate-400 shrink-0">Created by</span>
+                    <span className="text-slate-700 text-right">{creator.full_name}</span>
                   </div>
                 )}
                 {approver && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Approved by</span>
-                    <span className="text-slate-700">{approver.full_name}</span>
+                  <div className="flex justify-between gap-3">
+                    <span className="text-slate-400 shrink-0">Approved by</span>
+                    <span className="text-slate-700 text-right">{approver.full_name}</span>
                   </div>
                 )}
                 {qt.approved_at && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Approved at</span>
-                    <span className="text-slate-700">{formatDate(qt.approved_at)}</span>
+                  <div className="flex justify-between gap-3">
+                    <span className="text-slate-400 shrink-0">Approved at</span>
+                    <span className="text-slate-700 text-right">{formatDate(qt.approved_at)}</span>
                   </div>
                 )}
               </CardBody>

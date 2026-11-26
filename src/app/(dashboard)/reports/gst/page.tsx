@@ -5,7 +5,8 @@ import Link from 'next/link'
 import type { Route } from 'next'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { useOrgId } from '@/lib/hooks/use-tenant'
+import { useOrg, useOrgId } from '@/lib/hooks/use-tenant'
+import { buildGstr1Json, filingPeriod } from '@/lib/gstr1-json'
 import { useGstStates, useHsnSummary } from '@/lib/hooks/use-finance'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
@@ -16,7 +17,7 @@ import { formatCurrency, formatDate } from '@/lib/utils/format'
 import { allRows } from '@/lib/utils/all-rows'
 import { monthRange, reportPeriods } from '@/lib/utils/periods'
 import { downloadCsv, type CsvColumn } from '@/lib/utils/csv'
-import { Download } from 'lucide-react'
+import { Download, FileJson } from 'lucide-react'
 
 // Inter-state B2C invoices above this value are reported invoice-wise
 // (GSTR-1 Table 5, B2CL) — ₹1 lakh from 1 Aug 2024 (Notification 12/2024-CT).
@@ -257,6 +258,43 @@ export default function GstReportsPage() {
     }
   }
 
+  // The portal upload file: one return period, the organisation's GSTIN
+  const org = useOrg()
+  const fp = filingPeriod(from, to)
+  const ownGstin = (org?.gst_number ?? '').toUpperCase()
+  const jsonBlocker = !fp
+    ? 'Pick a calendar month (or a whole quarter for quarterly filers) to download the GSTR-1 JSON.'
+    : !ownGstin
+      ? 'Add your GSTIN in Settings to download the GSTR-1 JSON.'
+      : null
+  const gstr1 = useMemo(() => {
+    if (jsonBlocker || isLoading || loadingHsn || !invoices || !creditNotes) return null
+    const inv = (i: Inv) => ({
+      invoice_no: i.invoice_no, invoice_date: i.invoice_date, buyer_gstin: i.buyer_gstin, place_of_supply: i.place_of_supply,
+      reverse_charge: !!i.reverse_charge, total_amount: i.total_amount, lines: i.sales_invoice_lines,
+    })
+    const note = (n: Note) => ({
+      credit_note_no: n.credit_note_no, note_date: n.note_date, buyer_gstin: n.buyer_gstin, place_of_supply: n.place_of_supply,
+      reverse_charge: !!n.invoice?.reverse_charge, total_amount: n.total_amount, lines: n.credit_note_lines,
+    })
+    return buildGstr1Json({
+      gstin: ownGstin, fp: fp!, supplierState: org?.state_code ?? ownGstin.slice(0, 2),
+      b2b: b2b.map(inv), b2cl: b2cl.map(inv), b2cs, cdnr: cdnr.map(note), cdnur: cdnur.map(note),
+      hsn: hsn ?? [], documents,
+    })
+  }, [jsonBlocker, isLoading, loadingHsn, invoices, creditNotes, ownGstin, fp, org?.state_code, b2b, b2cl, b2cs, cdnr, cdnur, hsn, documents])
+
+  function downloadJson() {
+    if (!gstr1) return
+    const blob = new Blob([JSON.stringify(gstr1.json)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `GSTR1_${ownGstin}_${fp}.json`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
   const presets = reportPeriods()
 
   return (
@@ -266,7 +304,21 @@ export default function GstReportsPage() {
           <Download className="w-4 h-4" />
           Export {tab === 'Summary' ? 'B2B' : tab} CSV
         </Button>
+        <Button size="sm" onClick={downloadJson} disabled={!gstr1} title={jsonBlocker ?? 'File to upload on the GST portal: GSTR-1 → Prepare offline → Upload'}>
+          <FileJson className="w-4 h-4" />
+          GSTR-1 JSON
+        </Button>
       </PageHeader>
+
+      {jsonBlocker && <p className="mb-4 text-xs text-slate-500">{jsonBlocker}</p>}
+      {!!gstr1?.warnings.length && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 space-y-1">
+          <p className="font-medium">Before uploading the GSTR-1 JSON:</p>
+          <ul className="list-disc pl-5 space-y-0.5">
+            {gstr1.warnings.map((w) => <li key={w}>{w}</li>)}
+          </ul>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 flex flex-wrap items-end gap-3">
         <Input label="From" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />

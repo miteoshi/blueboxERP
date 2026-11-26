@@ -109,47 +109,6 @@ export function useProductionOrder(id: string | null) {
   })
 }
 
-// ── BOM for a finished item ───────────────────────────────────
-export function useBom(finishedItemId: string | null) {
-  const supabase = createClient()
-  const orgId = useOrgId()
-
-  return useQuery({
-    queryKey: ['bom', orgId, finishedItemId],
-    queryFn: async () => {
-      if (!finishedItemId || !orgId) return []
-
-      const { data, error } = await supabase
-        .from('bom')
-        .select(`
-          id,
-          qty_per_unit,
-          unit_id,
-          notes,
-
-          unit:units (
-            id,
-            name
-          ),
-
-          component:items!bom_org_component_fk (
-            id,
-            item_code,
-            name,
-            unit_id
-          )
-        `)
-        .eq('finished_item_id', finishedItemId)
-        .eq('is_active', true)
-
-      if (error) throw error
-      return data ?? []
-    },
-    enabled: !!finishedItemId && !!orgId,
-    staleTime: 5 * 60 * 1000,
-  })
-}
-
 // ── All manufactured items (for new production dropdown) ──────
 export function useManufacturedItems() {
   const supabase = createClient()

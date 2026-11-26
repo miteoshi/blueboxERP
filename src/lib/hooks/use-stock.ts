@@ -38,28 +38,6 @@ export function useStockLevels(search?: string) {
   })
 }
 
-// ── Single item stock ─────────────────────────────────────────
-export function useItemStock(itemId: string | null) {
-  const supabase = createClient()
-  const orgId = useOrgId()
-
-  return useQuery({
-    queryKey: ['stock-levels', orgId, itemId],
-    queryFn: async () => {
-      if (!itemId || !orgId) return null
-      const { data, error } = await supabase
-        .from('v_stock_levels')
-        .select('*')
-        .eq('item_id', itemId)
-        .single()
-      if (error) throw error
-      return data as StockLevel
-    },
-    enabled: !!itemId && !!orgId,
-    staleTime: 30 * 1000,
-  })
-}
-
 // ── Reorder alerts ────────────────────────────────────────────
 export function useReorderAlerts() {
   const supabase = createClient()

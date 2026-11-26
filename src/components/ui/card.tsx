@@ -37,14 +37,6 @@ export function CardBody({ children, className }: { children: React.ReactNode; c
   )
 }
 
-export function CardFooter({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={cn('px-5 py-3 bg-slate-50 rounded-b-xl border-t border-slate-100', className)}>
-      {children}
-    </div>
-  )
-}
-
 // ── Stat card ─────────────────────────────────────────────────
 interface StatCardProps {
   label: string

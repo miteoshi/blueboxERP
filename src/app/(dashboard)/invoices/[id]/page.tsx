@@ -202,8 +202,8 @@ export default function InvoiceDetailPage() {
               onChange={(e) => setAmount(e.target.value)}
             />
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-slate-700">Mode</label>
-              <select
+              <label htmlFor="invoices-id-mode" className="block text-sm font-medium text-slate-700">Mode</label>
+              <select id="invoices-id-mode"
                 value={mode}
                 onChange={(e) => setMode(e.target.value as PaymentMode)}
                 className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white"

@@ -515,9 +515,9 @@ export default function OnboardingPage() {
 
             <form onSubmit={handleCreateOrg}>
               <div style={{ marginBottom: 16 }}>
-                <label className="field-label">Your Full Name</label>
+                <label htmlFor="auth-onboarding-page-your-full-name" className="field-label">Your Full Name</label>
 
-                <input
+                <input id="auth-onboarding-page-your-full-name"
                   className="field-input"
                   type="text"
                   value={fullName}
@@ -528,9 +528,9 @@ export default function OnboardingPage() {
               </div>
 
               <div style={{ marginBottom: 16 }}>
-                <label className="field-label">Organization Name</label>
+                <label htmlFor="auth-onboarding-page-organization-name" className="field-label">Organization Name</label>
 
-                <input
+                <input id="auth-onboarding-page-organization-name"
                   className="field-input"
                   type="text"
                   value={orgName}
@@ -541,11 +541,11 @@ export default function OnboardingPage() {
               </div>
 
               <div style={{ marginBottom: 16 }}>
-                <label className="field-label">
+                <label htmlFor="auth-onboarding-page-gstin" className="field-label">
                   GSTIN <span style={{ color: "#64748b" }}>(optional)</span>
                 </label>
 
-                <input
+                <input id="auth-onboarding-page-gstin"
                   className="field-input"
                   type="text"
                   value={gstin}

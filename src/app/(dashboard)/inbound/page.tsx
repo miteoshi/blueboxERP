@@ -123,6 +123,7 @@ export default function InboundPage() {
             <input
               type="text"
               placeholder="Search by GRN number…"
+              aria-label="Search goods receipts"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -263,11 +264,13 @@ export default function InboundPage() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <Link href={`/inbound/${r.id}` as Route}>
-                        <button className="p-1.5 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-colors">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </Link>
+                      <Link
+                          href={`/inbound/${r.id}` as Route}
+                          aria-label={`View goods receipt ${r.receipt_no}`}
+                          className="inline-flex p-1.5 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
+                        >
+                          <Eye className="w-4 h-4" aria-hidden="true" />
+                        </Link>
                     </td>
                   </tr>
                 ))}

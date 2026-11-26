@@ -107,10 +107,10 @@ export function SupplierPaymentForm({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {!fixedSupplierId && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label htmlFor="payables-payment-form-supplier" className="block text-sm font-medium text-slate-700 mb-1.5">
                 Supplier <span className="text-red-500">*</span>
               </label>
-              <select
+              <select id="payables-payment-form-supplier"
                 value={supplierId}
                 onChange={(e) => setSupplierId(e.target.value)}
                 className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -138,8 +138,8 @@ export function SupplierPaymentForm({
             onChange={(e) => setAmount(e.target.value)}
           />
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Mode</label>
-            <select
+            <label htmlFor="payables-payment-form-mode" className="block text-sm font-medium text-slate-700 mb-1.5">Mode</label>
+            <select id="payables-payment-form-mode"
               value={mode}
               onChange={(e) => setMode(e.target.value as PaymentMode)}
               className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"

@@ -306,6 +306,7 @@ const { data: reservations } = useQuery({
           </p>
           <div className="flex items-center gap-3">
             <input
+              aria-label="Amount received"
               type="number"
               value={paymentAmount}
               onChange={e => setPaymentAmount(e.target.value)}
@@ -313,6 +314,7 @@ const { data: reservations } = useQuery({
               className="flex-1 max-w-xs px-3 py-2 text-sm rounded-lg border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
             <select
+              aria-label="Payment mode"
               value={paymentMode}
               onChange={e => setPaymentMode(e.target.value as PaymentMode)}
               className="px-3 py-2 text-sm rounded-lg border border-blue-200 bg-white"
@@ -320,6 +322,7 @@ const { data: reservations } = useQuery({
               {PAYMENT_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
             <input
+              aria-label="UTR or cheque number"
               value={paymentRef}
               onChange={e => setPaymentRef(e.target.value)}
               placeholder="UTR / cheque no."

@@ -331,6 +331,7 @@ export function MoneyEntriesPage({ config: c }: { config: MoneyEntriesConfig }) 
                           <td colSpan={6} className="bg-red-50 px-4 py-3">
                             <div className="flex flex-wrap items-center gap-2">
                               <input
+                                aria-label={`Reason for cancelling ${e.no}`}
                                 type="text"
                                 autoFocus
                                 placeholder={`Why cancel ${e.no}? e.g. entered twice`}

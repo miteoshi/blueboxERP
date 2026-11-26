@@ -519,6 +519,7 @@ export function GstPaymentList({ rows, canEdit }: { rows: GstPaymentRow[]; canEd
                     <td colSpan={7} className="bg-red-50 px-4 py-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <input
+                          aria-label={`Reason for cancelling ${p.payment_no}`}
                           type="text"
                           autoFocus
                           placeholder={`Why cancel ${p.payment_no}? e.g. entered twice`}

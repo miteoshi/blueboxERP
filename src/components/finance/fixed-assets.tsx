@@ -409,6 +409,7 @@ function ReasonPanel({ kind, asset, onDone }: { kind: 'undo' | 'cancel'; asset: 
     <div>
       <div className="flex flex-wrap items-center gap-2">
         <input
+          aria-label={kind === 'undo' ? `Reason for undoing the sale of ${asset.asset_no}` : `Reason for cancelling ${asset.asset_no}`}
           type="text"
           autoFocus
           placeholder={kind === 'undo' ? `Why undo the sale of ${asset.asset_no}? e.g. sale fell through` : `Why cancel ${asset.asset_no}? e.g. entered twice`}

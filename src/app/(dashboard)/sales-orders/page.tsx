@@ -81,6 +81,7 @@ export default function SalesOrdersPage() {
             <input
               type="text"
               placeholder="Search by SO number…"
+              aria-label="Search sales orders"
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -230,10 +231,12 @@ export default function SalesOrdersPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <Link href={`/sales-orders/${order.id}`}>
-                          <button className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
-                            <Eye className="w-4 h-4" />
-                          </button>
+                        <Link
+                          href={`/sales-orders/${order.id}`}
+                          aria-label={`View sales order ${order.so_number}`}
+                          className="inline-flex p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                        >
+                          <Eye className="w-4 h-4" aria-hidden="true" />
                         </Link>
                       </td>
                     </tr>

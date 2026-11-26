@@ -682,10 +682,10 @@ export default function ItemActions({ item }: ItemActionsProps) {
                 />
               </Field>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+              <div className="md:col-span-2" role="group" aria-labelledby="item-type-label">
+                <p id="item-type-label" className="block text-sm font-medium text-slate-700 mb-2">
                   Type
-                </label>
+                </p>
 
                 <div className="flex flex-wrap gap-4">
                   <Check
@@ -712,11 +712,12 @@ export default function ItemActions({ item }: ItemActionsProps) {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label htmlFor="item-notes" className="block text-sm font-medium text-slate-700 mb-1.5">
                   Notes
                 </label>
 
                 <textarea
+                  id="item-notes"
                   rows={4}
                   value={form.notes}
                   onChange={(e) => setField("notes", e.target.value)}
@@ -754,13 +755,14 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+    // The label wraps its one control, so the two are tied together
+    <label className="block">
+      <span className="block text-sm font-medium text-slate-700 mb-1.5">
         {label}
-      </label>
+      </span>
 
       {children}
-    </div>
+    </label>
   );
 }
 

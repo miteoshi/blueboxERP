@@ -213,6 +213,7 @@ export default function QuotationDetailPage() {
             Reason for rejection
           </p>
           <textarea
+            aria-label="Reason for rejection"
             rows={2}
             value={rejectComment}
             onChange={e => setRejectComment(e.target.value)}

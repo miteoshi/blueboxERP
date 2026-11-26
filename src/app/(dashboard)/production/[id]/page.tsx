@@ -271,6 +271,7 @@ const { data: workers = [] } = useWorkers(orgId);
               {canAssign && (
                 <div className="pt-2 border-t border-slate-100 space-y-2">
                   <select
+                    aria-label="Worker to assign"
                     value={selectedWorker}
                     onChange={(e) => setSelectedWorker(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-purple-500"

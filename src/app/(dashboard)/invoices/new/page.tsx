@@ -202,6 +202,7 @@ function NewInvoice() {
               </CardHeader>
               <CardBody className="space-y-4">
                 <select
+                  aria-label="Client"
                   value={clientId}
                   onChange={(e) => {
                     setClientId(e.target.value)

@@ -320,10 +320,10 @@ async function handleSave() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="block text-sm font-medium text-slate-700">
+                <label htmlFor="clients-state" className="block text-sm font-medium text-slate-700">
                   State <span className="text-xs font-normal text-slate-400">(place of supply)</span>
                 </label>
-                <select
+                <select id="clients-state"
                   value={form.state_code}
                   onChange={e => setField('state_code', e.target.value)}
                   disabled={!!stateCodeFromGstin(form.gst_number)}
@@ -386,6 +386,7 @@ async function handleSave() {
             <input
               type="text"
               placeholder="Search by name or phone…"
+              aria-label="Search clients"
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"

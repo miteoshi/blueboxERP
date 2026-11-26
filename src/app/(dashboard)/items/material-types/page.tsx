@@ -257,6 +257,7 @@ export default function MaterialTypesPage() {
             <input
               type="text"
               placeholder="Search material types…"
+              aria-label="Search material types"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -392,11 +393,11 @@ export default function MaterialTypesPage() {
 
             <div className="space-y-4 px-6 py-5">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                <label htmlFor="items-material-types-code" className="mb-1.5 block text-sm font-medium text-slate-700">
                   Code
                 </label>
 
-                <input
+                <input id="items-material-types-code"
                   type="text"
                   value={form.code}
                   onChange={(e) => updateForm("code", e.target.value)}
@@ -411,11 +412,11 @@ export default function MaterialTypesPage() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                <label htmlFor="items-material-types-name" className="mb-1.5 block text-sm font-medium text-slate-700">
                   Name
                 </label>
 
-                <input
+                <input id="items-material-types-name"
                   type="text"
                   value={form.name}
                   onChange={(e) => updateForm("name", e.target.value)}
@@ -426,11 +427,11 @@ export default function MaterialTypesPage() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                <label htmlFor="items-material-types-description" className="mb-1.5 block text-sm font-medium text-slate-700">
                   Description
                 </label>
 
-                <textarea
+                <textarea id="items-material-types-description"
                   value={form.description}
                   onChange={(e) => updateForm("description", e.target.value)}
                   placeholder="Optional description"

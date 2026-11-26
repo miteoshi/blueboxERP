@@ -306,8 +306,8 @@ export default function LoginPage() {
 
             <form onSubmit={handleLogin}>
               <div style={{ marginBottom: 16 }}>
-                <label className="field-label">Email address</label>
-                <input
+                <label htmlFor="auth-login-page-email-address" className="field-label">Email address</label>
+                <input id="auth-login-page-email-address"
                   className="field-input"
                   type="email"
                   value={email}
@@ -319,8 +319,8 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label className="field-label">Password</label>
-                <input
+                <label htmlFor="auth-login-page-password" className="field-label">Password</label>
+                <input id="auth-login-page-password"
                   className="field-input"
                   type="password"
                   value={password}

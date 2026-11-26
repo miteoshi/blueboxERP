@@ -338,8 +338,8 @@ export default function WorkersPage() {
               />
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Primary Skill</label>
-                <select
+                <label htmlFor="workers-primary-skill" className="block text-sm font-medium text-slate-700 mb-1.5">Primary Skill</label>
+                <select id="workers-primary-skill"
                   value={form.skill}
                   onChange={e => setForm(prev => ({ ...prev, skill: e.target.value }))}
                   className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"

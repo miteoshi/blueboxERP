@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRequestId } from '@/lib/hooks/use-request-id'
 import { isAlreadySaved, rpcFailure } from '@/lib/utils/rpc'
 import { useOrgId } from '@/lib/hooks/use-tenant'
+import { allRows } from '@/lib/utils/all-rows'
 import { toast } from 'sonner'
 import type { Tables } from '@/lib/types/database'
 
@@ -561,7 +562,8 @@ export function useInvoiceAgeing(clientId?: string) {
         .order('due_date')
         .order('invoice_no')
       if (clientId) query = query.eq('client_id', clientId)
-      const { data, error } = await query
+      // More than 1,000 open invoices would otherwise be cut off silently
+      const { data, error } = await allRows(query.order('id'))
       if (error) throw error
       return data
     },

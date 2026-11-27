@@ -22,11 +22,3 @@ export function useOrgId(): string | null {
   const { orgId } = useTenant()
   return orgId
 }
-
-/**
- * Returns the name of the current organization.
- */
-export function useCurrentOrgName(): string {
-  const { organization } = useTenant()
-  return organization?.name ?? 'Blue Box ERP'
-}

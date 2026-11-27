@@ -1,4 +1,4 @@
-import { format, formatDistanceToNow, parseISO } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 
 // ── Currency ──────────────────────────────────────────────────
 export function formatCurrency(amount: number | null | undefined): string {
@@ -82,32 +82,3 @@ export function formatDateTime(date: string | null | undefined): string {
   if (Number.isNaN(d.getTime())) return '—'
   return `${formatDate(date)}, ${istTimeFmt.format(d).toUpperCase()}`
 }
-
-export function formatRelative(date: string | null | undefined): string {
-  if (!date) return '—'
-  try {
-    return formatDistanceToNow(parseISO(date), { addSuffix: true })
-  } catch {
-    return '—'
-  }
-}
-
-// ── GST ───────────────────────────────────────────────────────
-export function calculateGst(amount: number, gstPercent: string): number {
-  return (amount * Number(gstPercent)) / 100
-}
-
-export function calculateTotal(
-  subtotal: number,
-  gstPercent: string
-): { gst: number; total: number } {
-  const gst = calculateGst(subtotal, gstPercent)
-  return { gst, total: subtotal + gst }
-}
-
-// ── Document numbers ──────────────────────────────────────────
-export function isQuotationNo(no: string) { return no.startsWith('QT-') }
-export function isSalesOrderNo(no: string) { return no.startsWith('SO-') }
-export function isGrnNo(no: string)        { return no.startsWith('GRN-') }
-export function isPrdNo(no: string)        { return no.startsWith('PRD-') }
-export function isDcNo(no: string)         { return no.startsWith('DC-') }

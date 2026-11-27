@@ -45,6 +45,7 @@ import {
   X,
   ScrollText,
   FileCheck,
+  TrendingUp,
 } from 'lucide-react'
 import type { Enums } from '@/lib/types/database'
 import { Route } from 'next'
@@ -255,6 +256,12 @@ const NAV: (NavItem | NavGroup)[] = [
         label: "Cash & Bank Book",
         href: "/reports/cash-book",
         icon: FileSpreadsheet,
+        roles: ["admin", "manager", "viewer"],
+      },
+      {
+        label: "Cash Flow Forecast",
+        href: "/reports/cash-flow",
+        icon: TrendingUp,
         roles: ["admin", "manager", "viewer"],
       },
       {

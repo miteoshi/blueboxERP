@@ -170,6 +170,7 @@ useEffect(() => {
             <input
               type="text"
               placeholder="Search items…"
+              aria-label="Search stock"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="
@@ -181,6 +182,7 @@ useEffect(() => {
 
           {/* Category filter */}
           <select
+            aria-label="Filter by category"
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
             className="

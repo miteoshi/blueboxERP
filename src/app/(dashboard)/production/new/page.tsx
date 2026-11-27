@@ -573,13 +573,13 @@ const { data: rawItems } = useRawMaterialItems(orgId);
 
               <div>
 
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label htmlFor="production-new-finished-item" className="block text-sm font-medium text-slate-700 mb-1.5">
 
                   Finished Item <span className="text-red-500">*</span>
 
                 </label>
 
-                <select
+                <select id="production-new-finished-item"
 
                   value={finishedItem?.item_id ?? ''}
 
@@ -639,13 +639,13 @@ const { data: rawItems } = useRawMaterialItems(orgId);
 
               <div>
 
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label htmlFor="production-new-quantity-to-produce" className="block text-sm font-medium text-slate-700 mb-1.5">
 
                   Quantity to Produce <span className="text-red-500">*</span>
 
                 </label>
 
-                <input
+                <input id="production-new-quantity-to-produce"
 
                   type="number"
 
@@ -701,9 +701,9 @@ const { data: rawItems } = useRawMaterialItems(orgId);
 
               <div>
 
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Notes</label>
+                <label htmlFor="production-new-notes" className="block text-sm font-medium text-slate-700 mb-1.5">Notes</label>
 
-                <textarea
+                <textarea id="production-new-notes"
 
                   rows={3}
 
@@ -904,6 +904,7 @@ const { data: rawItems } = useRawMaterialItems(orgId);
                             {raw.source === 'manual' ? (
 
                               <input
+                                aria-label="Quantity per unit"
 
                                 type="number"
 
@@ -1026,6 +1027,7 @@ const { data: rawItems } = useRawMaterialItems(orgId);
                   </p>
 
                   <select
+                    aria-label="Add a material"
 
                     defaultValue=""
 

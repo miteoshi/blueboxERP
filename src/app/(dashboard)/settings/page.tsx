@@ -373,6 +373,7 @@ export default function SettingsPage() {
                       <td data-label="Change Role" className="px-4 py-3">
                         {profile.id !== me?.id ? (
                           <select
+                            aria-label={`Role for ${profile.full_name}`}
                             value={profile.role}
                             disabled={updatingRole === profile.id}
                             onChange={(e) =>
@@ -451,6 +452,7 @@ export default function SettingsPage() {
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm mb-4">
             <div className="px-5 py-4 flex items-center gap-3">
               <input
+                aria-label="Search item prices"
                 type="text"
                 placeholder="Search items by name or code…"
                 value={priceSearch}
@@ -554,6 +556,7 @@ export default function SettingsPage() {
                           {editingPrice === item.id ? (
                             <div className="flex items-center gap-1.5">
                               <input
+                                aria-label="New purchase rate"
                                 type="number"
                                 min="0"
                                 step="any"
@@ -563,6 +566,7 @@ export default function SettingsPage() {
                                 className="w-24 px-2 py-1 text-xs rounded border border-slate-200 text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
                               />
                               <input
+                                aria-label="New selling rate"
                                 type="number"
                                 min="0"
                                 step="any"

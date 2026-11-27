@@ -193,8 +193,8 @@ function NewCreditNote() {
       <Card className="mb-6">
         <CardBody className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <div className="space-y-1 md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700">Against invoice</label>
-            <select
+            <label htmlFor="credit-notes-new-against-invoice" className="block text-sm font-medium text-slate-700">Against invoice</label>
+            <select id="credit-notes-new-against-invoice"
               value={invoiceId}
               onChange={(e) => {
                 setInvoiceId(e.target.value)
@@ -300,6 +300,7 @@ function NewCreditNote() {
                           </td>
                           <td data-label={isReturn ? 'Qty' : 'Amount (₹)'} className="px-4 py-3">
                             <input
+                              aria-label={isReturn ? 'Quantity to return' : 'Amount to credit'}
                               type="number"
                               min="0"
                               step={isReturn ? 'any' : '0.01'}

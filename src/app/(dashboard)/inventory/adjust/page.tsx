@@ -112,10 +112,10 @@ const { data: items, isLoading: itemsLoading } = useItems();
           </CardHeader>
           <CardBody className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label htmlFor="inventory-adjust-item" className="block text-sm font-medium text-slate-700 mb-1.5">
                 Item <span className="text-red-500">*</span>
               </label>
-              <select
+              <select id="inventory-adjust-item"
                 value={itemId}
                 onChange={(e) => { setItemId(e.target.value); edited() }}
                 disabled={itemsLoading}

@@ -126,6 +126,7 @@ export default function DispatchPage() {
             <input
               type="text"
               placeholder="Search by challan number…"
+              aria-label="Search delivery challans"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -256,11 +257,13 @@ export default function DispatchPage() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <Link href={`/dispatch/${c.id}` as Route}>
-                        <button className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </Link>
+                      <Link
+                          href={`/dispatch/${c.id}` as Route}
+                          aria-label={`View challan ${c.challan_no}`}
+                          className="inline-flex p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                        >
+                          <Eye className="w-4 h-4" aria-hidden="true" />
+                        </Link>
                     </td>
                   </tr>
                 ))}

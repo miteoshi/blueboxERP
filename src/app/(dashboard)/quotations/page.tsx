@@ -92,6 +92,7 @@ export default function QuotationsPage() {
             <input
               type="text"
               placeholder="Search by quotation number…"
+              aria-label="Search quotations"
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -215,11 +216,13 @@ export default function QuotationsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-center gap-1.5">
-                          <Link href={`/quotations/${q.id}`}>
-                            <Button variant="ghost" size="sm">
-                              <Eye className="w-3.5 h-3.5" />
-                            </Button>
-                          </Link>
+                          <Link
+                          href={`/quotations/${q.id}`}
+                          aria-label={`View quotation ${q.quotation_no}`}
+                          className="inline-flex p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" aria-hidden="true" />
+                        </Link>
                           {/* Approve/Reject only for pending, non-converted */}
                           {canApprove && isPendingQ && !isConverted && (
                             <>

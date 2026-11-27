@@ -161,10 +161,10 @@ function NewSupplierBill() {
             </CardHeader>
             <CardBody className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label htmlFor="supplier-bills-new-supplier" className="block text-sm font-medium text-slate-700 mb-1.5">
                   Supplier <span className="text-red-500">*</span>
                 </label>
-                <select
+                <select id="supplier-bills-new-supplier"
                   value={supplierId}
                   onChange={(e) => chooseSupplier(e.target.value)}
                   className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -287,6 +287,7 @@ function NewSupplierBill() {
                             </td>
                             <td data-label="Qty" className="px-3 py-2">
                               <input
+                                aria-label="Quantity to bill"
                                 type="number"
                                 min="0"
                                 max={r.remaining}
@@ -299,6 +300,7 @@ function NewSupplierBill() {
                             </td>
                             <td data-label="Rate (₹)" className="px-3 py-2">
                               <input
+                                aria-label="Rate"
                                 type="number"
                                 min="0"
                                 step="any"
@@ -313,6 +315,7 @@ function NewSupplierBill() {
                             </td>
                             <td data-label="GST" className="px-3 py-2">
                               <select
+                                aria-label="GST rate"
                                 disabled={!r.edit.selected}
                                 value={r.edit.gst}
                                 onChange={(e) => patch(r.line.id, r.edit, { gst: e.target.value as GstRate })}

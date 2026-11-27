@@ -182,10 +182,10 @@ function NewDebitNote() {
             </CardHeader>
             <CardBody className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label htmlFor="debit-notes-new-supplier-bill" className="block text-sm font-medium text-slate-700 mb-1.5">
                   Supplier bill <span className="text-red-500">*</span>
                 </label>
-                <select
+                <select id="debit-notes-new-supplier-bill"
                   value={billId}
                   onChange={(e) => chooseBill(e.target.value)}
                   className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -200,8 +200,8 @@ function NewDebitNote() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Reason</label>
-                <select
+                <label htmlFor="debit-notes-new-reason" className="block text-sm font-medium text-slate-700 mb-1.5">Reason</label>
+                <select id="debit-notes-new-reason"
                   value={reason}
                   onChange={(e) => chooseReason(e.target.value as DebitNoteReason)}
                   className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -336,6 +336,7 @@ function NewDebitNote() {
                             </td>
                             <td data-label={isReturn ? 'Returning' : 'Debit (₹)'} className="px-3 py-2">
                               <input
+                                aria-label={isReturn ? 'Quantity returning' : 'Amount to debit'}
                                 type="number"
                                 min="0"
                                 step="any"

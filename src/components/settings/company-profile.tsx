@@ -186,8 +186,8 @@ function CompanyProfileForm({ profile }: { profile: Profile }) {
               error={pinError ?? undefined}
             />
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-slate-700">State</label>
-              <select
+              <label htmlFor="settings-company-profile-state" className="block text-sm font-medium text-slate-700">State</label>
+              <select id="settings-company-profile-state"
                 value={form.state_code}
                 onChange={(e) => set('state_code', e.target.value)}
                 disabled={!!gstState}

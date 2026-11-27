@@ -1,5 +1,7 @@
+'use client'
+
 import { cn } from '@/lib/utils/cn'
-import { forwardRef } from 'react'
+import { forwardRef, useId } from 'react'
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string
@@ -8,17 +10,25 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, className, ...props }, ref) => {
+  ({ label, error, hint, className, id, 'aria-describedby': describedBy, ...props }, ref) => {
+    // The label and any message are tied to the field, so screen readers
+    // announce them and tapping the label focuses the field
+    const auto = useId()
+    const fieldId = id ?? auto
+    const noteId = error || hint ? `${fieldId}-note` : undefined
     return (
       <div className="space-y-1">
         {label && (
-          <label className="block text-sm font-medium text-slate-700">
+          <label htmlFor={fieldId} className="block text-sm font-medium text-slate-700">
             {label}
             {props.required && <span className="text-red-500 ml-0.5">*</span>}
           </label>
         )}
         <input
           ref={ref}
+          id={fieldId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={[describedBy, noteId].filter(Boolean).join(' ') || undefined}
           className={cn(
             'w-full px-3 py-2 text-sm rounded-lg border bg-white',
             'placeholder:text-slate-400 text-slate-900',
@@ -32,8 +42,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
           {...props}
         />
-        {error && <p className="text-xs text-red-600">{error}</p>}
-        {hint && !error && <p className="text-xs text-slate-400">{hint}</p>}
+        {error && <p id={noteId} className="text-xs text-red-600">{error}</p>}
+        {hint && !error && <p id={noteId} className="text-xs text-slate-400">{hint}</p>}
       </div>
     )
   }
@@ -49,16 +59,22 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 }
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, error, className, ...props }, ref) => {
+  ({ label, error, className, id, 'aria-describedby': describedBy, ...props }, ref) => {
+    const auto = useId()
+    const fieldId = id ?? auto
+    const noteId = error ? `${fieldId}-note` : undefined
     return (
       <div className="space-y-1">
         {label && (
-          <label className="block text-sm font-medium text-slate-700">
+          <label htmlFor={fieldId} className="block text-sm font-medium text-slate-700">
             {label}
           </label>
         )}
         <textarea
           ref={ref}
+          id={fieldId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={[describedBy, noteId].filter(Boolean).join(' ') || undefined}
           rows={3}
           className={cn(
             'w-full px-3 py-2 text-sm rounded-lg border bg-white resize-none',
@@ -70,7 +86,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           )}
           {...props}
         />
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p id={noteId} className="text-xs text-red-600">{error}</p>}
       </div>
     )
   }

@@ -370,6 +370,7 @@ export function TdsDepositList({ rows, canEdit }: { rows: TdsDepositRow[]; canEd
                     <td colSpan={7} className="bg-red-50 px-4 py-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <input
+                          aria-label={`Reason for cancelling ${d.deposit_no}`}
                           type="text"
                           autoFocus
                           placeholder={`Why cancel ${d.deposit_no}? e.g. entered twice`}

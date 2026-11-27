@@ -425,6 +425,7 @@ function ReceiveForm({
                   <td data-label="Still on order" className="py-2 text-right tabular-nums text-slate-600">{formatQty(l.outstanding, l.unit)}</td>
                   <td data-label="Received now" className="py-2">
                     <input
+                      aria-label="Quantity received now"
                       type="number"
                       min="0"
                       max={l.outstanding}
@@ -451,8 +452,8 @@ function ReceiveForm({
             onChange={(e) => setReceiptDate(e.target.value)}
           />
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Transport</label>
-            <select
+            <label htmlFor="purchase-orders-id-transport" className="block text-sm font-medium text-slate-700 mb-1.5">Transport</label>
+            <select id="purchase-orders-id-transport"
               value={transportMode}
               onChange={(e) => setTransportMode(e.target.value as TransportMode)}
               className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"

@@ -209,10 +209,10 @@ function NewGrnPageContent() {
             </CardHeader>
             <CardBody className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label htmlFor="inbound-new-supplier" className="block text-sm font-medium text-slate-700 mb-1.5">
                   Supplier <span className="text-red-500">*</span>
                 </label>
-                <select
+                <select id="inbound-new-supplier"
                   value={supplierId}
                   onChange={(e) => setSupplierId(e.target.value)}
                   className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -237,10 +237,10 @@ function NewGrnPageContent() {
               />
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label htmlFor="inbound-new-transport-mode" className="block text-sm font-medium text-slate-700 mb-1.5">
                   Transport Mode
                 </label>
-                <select
+                <select id="inbound-new-transport-mode"
                   value={transportMode}
                   onChange={(e) =>
                     setTransportMode(e.target.value as TransportMode)
@@ -367,6 +367,7 @@ function NewGrnPageContent() {
                       <tr key={i} className="group">
                         <td data-main className="px-3 py-2">
                           <select
+                            aria-label={`Item, line ${i + 1}`}
                             value={line.item_id}
                             onChange={(e) => selectItem(i, e.target.value)}
                             className="w-full px-2 py-1.5 text-xs rounded border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 min-w-[200px]"
@@ -381,6 +382,7 @@ function NewGrnPageContent() {
                         </td>
                         <td data-label="Ordered" className="px-3 py-2">
                           <input
+                            aria-label={`Ordered, line ${i + 1}`}
                             type="number"
                             min="0"
                             step="any"
@@ -398,6 +400,7 @@ function NewGrnPageContent() {
                         </td>
                         <td data-label="Received" className="px-3 py-2">
                           <input
+                            aria-label={`Received, line ${i + 1}`}
                             type="number"
                             min="0.0001"
                             step="any"
@@ -414,6 +417,7 @@ function NewGrnPageContent() {
                         </td>
                         <td data-label="Unit" className="px-3 py-2">
                           <input
+                            aria-label={`Unit, line ${i + 1}`}
                             type="text"
                             value={line.unit_name || "—"}
                             readOnly
@@ -422,6 +426,7 @@ function NewGrnPageContent() {
                         </td>
                         <td data-label="Rate (₹)" className="px-3 py-2">
                           <input
+                            aria-label={`Rate (₹), line ${i + 1}`}
                             type="number"
                             min="0"
                             step="any"
@@ -434,6 +439,7 @@ function NewGrnPageContent() {
                         </td>
                         <td data-label="GST%" className="px-3 py-2">
                           <select
+                            aria-label={`GST%, line ${i + 1}`}
                             value={line.gst_percent}
                             onChange={(e) =>
                               updateLine(

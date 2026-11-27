@@ -220,6 +220,7 @@ export default function PaymentsPage() {
                         {cancelId === r.id && (
                           <div className="mt-2 flex gap-2">
                             <input
+                              aria-label="Reason for cancelling"
                               autoFocus
                               value={reason}
                               onChange={(e) => setReason(e.target.value)}
@@ -345,8 +346,8 @@ function RecordPaymentForm({ onClose }: { onClose: () => void }) {
       <CardBody className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <div className="space-y-1 md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700">Client</label>
-            <select
+            <label htmlFor="payments-client" className="block text-sm font-medium text-slate-700">Client</label>
+            <select id="payments-client"
               value={clientId}
               onChange={(e) => {
                 setClientId(e.target.value)
@@ -364,8 +365,8 @@ function RecordPaymentForm({ onClose }: { onClose: () => void }) {
           </div>
           <Input label="Amount (₹)" type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-700">Mode</label>
-            <select
+            <label htmlFor="payments-mode" className="block text-sm font-medium text-slate-700">Mode</label>
+            <select id="payments-mode"
               value={mode}
               onChange={(e) => setMode(e.target.value as PaymentMode)}
               className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white"
@@ -416,6 +417,7 @@ function RecordPaymentForm({ onClose }: { onClose: () => void }) {
                       <td data-label="Apply" className="px-4 py-2 text-right w-36">
                         {manual ? (
                           <input
+                            aria-label="Amount to apply"
                             type="number"
                             min="0"
                             step="0.01"

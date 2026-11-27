@@ -280,10 +280,10 @@ function NewQuotationPageContent() {
 
               {/* Client */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label htmlFor="quotations-new-client" className="block text-sm font-medium text-slate-700 mb-1.5">
                   Client <span className="text-red-500">*</span>
                 </label>
-                <select
+                <select id="quotations-new-client"
                   value={clientId}
                   onChange={e => setClientId(e.target.value)}
                   className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -313,10 +313,10 @@ function NewQuotationPageContent() {
               />
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label htmlFor="quotations-new-payment-terms" className="block text-sm font-medium text-slate-700 mb-1.5">
                   Payment Terms
                 </label>
-                <input
+                <input id="quotations-new-payment-terms"
                   type="text"
                   value={paymentTerms}
                   onChange={e => setPaymentTerms(e.target.value)}
@@ -398,6 +398,7 @@ function NewQuotationPageContent() {
                       <tr key={i} className="group">
                         <td data-main className="px-3 py-2">
                           <select
+                            aria-label={`Item, line ${i + 1}`}
                             value={line.item_id}
                             onChange={e => selectItem(i, e.target.value)}
                             className="w-full px-2 py-1.5 text-xs rounded border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-[200px]"
@@ -411,6 +412,7 @@ function NewQuotationPageContent() {
                           </select>
                           {line.item_id && (
                             <input
+                              aria-label={`Description, line ${i + 1}`}
                               type="text"
                               placeholder="Description override (optional)"
                               value={line.description}
@@ -421,6 +423,7 @@ function NewQuotationPageContent() {
                         </td>
                         <td data-label="Qty" className="px-3 py-2">
                           <input
+                            aria-label={`Quantity, line ${i + 1}`}
                             type="number"
                             min="0.0001"
                             step="any"
@@ -431,6 +434,7 @@ function NewQuotationPageContent() {
                         </td>
                         <td data-label="Unit" className="px-3 py-2">
                           <input
+                            aria-label={`Unit, line ${i + 1}`}
                             type="text"
                             value={line.unit}
                             onChange={e => updateLine(i, 'unit', e.target.value)}
@@ -439,6 +443,7 @@ function NewQuotationPageContent() {
                         </td>
                         <td data-label="Rate (₹)" className="px-3 py-2">
                           <input
+                            aria-label={`Rate, line ${i + 1}`}
                             type="number"
                             min="0"
                             step="any"
@@ -449,6 +454,7 @@ function NewQuotationPageContent() {
                         </td>
                         <td data-label="GST%" className="px-3 py-2">
                           <select
+                            aria-label={`GST rate, line ${i + 1}`}
                             value={line.gst_percent}
                             onChange={e => updateLine(i, 'gst_percent', e.target.value as GstRate)}
                             className="w-full px-1.5 py-1.5 text-xs rounded border border-slate-200 text-center focus:outline-none focus:ring-1 focus:ring-blue-500"

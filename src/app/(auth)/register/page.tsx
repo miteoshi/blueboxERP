@@ -113,11 +113,11 @@ export default function RegisterPage() {
 
           <form onSubmit={handleRegister} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label htmlFor="auth-register-page-email" className="block text-sm font-medium text-slate-700 mb-1.5">
                 Email
               </label>
 
-              <input
+              <input id="auth-register-page-email"
                 value={email}
                 disabled
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500"
@@ -125,11 +125,11 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label htmlFor="auth-register-page-full-name" className="block text-sm font-medium text-slate-700 mb-1.5">
                 Full name
               </label>
 
-              <input
+              <input id="auth-register-page-full-name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
@@ -139,11 +139,11 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label htmlFor="auth-register-page-password" className="block text-sm font-medium text-slate-700 mb-1.5">
                 Password
               </label>
 
-              <input
+              <input id="auth-register-page-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -156,11 +156,11 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label htmlFor="auth-register-page-confirm-password" className="block text-sm font-medium text-slate-700 mb-1.5">
                 Confirm password
               </label>
 
-              <input
+              <input id="auth-register-page-confirm-password"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}

@@ -145,6 +145,7 @@ export default function SupplierBillsPage() {
             <input
               type="text"
               placeholder="Bill, invoice number or supplier…"
+              aria-label="Search supplier bills"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"

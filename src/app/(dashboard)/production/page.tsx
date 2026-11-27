@@ -103,6 +103,7 @@ export default function ProductionPage() {
             <input
               type="text"
               placeholder="Search by PRD no…"
+              aria-label="Search production orders"
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -314,10 +315,12 @@ export default function ProductionPage() {
 
                       {/* Eye button — only way to navigate for production role */}
                       <td className="px-4 py-3 text-center">
-                        <Link href={`/production/${order.id}` as Route}>
-                          <Button variant="ghost" size="sm">
-                            <Eye className="w-3.5 h-3.5" />
-                          </Button>
+                        <Link
+                          href={`/production/${order.id}` as Route}
+                          aria-label={`View production order ${order.po_number}`}
+                          className="inline-flex p-1.5 rounded-lg text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" aria-hidden="true" />
                         </Link>
                       </td>
                     </tr>

@@ -159,6 +159,7 @@ export default function ItemsPage() {
             <input
               type="text"
               placeholder="Search by name or code…"
+              aria-label="Search items"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="
@@ -169,6 +170,7 @@ export default function ItemsPage() {
           </div>
 
           <select
+            aria-label="Filter by category"
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
             disabled={isCategoriesLoading}
